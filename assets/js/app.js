@@ -42,7 +42,6 @@
   function init() {
     applyMeta();
     md.bindFoldToggle();
-    store.seedIfEmpty();
     router.start();
   }
 

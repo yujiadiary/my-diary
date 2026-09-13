@@ -1,4 +1,5 @@
 // 前台渲染:首页、作者、分类、详情、关于,以及通用 UI 工具
+// 全部页面函数都是 async,内部 await 数据请求
 (function () {
   const cfg = window.DiaryConfig;
   const store = window.DiaryStore;
@@ -53,7 +54,6 @@
     return div.innerHTML;
   }
 
-  // 分页器
   function pager(current, total, buildHref) {
     if (total <= 1) return '';
     let html = '<div class="pager">';
@@ -88,9 +88,15 @@
   }
 
   // ---------- 页面:首页 ----------
-  function pageHome(args, params) {
-    store.seedIfEmpty();
-    const list = store.posts.listPublic();
+  async function pageHome(args, params) {
+    const data = await store.posts.listPublic({ pageSize: 50 });
+    const list = data.list || [];
+    // 如果数据库空,调种子接口(已登录则插,未登录则不插,但下次有内容了)
+    if (!list.length) {
+      await store.posts.seedIfEmpty();
+      const data2 = await store.posts.listPublic({ pageSize: 50 });
+      list.push(...(data2.list || []));
+    }
     const pinned = list.filter(p => p.pinned).slice(0, 3);
     const latest = list.slice(0, cfg.pageSize);
 
@@ -104,14 +110,12 @@
       html += '</div></section>';
     }
 
-    // 分类入口
     html += '<section class="block"><h2 class="block-title">分类</h2><div class="chips">';
     cfg.categories.forEach(c => {
       html += `<a class="chip" href="#/category/${c.id}">${h(c.name)}</a>`;
     });
     html += '</div></section>';
 
-    // 作者入口
     html += '<section class="block"><h2 class="block-title">作者</h2><div class="chips">';
     cfg.authors.forEach(a => {
       html += `<a class="chip" href="#/author/${a.id}">${h(a.name)}</a>`;
@@ -132,16 +136,17 @@
   }
 
   // ---------- 页面:全部列表 ----------
-  function pageList(args, params) {
-    const list = store.posts.listPublic();
+  async function pageList(args, params) {
     const page = parseInt(params.page || '1', 10) || 1;
-    const total = Math.ceil(list.length / cfg.pageSize);
-    const slice = list.slice((page - 1) * cfg.pageSize, page * cfg.pageSize);
+    const data = await store.posts.listPublic({ page, pageSize: cfg.pageSize });
+    const list = data.list || [];
+    const total = Math.ceil((data.total || list.length) / cfg.pageSize);
 
     let html = `<section class="block"><h2 class="block-title">全部内容</h2>`;
-    html += `<p class="block-sub">共 ${list.length} 条</p>`;
+    html += `<p class="block-sub">共 ${data.total || list.length} 条</p>`;
     html += '<div class="cards">';
-    html += slice.map(postCard).join('');
+    if (list.length) html += list.map(postCard).join('');
+    else html += '<p class="empty">还没有内容。</p>';
     html += '</div>';
     html += pager(page, total, i => `#/list?page=${i}`);
     html += '</section>';
@@ -149,25 +154,30 @@
   }
 
   // ---------- 页面:作者页 ----------
-  function pageAuthorIndex() {
+  async function pageAuthorIndex() {
+    // 用列表统计各作者条数
+    const data = await store.posts.listPublic({ pageSize: 1000 });
+    const all = data.list || [];
+    const countBy = id => all.filter(p => p.author === id).length;
+
     let html = '<section class="block"><h2 class="block-title">作者</h2>';
     html += '<div class="author-list">';
     cfg.authors.forEach(a => {
-      const count = store.posts.listPublic({ author: a.id }).length;
       html += `<a class="author-card" href="#/author/${a.id}">
         <h3>${h(a.name)}</h3>
         <p>${h(a.desc)}</p>
-        <span class="count">${count} 条</span>
+        <span class="count">${countBy(a.id)} 条</span>
       </a>`;
     });
     html += '</div></section>';
     view().innerHTML = html;
   }
 
-  function pageAuthor(args) {
+  async function pageAuthor(args) {
     const a = cfg.authorById(args.id);
     if (!a) return view().innerHTML = '<p>没有这个作者。</p>';
-    const list = store.posts.listPublic({ author: a.id });
+    const data = await store.posts.listPublic({ author: a.id, pageSize: 1000 });
+    const list = data.list || [];
     let html = `<section class="block">
       <p class="crumb"><a href="#/author">作者</a> / ${h(a.name)}</p>
       <h2 class="block-title">${h(a.name)}</h2>
@@ -180,24 +190,28 @@
   }
 
   // ---------- 页面:分类页 ----------
-  function pageCategoryIndex() {
+  async function pageCategoryIndex() {
+    const data = await store.posts.listPublic({ pageSize: 1000 });
+    const all = data.list || [];
+    const countBy = id => all.filter(p => p.category === id).length;
+
     let html = '<section class="block"><h2 class="block-title">分类</h2>';
     html += '<div class="author-list">';
     cfg.categories.forEach(c => {
-      const count = store.posts.listPublic({ category: c.id }).length;
       html += `<a class="author-card" href="#/category/${c.id}">
         <h3>${h(c.name)}</h3>
-        <span class="count">${count} 条</span>
+        <span class="count">${countBy(c.id)} 条</span>
       </a>`;
     });
     html += '</div></section>';
     view().innerHTML = html;
   }
 
-  function pageCategory(args) {
+  async function pageCategory(args) {
     const c = cfg.categoryById(args.id);
     if (!c) return view().innerHTML = '<p>没有这个分类。</p>';
-    const list = store.posts.listPublic({ category: c.id });
+    const data = await store.posts.listPublic({ category: c.id, pageSize: 1000 });
+    const list = data.list || [];
     let html = `<section class="block">
       <p class="crumb"><a href="#/category">分类</a> / ${h(c.name)}</p>
       <h2 class="block-title">${h(c.name)}</h2>
@@ -210,9 +224,10 @@
   }
 
   // ---------- 页面:标签页 ----------
-  function pageTag(args) {
+  async function pageTag(args) {
     const tag = decodeURIComponent(args.name);
-    const list = store.posts.listPublic({ tag });
+    const data = await store.posts.listPublic({ tag, pageSize: 1000 });
+    const list = data.list || [];
     let html = `<section class="block">
       <p class="crumb"><a href="#/">首页</a> / 标签</p>
       <h2 class="block-title">#${h(tag)}</h2>
@@ -225,13 +240,16 @@
   }
 
   // ---------- 页面:文章详情 ----------
-  function pagePost(args) {
-    const p = store.posts.byId(args.id);
+  async function pagePost(args) {
+    let p;
+    try { p = await store.posts.byId(args.id); }
+    catch (e) { return view().innerHTML = '<p class="empty">文章不存在或已隐藏。</p>'; }
+
     if (!p || p.draft || p.hidden || p.deletedAt) {
       return view().innerHTML = '<p class="empty">文章不存在或已隐藏。</p>';
     }
-    const { prev, next } = store.posts.neighbors(p.id);
-    const body = md.render(p.content || '', { fold: p.category !== 'long' ? true : false });
+    const { prev, next } = await store.posts.neighbors(p.id);
+    const body = md.render(p.content || '', { fold: p.category !== 'long' });
     const tags = (p.tags || []).map(t => `<a href="#/tag/${encodeURIComponent(t)}" class="tag">#${h(t)}</a>`).join('');
     const imgs = (p.images || []).map(src => `<a href="${h(src)}" target="_blank" rel="noopener"><img src="${h(src)}" alt="" loading="lazy"></a>`).join('');
 
@@ -249,7 +267,6 @@
     if (tags) html += `<div class="post-tags">${tags}</div>`;
     html += '</article>';
 
-    // 上一篇/下一篇
     html += '<nav class="prev-next">';
     if (prev) html += `<a class="pn prev" href="#/post/${prev.id}"><span class="pn-label">上一篇</span><span class="pn-title">${h(prev.title || '(无题)')}</span></a>`;
     else html += '<span class="pn placeholder"></span>';
@@ -275,7 +292,7 @@
   }
 
   // ---------- 搜索 ----------
-  function pageSearch(args, params) {
+  async function pageSearch(args, params) {
     const q = params.q || '';
     let html = '<section class="block">';
     html += '<form class="search-form" onsubmit="return false">';
@@ -283,10 +300,11 @@
     html += '<button type="submit" id="search-btn">搜索</button>';
     html += '</form>';
     if (q) {
-      const list = store.posts.listPublic({ q });
+      const data = await store.posts.listPublic({ q, pageSize: 50 });
+      const list = data.list || [];
       html += `<p class="block-sub">"${h(q)}" 的搜索结果 · ${list.length} 条</p>`;
       html += '<div class="cards">';
-      if (list.length) html += list.slice(0, 50).map(postCard).join('');
+      if (list.length) html += list.map(postCard).join('');
       else html += '<p class="empty">没有找到。</p>';
       html += '</div>';
     }

@@ -1,4 +1,4 @@
-// 全站静态配置:作者、分类、站点信息、默认设置
+// 全站配置:作者、分类、API、站点信息
 // 修改这里即可调整作者/分类,无需改动其它代码
 window.DiaryConfig = {
   siteTitle: '碎碎念留档',
@@ -28,11 +28,18 @@ window.DiaryConfig = {
   // 长文折叠阈值(字符数)
   foldLength: 600,
 
-  // 默认后台密码,首次进入后台时写入 localStorage
-  // 建议登录后立即在"设置"里改掉
-  defaultAdminPassword: 'diary2024',
+  // ---------- API 配置 ----------
+  // 自动判断:同源走相对路径 /api,部署到子路径也正确
+  apiBase: (function () {
+    // 用当前 HTML 文件所在目录 + api/ 拼出 API 基址
+    // 这样无论是根部署还是 GitHub Pages 子路径都能用
+    var p = location.pathname.replace(/\/[^/]*$/, '/');
+    return p + 'api';
+  })(),
 
-  // 作者与分类辅助查询
+  // token 在 localStorage 里的 key
+  tokenKey: 'diary.token',
+
   authorById(id) {
     return this.authors.find(a => a.id === id) || null;
   },

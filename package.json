@@ -1,0 +1,13 @@
+{
+  "name": "my-diary",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler pages dev . --local-protocol=http --port 3000",
+    "db:init:local": "wrangler d1 execute my-diary-db --local --file=./schema.sql",
+    "db:init:remote": "wrangler d1 execute my-diary-db --remote --file=./schema.sql",
+    "deploy": "wrangler pages deploy ."
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
