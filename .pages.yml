@@ -117,8 +117,8 @@ content:
         label: 评论人
         type: string
         required: true
-        default: 于加的AI
-        description: 评论人名字,如:于加的AI / 江予朔 / 周叙
+        default: 于加
+        description: 评论人名字,如:于加 / 江予朔 / 周叙
 
       - name: date
         label: 评论日期

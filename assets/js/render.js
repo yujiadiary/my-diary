@@ -130,6 +130,9 @@
     }
     html += '</section>';
 
+    // 全站归档入口(纯静态链接,直指 all-posts.html,不走 SPA 路由)
+    html += '<section class="block"><p class="archive-link-line"><a href="all-posts.html">查看全部文章和评论汇总 →</a></p></section>';
+
     view().innerHTML = html;
   }
 
