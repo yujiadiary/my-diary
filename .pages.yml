@@ -32,27 +32,17 @@ content:
 
       - name: author
         label: 作者
-        type: select
+        type: string
         required: true
         default: yu
-        options:
-          - { label: "于加",       value: "yu" }
-          - { label: "江予朔",     value: "jiang" }
-          - { label: "周叙",       value: "zhou" }
-          - { label: "共同存档",   value: "archive" }
+        description: 直接输入作者 id:yu / jiang / zhou / archive
 
       - name: category
         label: 分类
-        type: select
+        type: string
         required: true
         default: daily
-        options:
-          - { label: "日常碎碎念",    value: "daily" }
-          - { label: "长文/正式记录", value: "long" }
-          - { label: "图片/相册",     value: "photo" }
-          - { label: "代码/创作",     value: "code" }
-          - { label: "音乐/歌单",     value: "music" }
-          - { label: "存档/备份",     value: "backup" }
+        description: 直接输入分类 id:daily / long / photo / code / music / backup
 
       - name: tags
         label: 标签
