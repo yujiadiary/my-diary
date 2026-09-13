@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'posts/**'
+      - 'comments/**'
       - 'build.js'
       - '.github/workflows/build.yml'
   workflow_dispatch:

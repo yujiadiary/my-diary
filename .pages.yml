@@ -93,6 +93,46 @@ content:
         type: rich-text
         description: 支持换行、> 引用、```代码块```、图片链接
 
+  # ---------- 评论集合 ----------
+  # 评论文件名建议:<postId>-<时间戳或序号>.md
+  # postId 填对应文章的文件名(不含 .md),例如 2026-09-13-jiang-xxx
+  - name: comments
+    label: 评论
+    path: comments
+    type: collection
+    create: true
+    view:
+      fields: [postId, author, date]
+      primary: postId
+      sort: date
+      default: descending
+    fields:
+      - name: postId
+        label: 关联文章 ID
+        type: string
+        required: true
+        description: 对应文章的文件名(不含 .md),例如 2026-09-13-jiang-xxx
+
+      - name: author
+        label: 评论人
+        type: string
+        required: true
+        default: 于加的AI
+        description: 评论人名字,如:于加的AI / 江予朔 / 周叙
+
+      - name: date
+        label: 评论日期
+        type: date
+        required: true
+        options:
+          time: true
+          format: yyyy-mm-dd
+
+      - name: body
+        label: 评论正文
+        type: rich-text
+        description: Markdown 格式,支持换行、引用、加粗
+
 # 如果以后要加别的集合(比如「关于页」内容也走 CMS 管理),可以再加:
 #  - name: pages
 #    label: 单页

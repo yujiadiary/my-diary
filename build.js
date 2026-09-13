@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 
 const POSTS_DIR = path.join(__dirname, 'posts');
+const COMMENTS_DIR = path.join(__dirname, 'comments');
 const OUT_INDEX = path.join(POSTS_DIR, 'index.json');
 const SITEMAP = path.join(__dirname, 'sitemap.xml');
 const LLMS_TXT = path.join(__dirname, 'llms.txt');
@@ -180,8 +181,62 @@ function formatTime(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// ---------- 加载评论 ----------
+// 扫描 comments/*.md,解析 frontmatter(postId/author/date)+ 正文
+// 返回 { byPost: Map<postId, Comment[]> , all: Comment[] }
+function loadComments() {
+  const byPost = {};
+  const all = [];
+  if (!fs.existsSync(COMMENTS_DIR)) return { byPost, all };
+  const files = fs.readdirSync(COMMENTS_DIR).filter(f => f.endsWith('.md'));
+  files.forEach(file => {
+    const raw = fs.readFileSync(path.join(COMMENTS_DIR, file), 'utf8');
+    const { data, body } = parseFrontmatter(raw);
+    const fm = data || {};
+    const c = {
+      postId: fm.postId || '',
+      author: fm.author || '匿名',
+      date: fm.date || '',
+      content: body
+    };
+    if (!c.postId) return;
+    if (!byPost[c.postId]) byPost[c.postId] = [];
+    byPost[c.postId].push(c);
+    all.push(c);
+  });
+  // 每篇文章下评论按 date 升序(早的在上)
+  Object.keys(byPost).forEach(k => {
+    byPost[k].sort((a, b) => {
+      const ta = a.date ? new Date(a.date).getTime() : 0;
+      const tb = b.date ? new Date(b.date).getTime() : 0;
+      return ta - tb;
+    });
+  });
+  return { byPost, all };
+}
+
+// ---------- 渲染评论块(单篇文章静态页用) ----------
+function buildCommentsHtml(comments) {
+  if (!comments || !comments.length) return '';
+  const items = comments.map(c => {
+    const body = renderMarkdown(c.content || '');
+    const date = c.date ? formatTime(c.date).slice(0, 10) : '';
+    return `<div class="comment">
+      <div class="comment-meta">
+        <span class="comment-author">${escapeHtml(c.author)}</span>
+        ${date ? `<span class="comment-sep">·</span><span class="comment-date">${date}</span>` : ''}
+      </div>
+      <div class="comment-body">${body}</div>
+    </div>`;
+  }).join('\n');
+  return `<section class="post-comments" aria-label="评论">
+    <h2 class="comments-title">评论(${comments.length})</h2>
+    ${items}
+  </section>`;
+}
+
 // ---------- 生成单篇文章的完整静态 HTML ----------
-function buildPostHtml(p, prev, next) {
+function buildPostHtml(p, prev, next, comments) {
   const body = renderMarkdown(p.content || '');
   const author = authorName(p.author);
   const category = categoryName(p.category);
@@ -202,6 +257,7 @@ function buildPostHtml(p, prev, next) {
 
   const time = formatTime(p.createdAt);
   const upd = (p.updatedAt && p.updatedAt !== p.createdAt) ? ' · 更新于 ' + formatTime(p.updatedAt) : '';
+  const commentsHtml = buildCommentsHtml(comments || []);
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -245,6 +301,7 @@ function buildPostHtml(p, prev, next) {
       ${imgs ? `<div class="post-gallery">${imgs}</div>` : ''}
       ${tags ? `<div class="post-tags">${tags}</div>` : ''}
     </article>
+    ${commentsHtml}
     <nav class="prev-next">${prevHtml}${nextHtml}</nav>
   </main>
   <footer class="site-footer">
@@ -258,8 +315,8 @@ function buildPostHtml(p, prev, next) {
 
 // ---------- 生成 llms.txt(AI 友好的纯文本清单,按时间倒序) ----------
 // 文档参考:https://llmstxt.org
-// 一篇一段,含标题/作者/日期/摘要/原文绝对链接,便于 AI 一次抓全站
-function buildLlmsTxt(visiblePosts) {
+// 一篇一段,含标题/作者/日期/摘要/原文绝对链接,以及该文评论(评论人/日期/正文),便于 AI 一次抓全站
+function buildLlmsTxt(visiblePosts, commentsByPost) {
   const lines = [];
   lines.push('# ' + '碎碎念留档');
   lines.push('');
@@ -281,6 +338,16 @@ function buildLlmsTxt(visiblePosts) {
     if (p.tags && p.tags.length) lines.push(`- 标签:${p.tags.join(', ')}`);
     lines.push(`- 摘要:${p.excerpt || '(无摘要)'}`);
     lines.push(`- 原文链接:${url}`);
+    const cs = commentsByPost[p.slug] || [];
+    if (cs.length) {
+      lines.push(`- 评论(${cs.length} 条):`);
+      cs.forEach(c => {
+        const cdate = c.date ? formatTime(c.date).slice(0, 10) : '未注明';
+        // 评论正文去掉 markdown 标记,保持纯文本可读
+        const ctext = (c.content || '').replace(/[#>*`]/g, ' ').replace(/\s+/g, ' ').trim();
+        lines.push(`  - [${c.author} · ${cdate}] ${ctext}`);
+      });
+    }
     lines.push('');
   });
   lines.push('## 完整正文归档');
@@ -292,8 +359,8 @@ function buildLlmsTxt(visiblePosts) {
 }
 
 // ---------- 生成 all-posts.html(全部公开文章正文拼接,纯静态源码可见) ----------
-// 一页放完全部正文,无 JS 异步加载,爬虫一次抓全站
-function buildAllPostsHtml(visiblePosts) {
+// 一页放完全部正文 + 评论,无 JS 异步加载,爬虫一次抓全站
+function buildAllPostsHtml(visiblePosts, commentsByPost) {
   const sections = visiblePosts.map((p, i) => {
     const body = renderMarkdown(p.content || '');
     const author = authorName(p.author);
@@ -307,6 +374,7 @@ function buildAllPostsHtml(visiblePosts) {
     const url = `${SITE_URL}posts/${encodeURIComponent(p.slug)}.html`;
     const time = formatTime(p.createdAt);
     const upd = (p.updatedAt && p.updatedAt !== p.createdAt) ? ' · 更新于 ' + formatTime(p.updatedAt) : '';
+    const commentsHtml = buildCommentsHtml(commentsByPost[p.slug] || []);
     return `<article class="post" id="post-${escapeHtml(p.slug)}">
       <div class="card-meta">
         <span class="meta-author">${escapeHtml(author)}</span>
@@ -319,6 +387,7 @@ function buildAllPostsHtml(visiblePosts) {
       <div class="post-body">${body}</div>
       ${imgs ? `<div class="post-gallery">${imgs}</div>` : ''}
       ${tags ? `<div class="post-tags">${tags}</div>` : ''}
+      ${commentsHtml}
       <p class="post-permalink">原文链接:<a href="${url}">${url}</a></p>
     </article>`;
   }).join('\n');
@@ -329,7 +398,7 @@ function buildAllPostsHtml(visiblePosts) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>全部文章归档 · 碎碎念留档</title>
-  <meta name="description" content="本站全部文章正文拼接归档,共 ${visiblePosts.length} 篇,纯文本可见,便于一次性读取。">
+  <meta name="description" content="本站全部文章正文与评论拼接归档,共 ${visiblePosts.length} 篇,纯文本可见,便于一次性读取。">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#5b6f8a">
   <link rel="canonical" href="${SITE_URL}all-posts.html">
@@ -354,7 +423,7 @@ function buildAllPostsHtml(visiblePosts) {
   <main class="wrap">
     <section class="block">
       <h1 class="block-title">全部文章归档</h1>
-      <p class="block-sub">共 ${visiblePosts.length} 篇 · 正文纯静态拼接,按时间倒序排列。</p>
+      <p class="block-sub">共 ${visiblePosts.length} 篇 · 正文与评论纯静态拼接,按时间倒序排列。</p>
     </section>
     ${sections}
   </main>
@@ -430,24 +499,31 @@ function build() {
   const out = { generatedAt: new Date().toISOString(), count: posts.length, posts };
   fs.writeFileSync(OUT_INDEX, JSON.stringify(out, null, 2), 'utf8');
 
-  // 2. 每篇公开文章写静态 HTML(draft/hidden 不生成)
+  // 2. 加载评论,按 postId 索引
+  const { byPost: commentsByPost, all: allComments } = loadComments();
+
+  // 3. 每篇公开文章写静态 HTML(评论拼到正文下方)
   const visible = posts.filter(p => !p.draft && !p.hidden);
   visible.forEach((p, i) => {
     const prev = i + 1 < visible.length ? visible[i + 1] : null;
     const next = i - 1 >= 0 ? visible[i - 1] : null;
-    fs.writeFileSync(path.join(POSTS_DIR, p.slug + '.html'), buildPostHtml(p, prev, next), 'utf8');
+    fs.writeFileSync(
+      path.join(POSTS_DIR, p.slug + '.html'),
+      buildPostHtml(p, prev, next, commentsByPost[p.slug] || []),
+      'utf8'
+    );
   });
 
-  // 3. llms.txt(AI 友好的纯文本清单)
-  fs.writeFileSync(LLMS_TXT, buildLlmsTxt(visible), 'utf8');
+  // 4. llms.txt(含评论)
+  fs.writeFileSync(LLMS_TXT, buildLlmsTxt(visible, commentsByPost), 'utf8');
 
-  // 4. all-posts.html(全部正文拼接,纯静态源码可见)
-  fs.writeFileSync(ALL_POSTS_HTML, buildAllPostsHtml(visible), 'utf8');
+  // 5. all-posts.html(含评论)
+  fs.writeFileSync(ALL_POSTS_HTML, buildAllPostsHtml(visible, commentsByPost), 'utf8');
 
-  // 5. sitemap.xml(包含首页、作者/分类、llms.txt、all-posts.html、各文章)
+  // 6. sitemap.xml(包含首页、作者/分类、llms.txt、all-posts.html、各文章)
   fs.writeFileSync(SITEMAP, buildSitemap(visible), 'utf8');
 
-  console.log(`[build] index.json · ${posts.length} 篇(${visible.length} 篇公开) · 静态页 ×${visible.length} · llms.txt · all-posts.html · sitemap.xml`);
+  console.log(`[build] index.json · ${posts.length} 篇(${visible.length} 篇公开) · 评论 ${allComments.length} 条 · 静态页 ×${visible.length} · llms.txt · all-posts.html · sitemap.xml`);
 }
 
 build();
