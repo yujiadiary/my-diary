@@ -1,0 +1,48 @@
+name: Build posts index
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'posts/**'
+      - 'build.js'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-posts-index
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run build.js
+        run: node build.js
+
+      - name: Commit updated index.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- posts/index.json; then
+            echo "index.json 无变化,跳过提交"
+          else
+            git add posts/index.json
+            git commit -m "chore: 自动重建 posts/index.json [skip ci]"
+            git push
+            echo "已提交新的 index.json"
+          fi
