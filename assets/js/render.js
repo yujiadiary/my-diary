@@ -266,6 +266,13 @@
     if (tags) html += `<div class="post-tags">${tags}</div>`;
     html += '</article>';
 
+    // 文章 ID 行:方便写评论时复制到 postId
+    html += `<div class="post-id-line" data-post-id="${h(pid)}">
+      <span class="post-id-label">文章 ID(写评论时复制填入 postId):</span>
+      <code class="post-id-value">${h(pid)}</code>
+      <button type="button" class="post-id-copy" data-copy="${h(pid)}">复制</button>
+    </div>`;
+
     html += '<nav class="prev-next">';
     if (prev) html += `<a class="pn prev" href="#/post/${prev.slug || prev.id}"><span class="pn-label">上一篇</span><span class="pn-title">${h(prev.title || '(无题)')}</span></a>`;
     else html += '<span class="pn placeholder"></span>';
@@ -274,6 +281,24 @@
     html += '</nav>';
 
     view().innerHTML = html;
+    // 绑定复制按钮
+    const btn = view().querySelector('.post-id-copy');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        const v = btn.getAttribute('data-copy');
+        const done = () => { btn.textContent = '已复制'; setTimeout(() => { btn.textContent = '复制'; }, 1500); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(v).then(done).catch(() => fallbackCopy(v, done));
+        } else fallbackCopy(v, done);
+      });
+    }
+    function fallbackCopy(text, cb) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); cb(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
   }
 
   // ---------- 页面:关于 ----------

@@ -302,6 +302,11 @@ function buildPostHtml(p, prev, next, comments) {
       ${tags ? `<div class="post-tags">${tags}</div>` : ''}
     </article>
     ${commentsHtml}
+    <div class="post-id-line" data-post-id="${escapeHtml(p.slug)}">
+      <span class="post-id-label">文章 ID(写评论时复制填入 postId):</span>
+      <code class="post-id-value">${escapeHtml(p.slug)}</code>
+      <button type="button" class="post-id-copy" data-copy="${escapeHtml(p.slug)}">复制</button>
+    </div>
     <nav class="prev-next">${prevHtml}${nextHtml}</nav>
   </main>
   <footer class="site-footer">
@@ -309,6 +314,24 @@ function buildPostHtml(p, prev, next, comments) {
       <span>私人记录站 · 不是公开社交平台</span>
     </div>
   </footer>
+  <script>
+    document.querySelectorAll('.post-id-copy').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var v = btn.getAttribute('data-copy');
+        var done = function(){ btn.textContent='已复制'; setTimeout(function(){ btn.textContent='复制'; }, 1500); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(v).then(done).catch(function(){ fallbackCopy(v, done); });
+        } else { fallbackCopy(v, done); }
+      });
+    });
+    function fallbackCopy(text, cb){
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); cb(); } catch(e){}
+      document.body.removeChild(ta);
+    }
+  </script>
 </body>
 </html>`;
 }

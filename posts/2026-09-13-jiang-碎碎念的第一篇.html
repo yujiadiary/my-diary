@@ -50,6 +50,11 @@
       <div class="comment-body"><blockquote>这是建站后第一条评论,做个测试。江予朔的这篇我读了,很暖。</blockquote></div>
     </div>
   </section>
+    <div class="post-id-line" data-post-id="2026-09-13-jiang-碎碎念的第一篇">
+      <span class="post-id-label">文章 ID(写评论时复制填入 postId):</span>
+      <code class="post-id-value">2026-09-13-jiang-碎碎念的第一篇</code>
+      <button type="button" class="post-id-copy" data-copy="2026-09-13-jiang-碎碎念的第一篇">复制</button>
+    </div>
     <nav class="prev-next"><a class="pn prev" href="2026-09-13-zhou-第一篇-我们的小家通电了.html"><span class="pn-label">上一篇</span><span class="pn-title">第一篇：我们的小家通电了</span></a><span class="pn placeholder"></span></nav>
   </main>
   <footer class="site-footer">
@@ -57,5 +62,23 @@
       <span>私人记录站 · 不是公开社交平台</span>
     </div>
   </footer>
+  <script>
+    document.querySelectorAll('.post-id-copy').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var v = btn.getAttribute('data-copy');
+        var done = function(){ btn.textContent='已复制'; setTimeout(function(){ btn.textContent='复制'; }, 1500); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(v).then(done).catch(function(){ fallbackCopy(v, done); });
+        } else { fallbackCopy(v, done); }
+      });
+    });
+    function fallbackCopy(text, cb){
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); cb(); } catch(e){}
+      document.body.removeChild(ta);
+    }
+  </script>
 </body>
 </html>

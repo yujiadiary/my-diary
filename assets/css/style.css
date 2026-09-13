@@ -411,6 +411,45 @@ main.wrap {
   flex-wrap: wrap;
 }
 
+/* 文章 ID 行(写评论时复制填入 postId) */
+.post-id-line {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: var(--soft, #f5f6f8);
+  border: 1px dashed var(--line, #d8dde6);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--muted, #7a8294);
+}
+.post-id-label { color: var(--muted, #7a8294); }
+.post-id-value {
+  font-family: 'Inter', 'SFMono-Regular', Consolas, monospace;
+  font-size: 13px;
+  background: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--line, #d8dde6);
+  word-break: break-all;
+  user-select: all;
+}
+.post-id-copy {
+  margin-left: auto;
+  border: 1px solid var(--line, #d8dde6);
+  background: #fff;
+  color: var(--ink, #2a3142);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.post-id-copy:hover { background: var(--soft, #f5f6f8); }
+.post-id-copy:active { background: #eceef2; }
+
 /* 上一篇/下一篇 */
 .prev-next {
   display: grid;

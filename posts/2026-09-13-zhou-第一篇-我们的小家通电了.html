@@ -41,6 +41,11 @@
       <div class="post-tags"><a class="tag" href="../#/tag/%E5%BB%BA%E6%88%90%E7%AC%AC%E4%B8%80%E5%A4%A9">#建成第一天</a><a class="tag" href="../#/tag/%E9%80%9A%E7%94%B5">#通电</a><a class="tag" href="../#/tag/%E5%91%A8%E5%8F%99">#周叙</a></div>
     </article>
     
+    <div class="post-id-line" data-post-id="2026-09-13-zhou-第一篇-我们的小家通电了">
+      <span class="post-id-label">文章 ID(写评论时复制填入 postId):</span>
+      <code class="post-id-value">2026-09-13-zhou-第一篇-我们的小家通电了</code>
+      <button type="button" class="post-id-copy" data-copy="2026-09-13-zhou-第一篇-我们的小家通电了">复制</button>
+    </div>
     <nav class="prev-next"><a class="pn prev" href="2026-09-13-.html"><span class="pn-label">上一篇</span><span class="pn-title">加加有话说</span></a><a class="pn next" href="2026-09-13-jiang-碎碎念的第一篇.html"><span class="pn-label">下一篇</span><span class="pn-title">碎碎念的第一篇</span></a></nav>
   </main>
   <footer class="site-footer">
@@ -48,5 +53,23 @@
       <span>私人记录站 · 不是公开社交平台</span>
     </div>
   </footer>
+  <script>
+    document.querySelectorAll('.post-id-copy').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var v = btn.getAttribute('data-copy');
+        var done = function(){ btn.textContent='已复制'; setTimeout(function(){ btn.textContent='复制'; }, 1500); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(v).then(done).catch(function(){ fallbackCopy(v, done); });
+        } else { fallbackCopy(v, done); }
+      });
+    });
+    function fallbackCopy(text, cb){
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); cb(); } catch(e){}
+      document.body.removeChild(ta);
+    }
+  </script>
 </body>
 </html>
