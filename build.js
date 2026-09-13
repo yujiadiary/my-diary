@@ -16,6 +16,8 @@ const path = require('path');
 const POSTS_DIR = path.join(__dirname, 'posts');
 const OUT_INDEX = path.join(POSTS_DIR, 'index.json');
 const SITEMAP = path.join(__dirname, 'sitemap.xml');
+const LLMS_TXT = path.join(__dirname, 'llms.txt');
+const ALL_POSTS_HTML = path.join(__dirname, 'all-posts.html');
 
 // 站点根 URL(sitemap.xml 必须用绝对地址)
 // GitHub Pages 默认:https://<user>.github.io/<repo>/
@@ -254,12 +256,125 @@ function buildPostHtml(p, prev, next) {
 </html>`;
 }
 
+// ---------- 生成 llms.txt(AI 友好的纯文本清单,按时间倒序) ----------
+// 文档参考:https://llmstxt.org
+// 一篇一段,含标题/作者/日期/摘要/原文绝对链接,便于 AI 一次抓全站
+function buildLlmsTxt(visiblePosts) {
+  const lines = [];
+  lines.push('# ' + '碎碎念留档');
+  lines.push('');
+  lines.push('> 私人的多作者记录站 · 安静、干净、偏生活化。');
+  lines.push('> 作者:于加 / 江予朔 / 周叙 / 共同存档。');
+  lines.push('> 内容分类:日常碎碎念 / 长文/正式记录 / 图片/相册 / 代码/创作 / 音乐/歌单 / 存档/备份。');
+  lines.push('');
+  lines.push('## 文章清单(按时间倒序)');
+  lines.push('');
+  visiblePosts.forEach(p => {
+    const url = `${SITE_URL}posts/${encodeURIComponent(p.slug)}.html`;
+    const date = p.createdAt ? formatTime(p.createdAt).slice(0, 10) : '未注明';
+    const author = authorName(p.author);
+    const cat = categoryName(p.category);
+    lines.push(`### ${p.title}`);
+    lines.push(`- 作者:${author}`);
+    lines.push(`- 分类:${cat}`);
+    lines.push(`- 日期:${date}`);
+    if (p.tags && p.tags.length) lines.push(`- 标签:${p.tags.join(', ')}`);
+    lines.push(`- 摘要:${p.excerpt || '(无摘要)'}`);
+    lines.push(`- 原文链接:${url}`);
+    lines.push('');
+  });
+  lines.push('## 完整正文归档');
+  lines.push('');
+  lines.push(`- 全部文章正文拼接页:${SITE_URL}all-posts.html`);
+  lines.push('- 站点地图:' + SITE_URL + 'sitemap.xml');
+  lines.push('');
+  return lines.join('\n');
+}
+
+// ---------- 生成 all-posts.html(全部公开文章正文拼接,纯静态源码可见) ----------
+// 一页放完全部正文,无 JS 异步加载,爬虫一次抓全站
+function buildAllPostsHtml(visiblePosts) {
+  const sections = visiblePosts.map((p, i) => {
+    const body = renderMarkdown(p.content || '');
+    const author = authorName(p.author);
+    const category = categoryName(p.category);
+    const tags = (p.tags || []).map(t =>
+      `<a class="tag" href="#/tag/${encodeURIComponent(t)}">#${escapeHtml(t)}</a>`
+    ).join('');
+    const imgs = (p.images || []).map(src =>
+      `<a href="${escapeHtml(src)}" target="_blank" rel="noopener"><img src="${escapeHtml(src)}" alt="" loading="lazy"></a>`
+    ).join('');
+    const url = `${SITE_URL}posts/${encodeURIComponent(p.slug)}.html`;
+    const time = formatTime(p.createdAt);
+    const upd = (p.updatedAt && p.updatedAt !== p.createdAt) ? ' · 更新于 ' + formatTime(p.updatedAt) : '';
+    return `<article class="post" id="post-${escapeHtml(p.slug)}">
+      <div class="card-meta">
+        <span class="meta-author">${escapeHtml(author)}</span>
+        <span class="meta-sep">·</span>
+        <a class="meta-cat" href="#/category/${encodeURIComponent(p.category)}">${escapeHtml(category)}</a>
+        ${p.pinned ? '<span class="pin">置顶</span>' : ''}
+      </div>
+      <h2 class="post-title"><a href="${url}">${escapeHtml(p.title || '(无题)')}</a></h2>
+      <div class="post-time">${time}${upd}</div>
+      <div class="post-body">${body}</div>
+      ${imgs ? `<div class="post-gallery">${imgs}</div>` : ''}
+      ${tags ? `<div class="post-tags">${tags}</div>` : ''}
+      <p class="post-permalink">原文链接:<a href="${url}">${url}</a></p>
+    </article>`;
+  }).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>全部文章归档 · 碎碎念留档</title>
+  <meta name="description" content="本站全部文章正文拼接归档,共 ${visiblePosts.length} 篇,纯文本可见,便于一次性读取。">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#5b6f8a">
+  <link rel="canonical" href="${SITE_URL}all-posts.html">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a href="index.html" class="brand">
+        <span class="brand-title">碎碎念留档</span>
+        <span class="brand-sub">全部文章归档 · ${visiblePosts.length} 篇</span>
+      </a>
+      <nav class="nav-top">
+        <a href="index.html">首页</a>
+        <a href="#/author">作者</a>
+        <a href="#/category">分类</a>
+        <a href="#/about">关于</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="block">
+      <h1 class="block-title">全部文章归档</h1>
+      <p class="block-sub">共 ${visiblePosts.length} 篇 · 正文纯静态拼接,按时间倒序排列。</p>
+    </section>
+    ${sections}
+  </main>
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>私人记录站 · 不是公开社交平台</span>
+    </div>
+  </footer>
+</body>
+</html>`;
+}
+
 // ---------- 生成 sitemap.xml ----------
 function buildSitemap(visiblePosts) {
   const urls = [
     `  <url>\n    <loc>${SITE_URL}</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>`,
     `  <url>\n    <loc>${SITE_URL}#/author</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`,
-    `  <url>\n    <loc>${SITE_URL}#/category</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`
+    `  <url>\n    <loc>${SITE_URL}#/category</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`,
+    `  <url>\n    <loc>${SITE_URL}llms.txt</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>`,
+    `  <url>\n    <loc>${SITE_URL}all-posts.html</loc>\n    <changefreq>daily</changefreq>\n    <priority>0.9</priority>\n  </url>`
   ];
   visiblePosts.forEach(p => {
     const lastmod = p.createdAt ? new Date(p.createdAt).toISOString().slice(0, 10) : '';
@@ -323,10 +438,16 @@ function build() {
     fs.writeFileSync(path.join(POSTS_DIR, p.slug + '.html'), buildPostHtml(p, prev, next), 'utf8');
   });
 
-  // 3. sitemap.xml
+  // 3. llms.txt(AI 友好的纯文本清单)
+  fs.writeFileSync(LLMS_TXT, buildLlmsTxt(visible), 'utf8');
+
+  // 4. all-posts.html(全部正文拼接,纯静态源码可见)
+  fs.writeFileSync(ALL_POSTS_HTML, buildAllPostsHtml(visible), 'utf8');
+
+  // 5. sitemap.xml(包含首页、作者/分类、llms.txt、all-posts.html、各文章)
   fs.writeFileSync(SITEMAP, buildSitemap(visible), 'utf8');
 
-  console.log(`[build] index.json · ${posts.length} 篇(${visible.length} 篇公开已生成静态页) · sitemap.xml`);
+  console.log(`[build] index.json · ${posts.length} 篇(${visible.length} 篇公开) · 静态页 ×${visible.length} · llms.txt · all-posts.html · sitemap.xml`);
 }
 
 build();
