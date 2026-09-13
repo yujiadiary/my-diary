@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# 允许 DeepSeekBot 抓取
+User-agent: DeepSeekBot
+Allow: /
+
+Sitemap: /sitemap.xml

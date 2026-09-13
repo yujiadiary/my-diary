@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 · 碎碎念留档</title>
+  <script>
+    // 把所有路径交回 SPA 处理,避免 #/ 路由被 404 截断
+    var path = location.pathname;
+    if (path && path !== '/404.html' && path !== '/404') {
+      // 保留原查询,重定向到首页对应 hash
+      var target = '/' + (location.hash || '#/');
+      location.replace(target);
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+  <main class="wrap" style="text-align:center;padding-top:80px">
+    <h1 class="block-title" style="font-size:22px">这里什么都没有</h1>
+    <p class="empty">可能链接已失效,或者内容被隐藏了。<br><a href="#/" class="btn primary" style="margin-top:16px">回首页</a></p>
+  </main>
+</body>
+</html>
