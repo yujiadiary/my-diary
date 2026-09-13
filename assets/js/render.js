@@ -65,9 +65,13 @@
   }
 
   // ---------- 组件:文章卡片 ----------
+  // 卡片标题链接到 build.js 生成的静态页 posts/<slug>.html(SSG,正文在 HTML 源码里可见,利于 SEO)
+  // hash 路由 #/post/<slug> 保留作 fallback,但默认入口走静态页
   function postCard(p) {
     const cover = (p.images && p.images[0]) ? `<div class="card-cover"><img src="${h(p.images[0])}" alt="" loading="lazy"></div>` : '';
     const tags = (p.tags || []).map(t => `<a href="#/tag/${encodeURIComponent(t)}" class="tag">#${h(t)}</a>`).join('');
+    const slug = p.slug || p.id;
+    const postHref = slug ? `posts/${slug}.html` : `#/post/${slug}`;
     return `<article class="card">
       ${cover}
       <div class="card-body">
@@ -77,7 +81,7 @@
           <a class="meta-cat" href="#/category/${p.category}">${h(categoryName(p.category))}</a>
           ${p.pinned ? '<span class="pin">置顶</span>' : ''}
         </div>
-        <h3 class="card-title"><a href="#/post/${p.slug || p.id}">${h(p.title || '(无题)')}</a></h3>
+        <h3 class="card-title"><a href="${postHref}">${h(p.title || '(无题)')}</a></h3>
         <p class="card-excerpt">${h(excerpt(p.content, 120))}</p>
         <div class="card-foot">
           <span class="meta-time">${fmtDateShort(p.createdAt)}</span>

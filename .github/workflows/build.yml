@@ -1,4 +1,4 @@
-name: Build posts index
+name: Build static pages
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: build-posts-index
+  group: build-static-pages
   cancel-in-progress: false
 
 jobs:
@@ -34,15 +34,18 @@ jobs:
       - name: Run build.js
         run: node build.js
 
-      - name: Commit updated index.json
+      - name: Commit generated files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- posts/index.json; then
-            echo "index.json 无变化,跳过提交"
+          # 暂存 build.js 生成物:index.json / posts/*.html / sitemap.xml
+          # posts/ 下源 .md 由上游 commit 带入,这里只提交生成物,不会动到 .md
+          git add posts/index.json sitemap.xml
+          git add 'posts/*.html'
+          if git diff --cached --quiet; then
+            echo "生成物无变化,跳过提交"
           else
-            git add posts/index.json
-            git commit -m "chore: 自动重建 posts/index.json [skip ci]"
+            git commit -m "chore: 自动重建静态页/索引/sitemap [skip ci]"
             git push
-            echo "已提交新的 index.json"
+            echo "已提交生成物"
           fi

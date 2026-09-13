@@ -5,4 +5,4 @@ Allow: /
 User-agent: DeepSeekBot
 Allow: /
 
-Sitemap: /sitemap.xml
+Sitemap: https://yujiadiary.github.io/my-diary/sitemap.xml
