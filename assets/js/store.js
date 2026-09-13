@@ -1,149 +1,160 @@
-// 数据层:通过 fetch 调 Cloudflare Pages Functions + D1
-// 所有方法都是 async,前端调用方需要 await
+// 数据层:从 posts/index.json 读取(由 build.js 在部署时生成)
+// 内容来源:posts/*.md 文件,通过 PagesCMS / git 提交
+// 所有方法都是 async,但实际只有一次网络请求(取 index.json 后本地过滤)
 (function () {
   const cfg = window.DiaryConfig;
-  const api = cfg.apiBase;
 
-  // ---------- fetch 封装 ----------
-  async function request(path, options) {
-    options = options || {};
-    const headers = Object.assign({}, options.headers || {});
-    if (options.body && typeof options.body !== 'string') {
-      headers['Content-Type'] = 'application/json';
-      options.body = JSON.stringify(options.body);
-    }
-    const token = localStorage.getItem(cfg.tokenKey);
-    if (token) headers['Authorization'] = 'Bearer ' + token;
+  // 单次取回的索引,内部缓存避免重复 fetch
+  let _cache = null;
+  let _fetching = null;
 
-    let res;
-    try {
-      res = await fetch(api + path, Object.assign({}, options, { headers }));
-    } catch (e) {
-      throw new Error('网络错误:无法连接服务器');
-    }
-    let data = null;
-    const ct = res.headers.get('content-type') || '';
-    if (ct.includes('application/json')) {
-      try { data = await res.json(); } catch (e) { data = null; }
-    }
-    if (!res.ok) {
-      const msg = (data && data.error) || ('HTTP ' + res.status);
-      const err = new Error(msg);
-      err.status = res.status;
-      err.data = data;
-      throw err;
-    }
-    return data;
+  // 拼出 index.json 的实际 URL(同源相对路径,子路径部署也正确)
+  function indexUrl() {
+    const p = location.pathname.replace(/\/[^/]*$/, '/');
+    return p + 'posts/index.json';
   }
 
-  function setToken(token) {
-    if (token) localStorage.setItem(cfg.tokenKey, token);
-    else localStorage.removeItem(cfg.tokenKey);
+  async function getIndex() {
+    if (_cache) return _cache;
+    if (_fetching) return _fetching;
+    _fetching = fetch(indexUrl(), { cache: 'no-cache' })
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(data => {
+        _cache = data;
+        _fetching = null;
+        return data;
+      })
+      .catch(e => {
+        _fetching = null;
+        throw e;
+      });
+    return _fetching;
   }
 
-  // ---------- 鉴权 ----------
-  const auth = {
-    async login(password) {
-      const data = await request('/login', { method: 'POST', body: { password } });
-      setToken(data.token);
-      return data;
-    },
-    isLoggedIn() {
-      return !!localStorage.getItem(cfg.tokenKey);
-    },
-    logout() {
-      localStorage.removeItem(cfg.tokenKey);
-    }
-  };
+  // 公开列表:排除草稿 / 隐藏 / 已删除
+  function visiblePosts(all) {
+    return (all || []).filter(p => !p.draft && !p.hidden);
+  }
 
-  // ---------- 帖子 ----------
+  // 排序:置顶优先,然后 createdAt 降序
+  function sortPosts(list) {
+    return list.slice().sort((a, b) => {
+      if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tb - ta;
+    });
+  }
+
+  function applyFilter(list, filter) {
+    filter = filter || {};
+    let out = list;
+    if (filter.author) out = out.filter(p => p.author === filter.author);
+    if (filter.category) out = out.filter(p => p.category === filter.category);
+    if (filter.tag) out = out.filter(p => (p.tags || []).includes(filter.tag));
+    if (filter.q) {
+      const q = String(filter.q).toLowerCase();
+      out = out.filter(p => {
+        const hay = (
+          (p.title || '') + '\n' +
+          (p.content || '') + '\n' +
+          (p.tags || []).join(' ')
+        ).toLowerCase();
+        return hay.includes(q);
+      });
+    }
+    return out;
+  }
+
+  function paginate(list, filter) {
+    const page = filter.page ? parseInt(filter.page, 10) || 1 : 1;
+    const size = filter.pageSize || cfg.pageSize || 10;
+    const total = list.length;
+    const pages = Math.max(1, Math.ceil(total / size));
+    const start = (page - 1) * size;
+    return {
+      list: list.slice(start, start + size),
+      total,
+      page,
+      pages
+    };
+  }
+
+  // ---------- 帖子接口(保留旧 API 形状,前端不用大改) ----------
   const posts = {
-    // 前台用:listMode 缺省=public(只看已发布未隐藏未删)
     async listPublic(filter) {
-      const q = new URLSearchParams();
-      if (filter) {
-        if (filter.author) q.set('author', filter.author);
-        if (filter.category) q.set('category', filter.category);
-        if (filter.tag) q.set('tag', filter.tag);
-        if (filter.q) q.set('q', filter.q);
-        if (filter.page) q.set('page', filter.page);
-        if (filter.pageSize) q.set('pageSize', filter.pageSize);
-      }
-      const data = await request('/posts?' + q.toString());
-      return data;
+      const data = await getIndex();
+      const all = sortPosts(visiblePosts(data.posts || []));
+      const filtered = applyFilter(all, filter || {});
+      return paginate(filtered, filter || {});
     },
-
-    // 后台用
-    async listAll() { return request('/posts?listMode=all'); },
-    async listDrafts() { return request('/posts?listMode=drafts'); },
-    async listTrash() { return request('/posts?listMode=trash'); },
 
     async byId(id) {
-      const data = await request('/posts/' + encodeURIComponent(id));
-      return data.post;
+      const data = await getIndex();
+      const all = visiblePosts(data.posts || []);
+      const p = all.find(x => x.slug === id || x.id === id);
+      // 兼容:旧路由可能传的是 id 字段;新版本 slug 即 id
+      return p || null;
     },
 
-    async create(data) {
-      const r = await request('/posts', { method: 'POST', body: data });
-      return r.post;
-    },
-    async update(id, data) {
-      const r = await request('/posts/' + encodeURIComponent(id), { method: 'PUT', body: data });
-      return r.post;
-    },
-    async togglePin(id) {
-      const r = await request('/posts/' + encodeURIComponent(id) + '/pin', { method: 'POST' });
-      return r;
-    },
-    async toggleHide(id) {
-      const r = await request('/posts/' + encodeURIComponent(id) + '/hide', { method: 'POST' });
-      return r;
-    },
-    async softDelete(id) {
-      return request('/posts/' + encodeURIComponent(id), { method: 'DELETE' });
-    },
-    async restore(id) {
-      return request('/posts/' + encodeURIComponent(id) + '/restore', { method: 'POST' });
-    },
-    async permanentDelete(id) {
-      return request('/posts/' + encodeURIComponent(id) + '/permanent', { method: 'DELETE' });
-    },
-    async emptyTrash() {
-      return request('/posts/empty-trash', { method: 'POST' });
-    },
-    async seedIfEmpty() {
-      // 调种子接口(已存在数据则不插)
-      try { return await request('/posts/seed', { method: 'POST' }); }
-      catch (e) { return null; }
-    },
-
-    // 上一篇/下一篇:从前台列表里找
+    // 上一篇/下一篇:基于"全公开列表"找邻居
     async neighbors(id, filter) {
-      const data = await this.listPublic(filter);
-      const list = data.list || [];
-      const i = list.findIndex(p => p.id === id);
+      const data = await getIndex();
+      const all = sortPosts(visiblePosts(data.posts || []));
+      const i = all.findIndex(p => p.slug === id || p.id === id);
       if (i < 0) return { prev: null, next: null };
+      // list 已按时间倒序:下一篇是更早的(prev index > i),上一篇是更晚的(next index < i)
+      // 但 UI 上"上一篇"通常指更早的,所以这里反过来对齐 UI 习惯
       return {
-        prev: i + 1 < list.length ? list[i + 1] : null,
-        next: i - 1 >= 0 ? list[i - 1] : null
+        prev: i + 1 < all.length ? all[i + 1] : null,
+        next: i - 1 >= 0 ? all[i - 1] : null
       };
     },
 
-    async exportAll() {
-      // 后台导出走 API;前台下载
-      return request('/export');
+    // 兼容字段(为渲染层):旧代码用 p.id,新代码统一用 p.slug
+    // 这里在 byId 返回时补一个 id 别名
+    async byIdWithAlias(id) {
+      const p = await this.byId(id);
+      if (p && !p.id) p.id = p.slug;
+      return p;
+    },
+
+    // 统计各作者 / 分类条数(给作者页/分类页索引用)
+    async counts() {
+      const data = await getIndex();
+      const all = visiblePosts(data.posts || []);
+      const byAuthor = {}, byCategory = {};
+      all.forEach(p => {
+        byAuthor[p.author] = (byAuthor[p.author] || 0) + 1;
+        byCategory[p.category] = (byCategory[p.category] || 0) + 1;
+      });
+      return { byAuthor, byCategory, total: all.length };
     }
   };
 
+  // ---------- 鉴权(已废弃,留空兼容) ----------
+  // 内容现在通过 PagesCMS + git 管理,网站本身没有"后台登录"概念
+  // 旧调用方调用这些方法不会报错,但啥也不做
+  const auth = {
+    async login() { return { token: null }; },
+    isLoggedIn() { return false; },
+    logout() {}
+  };
+
+  // ---------- 标签解析 ----------
   function parseTags(input) {
     if (!input) return [];
     if (Array.isArray(input)) return input;
     return String(input).split(/[,，]/).map(t => t.trim()).filter(Boolean);
   }
 
-  // 下载导出 JSON(后台用)
+  // ---------- 导出(给前端旧代码兜底) ----------
+  // 数据已经全在 git 里了,导出备份的意义弱化;提供一个把当前 index 落地的实现
   async function downloadExportJSON() {
-    const data = await posts.exportAll();
+    const data = await getIndex();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -155,5 +166,5 @@
     URL.revokeObjectURL(url);
   }
 
-  window.DiaryStore = { auth, posts, parseTags, downloadExportJSON, request };
+  window.DiaryStore = { auth, posts, parseTags, downloadExportJSON, getIndex, visiblePosts, sortPosts };
 })();

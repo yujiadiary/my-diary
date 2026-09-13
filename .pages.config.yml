@@ -1,0 +1,111 @@
+# PagesCMS 配置
+# 文档:https://pagescms.org/docs/
+#
+# 这个文件告诉 PagesCMS:
+#   - 哪个目录是"文章"集合(posts/)
+#   - 每篇文章有哪些字段、字段类型、可选值
+#   - 图片附件存哪
+# 配好之后,在 https://pagescms.org 添加仓库 yujiadiary/my-diary 就能直接
+# 用图形界面发帖/编辑,改完它会作为 .md 文件 commit 到 posts/ 目录,
+# Cloudflare Pages 检测到推送 → 跑 build.js → 前台刷新同步。
+
+media:
+  input: assets/uploads
+  output: /uploads
+
+content:
+  - name: posts
+    label: 文章
+    path: posts
+    type: collection
+    create: true
+    view:
+      fields: [title, author, category, createdAt]
+      primary: title
+      sort: createdAt
+      default: descending
+    fields:
+      - name: title
+        label: 标题
+        type: string
+        required: true
+
+      - name: author
+        label: 作者
+        type: select
+        required: true
+        default: yu
+        options:
+          - { label: "于加",       value: "yu" }
+          - { label: "江予朔",     value: "jiang" }
+          - { label: "周叙",       value: "zhou" }
+          - { label: "共同存档",   value: "archive" }
+
+      - name: category
+        label: 分类
+        type: select
+        required: true
+        default: daily
+        options:
+          - { label: "日常碎碎念",    value: "daily" }
+          - { label: "长文/正式记录", value: "long" }
+          - { label: "图片/相册",     value: "photo" }
+          - { label: "代码/创作",     value: "code" }
+          - { label: "音乐/歌单",     value: "music" }
+          - { label: "存档/备份",     value: "backup" }
+
+      - name: tags
+        label: 标签
+        type: string
+        list: true
+
+      - name: images
+        label: 图片外链
+        type: string
+        list: true
+        description: 每行一个图片 URL(图床 / GitHub raw / R2 公共链接)
+
+      - name: pinned
+        label: 置顶
+        type: boolean
+        default: false
+        description: 勾选后该篇会排在所有列表的最前
+
+      - name: hidden
+        label: 隐藏
+        type: boolean
+        default: false
+        description: 勾选后前台不会显示这篇
+
+      - name: draft
+        label: 草稿
+        type: boolean
+        default: false
+        description: 勾选后前台不会显示这篇
+
+      - name: createdAt
+        label: 创建时间
+        type: date
+        required: true
+        options:
+          time: true
+          format: yyyy-mm-dd
+
+      - name: updatedAt
+        label: 更新时间
+        type: date
+        options:
+          time: true
+          format: yyyy-mm-dd
+
+      - name: body
+        label: 正文
+        type: rich-text
+        description: 支持换行、> 引用、```代码块```、图片链接
+
+# 如果以后要加别的集合(比如「关于页」内容也走 CMS 管理),可以再加:
+#  - name: pages
+#    label: 单页
+#    path: pages
+#    type: file
+#    fields: [...]

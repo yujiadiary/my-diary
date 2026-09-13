@@ -27,12 +27,10 @@
     .on('/post/:id',  V.pagePost)
     .on('/about',     V.pageAbout)
     .on('/search',    V.pageSearch)
-    // 后台
+    // 后台(内容管理走 PagesCMS,这里只读 + 引导)
     .on('/admin',            A.list)
-    .on('/admin/new',        A.editor)
-    .on('/admin/edit/:id',   A.editor)
-    .on('/admin/drafts',     A.drafts)
-    .on('/admin/trash',      A.trash)
+    .on('/admin/guide',      A.guide)
+    .on('/admin/fields',     A.fields)
     .on('/admin/settings',   A.settings)
     .notFound(() => {
       document.getElementById('view').innerHTML =

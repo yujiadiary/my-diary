@@ -28,17 +28,9 @@ window.DiaryConfig = {
   // 长文折叠阈值(字符数)
   foldLength: 600,
 
-  // ---------- API 配置 ----------
-  // 自动判断:同源走相对路径 /api,部署到子路径也正确
-  apiBase: (function () {
-    // 用当前 HTML 文件所在目录 + api/ 拼出 API 基址
-    // 这样无论是根部署还是 GitHub Pages 子路径都能用
-    var p = location.pathname.replace(/\/[^/]*$/, '/');
-    return p + 'api';
-  })(),
-
-  // token 在 localStorage 里的 key
-  tokenKey: 'diary.token',
+  // 内容来源:posts/*.md 文件,通过 PagesCMS / git 提交
+  // 部署时由 build.js 扫描生成 posts/index.json,前台 fetch 这个文件
+  // 无后端,无登录,跨设备刷新即同步
 
   authorById(id) {
     return this.authors.find(a => a.id === id) || null;

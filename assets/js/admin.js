@@ -1,25 +1,21 @@
-// 后台:登录、发帖/编辑、管理列表、草稿、回收站、设置
-// 只有路由命中 admin 时才会渲染;未登录则只显示登录页
-// 全部页面函数都是 async
+// "后台"页:内容现在通过 PagesCMS + git 管理,网站本身没有登录态
+// 这里只是一个引导页,告诉你去哪发帖、怎么管理
 (function () {
   const cfg = window.DiaryConfig;
   const store = window.DiaryStore;
-  const md = window.DiaryMD;
-  const router = window.DiaryRouter;
   const V = window.DiaryView;
   const view = () => document.getElementById('view');
 
-  async function requireLogin(then) {
-    if (store.auth.isLoggedIn()) return then();
-    renderLogin();
-  }
+  // GitHub 仓库地址(从 cfg 推不出来,硬编码;改仓库名改这里)
+  const REPO = 'yujiadiary/my-diary';
+  const GITHUB_URL = `https://github.com/${REPO}`;
+  const PAGESCMS_URL = 'https://pagescms.org';
 
   function adminShell(active, inner) {
     const tabs = [
       ['admin', '管理'],
-      ['admin/new', '发帖'],
-      ['admin/drafts', '草稿'],
-      ['admin/trash', '回收站'],
+      ['admin/guide', '发帖指引'],
+      ['admin/fields', '字段说明'],
       ['admin/settings', '设置']
     ];
     let nav = '<nav class="admin-tabs">';
@@ -29,318 +25,173 @@
     return `<div class="admin">${nav}${inner}</div>`;
   }
 
-  // ---------- 登录 ----------
-  function renderLogin() {
-    view().innerHTML = `<div class="admin-login">
-      <h2>后台登录</h2>
-      <p class="block-sub">这是私人后台,请输入密码。</p>
-      <form id="login-form" class="admin-form">
-        <label>密码<input type="password" id="login-pw" required></label>
-        <button type="submit" class="btn primary">登录</button>
-      </form>
-      <p class="hint">密码由 Cloudflare 环境变量 ADMIN_PASSWORD 控制,联系部署者修改。</p>
-    </div>`;
-    document.getElementById('login-form').addEventListener('submit', async e => {
-      e.preventDefault();
-      const pw = document.getElementById('login-pw').value;
-      try {
-        await store.auth.login(pw);
-        V.toast('登录成功');
-        router.refresh();
-      } catch (err) {
-        V.toast('密码不对', 'error');
-      }
-    });
-  }
-
-  // ---------- 管理列表 ----------
+  // ---------- 管理:列出当前所有 Markdown 文件 ----------
   async function renderList() {
-    await requireLogin(async () => {
-      let data;
-      try { data = await store.posts.listAll(); }
-      catch (e) { V.toast('加载失败:' + e.message, 'error'); return; }
-      const list = data.list || [];
-      let draftsCount = 0, trashCount = 0;
-      try {
-        const d = await store.posts.listDrafts(); draftsCount = (d.list || []).length;
-        const t = await store.posts.listTrash(); trashCount = (t.list || []).length;
-      } catch (e) {}
-
-      let rows = '';
-      if (!list.length) rows = '<p class="empty">还没有内容,去"发帖"里写第一条吧。</p>';
-      list.forEach(p => {
-        const flags = [];
-        if (p.pinned) flags.push('置顶');
-        if (p.hidden) flags.push('隐藏');
-        if (p.draft) flags.push('草稿');
-        rows += `<tr class="${p.draft ? 'is-draft' : ''} ${p.hidden ? 'is-hidden' : ''}">
-          <td class="col-title"><a href="#/post/${p.id}" target="_blank">${V.h(p.title || '(无题)')}</a>
-            ${flags.length ? '<span class="row-flags">' + flags.map(f => `<i>${f}</i>`).join('') + '</span>' : ''}
-          </td>
-          <td>${V.h(V.authorName(p.author))}</td>
-          <td>${V.h(V.categoryName(p.category))}</td>
-          <td class="col-time">${V.fmtDateShort(p.createdAt)}</td>
-          <td class="col-actions">
-            <a href="#/admin/edit/${p.id}">编辑</a>
-            <button data-act="pin" data-id="${p.id}">${p.pinned ? '取消置顶' : '置顶'}</button>
-            <button data-act="hide" data-id="${p.id}">${p.hidden ? '显示' : '隐藏'}</button>
-            <button data-act="del" data-id="${p.id}" class="danger">删除</button>
-          </td>
-        </tr>`;
-      });
-      const inner = `
-        <div class="admin-stats">
-          <span>已发布 ${list.filter(p => !p.draft).length}</span>
-          <a href="#/admin/drafts">草稿 ${draftsCount}</a>
-          <a href="#/admin/trash">回收站 ${trashCount}</a>
-        </div>
-        <div class="table-wrap"><table class="admin-table">
-          <thead><tr><th>标题</th><th>作者</th><th>分类</th><th>时间</th><th>操作</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table></div>`;
-      view().innerHTML = adminShell('admin', inner);
-      bindRowActions();
+    let list = [];
+    let total = 0;
+    try {
+      // 这里调 listPublic 但 pageSize 设很大,把全部(包括隐藏/草稿)显示
+      // 不过 listPublic 只返回 visible;要全部得直接拿 index
+      const data = await store.getIndex();
+      list = (data.posts || []).slice();
+      total = list.length;
+    } catch (e) {
+      view().innerHTML = adminShell('admin', `<p class="empty">加载失败:${V.h(e.message)}</p>`);
+      return;
+    }
+    // 按 createdAt 倒序
+    list.sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tb - ta;
     });
-  }
-
-  function bindRowActions() {
-    view().querySelectorAll('button[data-act]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const act = btn.dataset.act;
-        const id = btn.dataset.id;
-        try {
-          if (act === 'pin') { await store.posts.togglePin(id); V.toast('已更新'); await renderList(); }
-          else if (act === 'hide') { await store.posts.toggleHide(id); V.toast('已更新'); await renderList(); }
-          else if (act === 'del') {
-            if (confirm('移到回收站?稍后可恢复。')) { await store.posts.softDelete(id); V.toast('已移入回收站'); await renderList(); }
-          }
-        } catch (e) { V.toast('操作失败:' + e.message, 'error'); }
-      });
+    let rows = '';
+    if (!list.length) rows = '<p class="empty">还没有任何内容。去 PagesCMS 写第一条吧。</p>';
+    list.forEach(p => {
+      const flags = [];
+      if (p.pinned) flags.push('置顶');
+      if (p.hidden) flags.push('隐藏');
+      if (p.draft) flags.push('草稿');
+      rows += `<tr class="${p.draft ? 'is-draft' : ''} ${p.hidden ? 'is-hidden' : ''}">
+        <td class="col-title">
+          <a href="${GITHUB_URL}/blob/main/posts/${encodeURIComponent(p.slug)}.md" target="_blank" rel="noopener">${V.h(p.title || '(无题)')}</a>
+          ${flags.length ? '<span class="row-flags">' + flags.map(f => `<i>${f}</i>`).join('') + '</span>' : ''}
+          <small class="row-slug">posts/${V.h(p.slug)}.md</small>
+        </td>
+        <td>${V.h(V.authorName(p.author))}</td>
+        <td>${V.h(V.categoryName(p.category))}</td>
+        <td class="col-time">${V.fmtDateShort(p.createdAt)}</td>
+      </tr>`;
     });
-  }
-
-  // ---------- 草稿 ----------
-  async function renderDrafts() {
-    await requireLogin(async () => {
-      let list = [];
-      try { const d = await store.posts.listDrafts(); list = d.list || []; }
-      catch (e) { V.toast('加载失败', 'error'); }
-      const rows = list.length ? list.map(p => draftRow(p)).join('') : '<p class="empty">没有草稿。</p>';
-      view().innerHTML = adminShell('admin/drafts', `<div class="admin-stats"><span>草稿 ${list.length} 条</span></div>${rows}`);
-      bindDraftActions();
-    });
-  }
-  function draftRow(p) {
-    return `<div class="draft-row">
-      <div><a href="#/admin/edit/${p.id}">${V.h(p.title || '(无题)')}</a>
-      <span class="row-flags"><i>草稿</i></span></div>
-      <div class="draft-time">${V.fmtDateShort(p.updatedAt || p.createdAt)}</div>
-      <div class="col-actions">
-        <a href="#/admin/edit/${p.id}">继续编辑</a>
-        <button data-act="publish" data-id="${p.id}" class="primary">发布</button>
-        <button data-act="del" data-id="${p.id}" class="danger">删除</button>
+    const inner = `
+      <div class="admin-stats">
+        <span>共 ${total} 条</span>
+        <a href="${PAGESCMS_URL}" target="_blank" rel="noopener" class="btn primary">前往 PagesCMS 发帖 →</a>
       </div>
-    </div>`;
-  }
-  function bindDraftActions() {
-    view().querySelectorAll('button[data-act]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.id;
-        try {
-          if (btn.dataset.act === 'publish') {
-            await store.posts.update(id, { draft: false });
-            V.toast('已发布'); await renderDrafts();
-          } else if (btn.dataset.act === 'del') {
-            if (confirm('移到回收站?')) { await store.posts.softDelete(id); V.toast('已移入回收站'); await renderDrafts(); }
-          }
-        } catch (e) { V.toast('操作失败:' + e.message, 'error'); }
-      });
-    });
+      <p class="hint">这是只读视图,所有编辑在 PagesCMS(或直接在 GitHub 网页编辑 Markdown 文件)完成。修改提交后,Cloudflare Pages 会自动重新构建,前台随之更新。</p>
+      <div class="table-wrap"><table class="admin-table">
+        <thead><tr><th>标题(点开看源文件)</th><th>作者</th><th>分类</th><th>时间</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+    view().innerHTML = adminShell('admin', inner);
   }
 
-  // ---------- 回收站 ----------
-  async function renderTrash() {
-    await requireLogin(async () => {
-      let list = [];
-      try { const d = await store.posts.listTrash(); list = d.list || []; }
-      catch (e) {}
-      const rows = list.length ? list.map(p => `<div class="draft-row">
-        <div>${V.h(p.title || '(无题)')}</div>
-        <div class="draft-time">${V.fmtDateShort(p.deletedAt)}</div>
-        <div class="col-actions">
-          <button data-act="restore" data-id="${p.id}" class="primary">恢复</button>
-          <button data-act="purge" data-id="${p.id}" class="danger">彻底删除</button>
-        </div>
-      </div>`).join('') : '<p class="empty">回收站是空的。</p>';
-      const extra = list.length ? '<button id="empty-trash" class="danger">清空回收站</button>' : '';
-      view().innerHTML = adminShell('admin/trash', `<div class="admin-stats"><span>回收站 ${list.length} 条</span>${extra}</div>${rows}`);
-      view().querySelectorAll('button[data-act]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.dataset.id;
-          try {
-            if (btn.dataset.act === 'restore') { await store.posts.restore(id); V.toast('已恢复'); await renderTrash(); }
-            else if (btn.dataset.act === 'purge') {
-              if (confirm('彻底删除后无法恢复,确定?')) { await store.posts.permanentDelete(id); V.toast('已删除'); await renderTrash(); }
-            }
-          } catch (e) { V.toast('操作失败:' + e.message, 'error'); }
-        });
-      });
-      const et = document.getElementById('empty-trash');
-      if (et) et.addEventListener('click', async () => {
-        if (confirm('清空全部回收站内容?此操作不可恢复。')) {
-          try { await store.posts.emptyTrash(); V.toast('已清空'); await renderTrash(); }
-          catch (e) { V.toast('操作失败:' + e.message, 'error'); }
-        }
-      });
-    });
+  // ---------- 发帖指引 ----------
+  function renderGuide() {
+    const inner = `
+      <h2 class="block-title">怎么发帖</h2>
+      <div class="post-body">
+        <h3>方式 1:PagesCMS(推荐,手机/电脑都能用)</h3>
+        <ol>
+          <li>打开 <a href="${PAGESCMS_URL}" target="_blank" rel="noopener">pagescms.org</a></li>
+          <li>点 <strong>Add site</strong>,选 GitHub,授权后选仓库 <code>${REPO}</code></li>
+          <li>它会自动读取 <code>.pages.config.yml</code> 配置,识别出"文章"集合和字段</li>
+          <li>点 <strong>Posts</strong> → <strong>New</strong>,填表,保存</li>
+          <li>PagesCMS 会把你的内容作为 Markdown 文件提交到 <code>posts/</code> 目录</li>
+          <li>Cloudflare Pages 检测到推送 → 自动跑 <code>node build.js</code> → 重新生成 <code>posts/index.json</code> → 前台刷新就能看到</li>
+        </ol>
+
+        <h3>方式 2:直接改 GitHub 网页</h3>
+        <ol>
+          <li>去 <a href="${GITHUB_URL}/tree/main/posts" target="_blank" rel="noopener">仓库的 posts 目录</a></li>
+          <li>点 <strong>Add file → Create new file</strong></li>
+          <li>文件名用 <code>YYYY-MM-DD-作者-标题关键词.md</code> 格式(可中英混排)</li>
+          <li>文件内容见下面「字段说明」页</li>
+          <li>提交后同样会自动触发构建</li>
+        </ol>
+
+        <h3>方式 3:本地 git</h3>
+        <ol>
+          <li><code>git clone ${GITHUB_URL}.git</code></li>
+          <li>在 <code>posts/</code> 下新建 .md 文件,格式见「字段说明」</li>
+          <li><code>git add . && git commit -m "new post" && git push</code></li>
+        </ol>
+      </div>`;
+    view().innerHTML = adminShell('admin/guide', inner);
   }
 
-  // ---------- 发帖 / 编辑 ----------
-  async function renderEditor(args) {
-    await requireLogin(async () => {
-      let editing = null;
-      if (args && args.id) {
-        try { editing = await store.posts.byId(args.id); }
-        catch (e) { V.toast('加载失败', 'error'); }
-      }
-      const p = editing || { author: cfg.authors[0].id, category: cfg.categories[0].id, tags: [], images: [], pinned: false, hidden: false, draft: false };
-      const isEdit = !!editing;
+  // ---------- 字段说明 ----------
+  function renderFields() {
+    const authorList = cfg.authors.map(a => `<code>${a.id}</code>(${V.h(a.name)})`).join(' · ');
+    const catList = cfg.categories.map(c => `<code>${c.id}</code>(${V.h(c.name)})`).join(' · ');
+    const inner = `
+      <h2 class="block-title">Markdown 文件格式</h2>
+      <p class="block-sub">每个 .md 文件由 frontmatter(元数据)+ 正文 两部分组成。示例如下:</p>
+      <pre class="code-block">---
+title: 标题
+author: jiang
+category: daily
+tags: [日常, 心情]
+images: []
+pinned: false
+hidden: false
+draft: false
+createdAt: 2026-09-13
+updatedAt: 2026-09-14
+---
 
-      let authorOpts = cfg.authors.map(a => `<option value="${a.id}" ${a.id === p.author ? 'selected' : ''}>${V.h(a.name)}</option>`).join('');
-      let catOpts = cfg.categories.map(c => `<option value="${c.id}" ${c.id === p.category ? 'selected' : ''}>${V.h(c.name)}</option>`).join('');
+这里是正文。支持换行、&gt; 引用、\`\`\`代码块\`\`\`。
 
-      view().innerHTML = adminShell(isEdit ? '' : 'admin/new', `
-        <h2 class="block-title">${isEdit ? '编辑' : '写新内容'}</h2>
-        <form id="editor-form" class="admin-form">
-          <label>标题<input type="text" name="title" value="${V.h(p.title || '')}" placeholder="给这条内容起个名字"></label>
-          <div class="form-row">
-            <label>作者<select name="author">${authorOpts}</select></label>
-            <label>分类<select name="category">${catOpts}</select></label>
-          </div>
-          <label>标签 <small>(逗号分隔)</small><input type="text" name="tags" value="${V.h((p.tags || []).join(', '))}" placeholder="日常, 心情"></label>
-          <label>正文 <small>(支持换行、&gt; 引用、\`\`\`代码块\`\`\`、图片链接)</small>
-            <textarea name="content" rows="14" placeholder="写点什么…">${V.h(p.content || '')}</textarea>
-          </label>
-          <label>图片链接 <small>(每行一个外链,或点下方按钮本地上传,base64 形式存)</small>
-            <textarea name="images" rows="3" placeholder="https://…">${V.h((p.images || []).join('\n'))}</textarea>
-          </label>
-          <div class="upload-row">
-            <input type="file" id="img-file" accept="image/*" multiple>
-            <span class="hint">本地上传的图片以 base64 存入数据库,体积大,只建议小图。</span>
-          </div>
-          <div class="form-checks">
-            <label class="check"><input type="checkbox" name="pinned" ${p.pinned ? 'checked' : ''}> 置顶</label>
-            <label class="check"><input type="checkbox" name="hidden" ${p.hidden ? 'checked' : ''}> 隐藏(前台不显示)</label>
-            <label class="check"><input type="checkbox" name="draft" ${p.draft ? 'checked' : ''}> 存为草稿</label>
-          </div>
-          <div class="form-actions">
-            <button type="submit" name="save" class="btn primary">${isEdit ? '保存修改' : '发布'}</button>
-            <button type="submit" name="saveDraft" class="btn">存为草稿</button>
-            ${isEdit ? `<a class="btn" href="#/admin">取消</a>` : ''}
-          </div>
-        </form>
-      `);
+&gt; 这是一段引用。
 
-      const form = document.getElementById('editor-form');
-      const fileInput = document.getElementById('img-file');
-
-      fileInput.addEventListener('change', () => {
-        const files = Array.from(fileInput.files || []);
-        if (!files.length) return;
-        const ta = form.elements.images;
-        Promise.all(files.map(file => new Promise(res => {
-          const r = new FileReader();
-          r.onload = () => res(r.result);
-          r.readAsDataURL(file);
-        }))).then(urls => {
-          const cur = ta.value.trim();
-          ta.value = (cur ? cur + '\n' : '') + urls.join('\n');
-          V.toast(`已添加 ${urls.length} 张图片(base64)`);
-        });
-      });
-
-      form.addEventListener('submit', async e => {
-        const submitter = e.submitter;
-        const asDraft = submitter && submitter.name === 'saveDraft';
-        if (e.target !== form) return;
-        e.preventDefault();
-        const fd = new FormData(form);
-        const data = {
-          title: fd.get('title'),
-          content: fd.get('content'),
-          author: fd.get('author'),
-          category: fd.get('category'),
-          tags: String(fd.get('tags') || ''),
-          images: String(fd.get('images') || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean),
-          pinned: fd.get('pinned') === 'on',
-          hidden: fd.get('hidden') === 'on',
-          draft: asDraft ? true : fd.get('draft') === 'on'
-        };
-        try {
-          if (isEdit) {
-            await store.posts.update(p.id, data);
-            V.toast('已保存');
-          } else {
-            await store.posts.create(data);
-            V.toast(asDraft ? '草稿已保存' : '已发布');
-          }
-          router.go('/admin');
-        } catch (err) {
-          V.toast('保存失败:' + err.message, 'error');
-        }
-      });
-    });
+\`\`\`
+// 代码块
+console.log('hi');
+\`\`\`</pre>
+      <h3>字段说明</h3>
+      <table class="admin-table">
+        <thead><tr><th>字段</th><th>必填</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>title</code></td><td>是</td><td>标题,字符串</td></tr>
+          <tr><td><code>author</code></td><td>是</td><td>作者 id。可选值:${authorList}</td></tr>
+          <tr><td><code>category</code></td><td>是</td><td>分类 id。可选值:${catList}</td></tr>
+          <tr><td><code>tags</code></td><td>否</td><td>标签数组。<code>[a, b]</code> 或 <code>a, b</code> 都行</td></tr>
+          <tr><td><code>images</code></td><td>否</td><td>图片外链数组,前台会作为画廊显示</td></tr>
+          <tr><td><code>pinned</code></td><td>否</td><td>true/false,置顶(排在所有列表最前)</td></tr>
+          <tr><td><code>hidden</code></td><td>否</td><td>true/false,隐藏(前台不显示)</td></tr>
+          <tr><td><code>draft</code></td><td>否</td><td>true/false,草稿(前台不显示)</td></tr>
+          <tr><td><code>createdAt</code></td><td>否</td><td>创建时间,YYYY-MM-DD(可带时分秒)</td></tr>
+          <tr><td><code>updatedAt</code></td><td>否</td><td>更新时间,同上</td></tr>
+        </tbody>
+      </table>
+      <h3>文件名约定</h3>
+      <p class="hint">建议 <code>YYYY-MM-DD-{作者}-{关键词}.md</code>,例如 <code>2026-09-13-jiang-碎碎念的第一篇.md</code>。文件名会作为文章的唯一 id(slug),改了等于换了一篇。</p>
+      <h3>图片</h3>
+      <p class="hint">图片用外链(图床 / GitHub raw / R2 公共 URL)写入 <code>images</code>。本站不带本地上传能力(纯静态),如果你需要本地上传,把图片拖到 GitHub 仓库的 <code>assets/uploads/</code> 目录,引用时用相对路径 <code>/my-diary/assets/uploads/xxx.jpg</code>。</p>`;
+    view().innerHTML = adminShell('admin/fields', inner);
   }
 
   // ---------- 设置 ----------
   function renderSettings() {
-    requireLogin(() => {
-      view().innerHTML = adminShell('admin/settings', `
-        <h2 class="block-title">设置</h2>
-        <div class="admin-form">
-          <h3>关于密码</h3>
-          <p class="hint">密码由 Cloudflare 环境变量 <code>ADMIN_PASSWORD</code> 控制。要修改,登录 Cloudflare 控制台 → 你的 Pages 项目 → Settings → Environment Variables,改完后重新部署一次生效。</p>
+    const inner = `
+      <h2 class="block-title">设置</h2>
+      <div class="admin-form">
+        <h3>关于"登录"</h3>
+        <p class="hint">当前架构下,网站本身没有登录态。内容管理走 PagesCMS(它有自己的 GitHub 授权),所以网页后台不再需要密码。</p>
 
-          <h3>数据备份</h3>
-          <p class="hint">数据现在存在 Cloudflare D1 数据库,跨设备同步。仍建议定期导出 JSON 留底。</p>
-          <div class="form-actions">
-            <button id="export-btn" class="btn primary">导出全部数据 (JSON)</button>
-          </div>
+        <h3>数据备份</h3>
+        <p class="hint">数据现在已经全部存在 git 仓库的 <code>posts/</code> 目录里。git 本身就是版本控制和备份。如果想导出一份 JSON 留底,点下面按钮:</p>
+        <div class="form-actions">
+          <button id="export-btn" class="btn primary">导出当前数据 (JSON)</button>
+        </div>
 
-          <h3>初始化示例数据</h3>
-          <p class="hint">如果数据库是空的,可以一键插入示例文章。</p>
-          <button id="seed-btn" class="btn">插入示例数据</button>
+        <h3>构建状态</h3>
+        <p class="hint">每次提交后,Cloudflare Pages 会自动跑 <code>node build.js</code> 重新生成索引。如果看不到新文章,先去 Cloudflare 控制台确认这次构建有没有成功。</p>
 
-          <h3>其它</h3>
-          <button id="logout-btn" class="btn">退出登录</button>
-        </div>`);
-
-      document.getElementById('export-btn').addEventListener('click', async () => {
-        try { await store.downloadExportJSON(); V.toast('已开始下载备份文件'); }
-        catch (e) { V.toast('导出失败:' + e.message, 'error'); }
-      });
-      document.getElementById('seed-btn').addEventListener('click', async () => {
-        try {
-          await store.posts.seedIfEmpty();
-          V.toast('已处理(若已存在数据则不会重复插入)');
-          router.refresh();
-        } catch (e) { V.toast('失败:' + e.message, 'error'); }
-      });
-      document.getElementById('logout-btn').addEventListener('click', () => {
-        store.auth.logout();
-        V.toast('已退出');
-        router.go('/');
-      });
+        <h3>仓库链接</h3>
+        <p><a href="${GITHUB_URL}" target="_blank" rel="noopener">${GITHUB_URL}</a></p>
+      </div>`;
+    view().innerHTML = adminShell('admin/settings', inner);
+    document.getElementById('export-btn').addEventListener('click', async () => {
+      try { await store.downloadExportJSON(); V.toast('已开始下载备份'); }
+      catch (e) { V.toast('导出失败:' + e.message, 'error'); }
     });
   }
 
-  // 暴露路由处理函数
   window.DiaryAdmin = {
-    login: renderLogin,
     list: renderList,
-    drafts: renderDrafts,
-    trash: renderTrash,
-    editor: renderEditor,
+    guide: renderGuide,
+    fields: renderFields,
     settings: renderSettings
   };
 })();

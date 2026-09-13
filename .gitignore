@@ -3,7 +3,9 @@ node_modules/
 .vercel/
 .env
 .env.local
-.dev.vars
-.wrangler/
 *.log
 .trae-html-share-packages/
+
+# build.js 生成的索引不进仓库,部署时现生成
+# (这样保证 Cloudflare Pages 重新构建时永远是最新版,避免和源 .md 不同步)
+posts/index.json

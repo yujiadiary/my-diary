@@ -77,7 +77,7 @@
           <a class="meta-cat" href="#/category/${p.category}">${h(categoryName(p.category))}</a>
           ${p.pinned ? '<span class="pin">置顶</span>' : ''}
         </div>
-        <h3 class="card-title"><a href="#/post/${p.id}">${h(p.title || '(无题)')}</a></h3>
+        <h3 class="card-title"><a href="#/post/${p.slug || p.id}">${h(p.title || '(无题)')}</a></h3>
         <p class="card-excerpt">${h(excerpt(p.content, 120))}</p>
         <div class="card-foot">
           <span class="meta-time">${fmtDateShort(p.createdAt)}</span>
@@ -91,12 +91,6 @@
   async function pageHome(args, params) {
     const data = await store.posts.listPublic({ pageSize: 50 });
     const list = data.list || [];
-    // 如果数据库空,调种子接口(已登录则插,未登录则不插,但下次有内容了)
-    if (!list.length) {
-      await store.posts.seedIfEmpty();
-      const data2 = await store.posts.listPublic({ pageSize: 50 });
-      list.push(...(data2.list || []));
-    }
     const pinned = list.filter(p => p.pinned).slice(0, 3);
     const latest = list.slice(0, cfg.pageSize);
 
@@ -155,10 +149,8 @@
 
   // ---------- 页面:作者页 ----------
   async function pageAuthorIndex() {
-    // 用列表统计各作者条数
-    const data = await store.posts.listPublic({ pageSize: 1000 });
-    const all = data.list || [];
-    const countBy = id => all.filter(p => p.author === id).length;
+    const counts = await store.posts.counts();
+    const countBy = id => counts.byAuthor[id] || 0;
 
     let html = '<section class="block"><h2 class="block-title">作者</h2>';
     html += '<div class="author-list">';
@@ -191,9 +183,8 @@
 
   // ---------- 页面:分类页 ----------
   async function pageCategoryIndex() {
-    const data = await store.posts.listPublic({ pageSize: 1000 });
-    const all = data.list || [];
-    const countBy = id => all.filter(p => p.category === id).length;
+    const counts = await store.posts.counts();
+    const countBy = id => counts.byCategory[id] || 0;
 
     let html = '<section class="block"><h2 class="block-title">分类</h2>';
     html += '<div class="author-list">';
@@ -242,17 +233,18 @@
   // ---------- 页面:文章详情 ----------
   async function pagePost(args) {
     let p;
-    try { p = await store.posts.byId(args.id); }
+    try { p = await store.posts.byIdWithAlias(args.id); }
     catch (e) { return view().innerHTML = '<p class="empty">文章不存在或已隐藏。</p>'; }
 
-    if (!p || p.draft || p.hidden || p.deletedAt) {
+    if (!p || p.draft || p.hidden) {
       return view().innerHTML = '<p class="empty">文章不存在或已隐藏。</p>';
     }
-    const { prev, next } = await store.posts.neighbors(p.id);
+    const { prev, next } = await store.posts.neighbors(p.slug || p.id);
     const body = md.render(p.content || '', { fold: p.category !== 'long' });
     const tags = (p.tags || []).map(t => `<a href="#/tag/${encodeURIComponent(t)}" class="tag">#${h(t)}</a>`).join('');
     const imgs = (p.images || []).map(src => `<a href="${h(src)}" target="_blank" rel="noopener"><img src="${h(src)}" alt="" loading="lazy"></a>`).join('');
 
+    const pid = p.slug || p.id;
     let html = '<article class="post">';
     html += `<div class="card-meta">
       <span class="meta-author">${h(authorName(p.author))}</span>
@@ -268,9 +260,9 @@
     html += '</article>';
 
     html += '<nav class="prev-next">';
-    if (prev) html += `<a class="pn prev" href="#/post/${prev.id}"><span class="pn-label">上一篇</span><span class="pn-title">${h(prev.title || '(无题)')}</span></a>`;
+    if (prev) html += `<a class="pn prev" href="#/post/${prev.slug || prev.id}"><span class="pn-label">上一篇</span><span class="pn-title">${h(prev.title || '(无题)')}</span></a>`;
     else html += '<span class="pn placeholder"></span>';
-    if (next) html += `<a class="pn next" href="#/post/${next.id}"><span class="pn-label">下一篇</span><span class="pn-title">${h(next.title || '(无题)')}</span></a>`;
+    if (next) html += `<a class="pn next" href="#/post/${next.slug || next.id}"><span class="pn-label">下一篇</span><span class="pn-title">${h(next.title || '(无题)')}</span></a>`;
     else html += '<span class="pn placeholder"></span>';
     html += '</nav>';
 
