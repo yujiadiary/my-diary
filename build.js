@@ -21,6 +21,7 @@ const LLMS_TXT = path.join(__dirname, 'llms.txt');
 const ALL_POSTS_HTML = path.join(__dirname, 'all-posts.html');
 const FEED_XML = path.join(__dirname, 'feed.xml');
 const ARCHIVES_DIR = path.join(__dirname, 'archives');
+const DAILY_DIR = path.join(__dirname, 'daily');
 
 // 递归删除目录(重建归档用)
 function rimraf(dir) {
@@ -298,6 +299,7 @@ function buildPostHtml(p, prev, next, comments) {
         <a href="../#/author">作者</a>
         <a href="../#/category">分类</a>
         <a href="../archives/">归档</a>
+        <a href="../daily/">每日</a>
         <a href="../#/about">关于</a>
       </nav>
     </div>
@@ -470,6 +472,7 @@ function buildAllPostsHtml(visiblePosts, commentsByPost) {
         <a href="#/author">作者</a>
         <a href="#/category">分类</a>
         <a href="archives/">归档</a>
+        <a href="daily/">每日</a>
         <a href="#/about">关于</a>
       </nav>
     </div>
@@ -524,6 +527,115 @@ function groupByMonth(visiblePosts) {
     const lm = latest ? (latest.updatedAt || latest.createdAt) : '';
     return { ym, posts, lastmod: lm };
   });
+}
+
+// ---------- 按天分组(返回 [{ ymd: '2026-09-13', posts: [...] }],按日期倒序,文章也倒序) ----------
+// 日期直接取 frontmatter 的 YYYY-MM-DD,不做时区转换
+function groupByDay(visiblePosts) {
+  const map = {};
+  visiblePosts.forEach(p => {
+    if (!p.createdAt) return;
+    // 直接取日期字符串前 10 位(YYYY-MM-DD),不做 Date 时区转换,避免跨天
+    const ymd = String(p.createdAt).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return;
+    if (!map[ymd]) map[ymd] = [];
+    map[ymd].push(p);
+  });
+  return Object.keys(map).sort().reverse().map(ymd => {
+    const posts = map[ymd].slice().sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tb - ta;
+    });
+    return { ymd, posts };
+  });
+}
+
+// ---------- 生成 daily/YYYY-MM-DD.txt(纯文本,当天所有文章 + 评论) ----------
+// 格式:日期 / 每篇【标题/作者/正文/评论】;评论按文章归属,不平铺
+function buildDailyTxt(ymd, posts, commentsByPost) {
+  const lines = [];
+  lines.push(`日期:${ymd}`);
+  lines.push('');
+  posts.forEach((p, i) => {
+    const author = authorName(p.author);
+    const body = (p.content || '').trim();
+    lines.push(`【文章${i + 1}】`);
+    lines.push(`标题:${p.title || '(无题)'}`);
+    lines.push(`作者:${author}`);
+    lines.push('正文:');
+    lines.push(body);
+    lines.push('');
+    const cs = commentsByPost[p.slug] || [];
+    if (cs.length) {
+      lines.push('评论:');
+      cs.forEach(c => {
+        const ctext = (c.content || '').replace(/[#>*`]/g, ' ').replace(/\s+/g, ' ').trim();
+        lines.push(`- ${c.author}:${ctext}`);
+      });
+    } else {
+      lines.push('评论:(暂无)');
+    }
+    lines.push('');
+  });
+  return lines.join('\n');
+}
+
+// ---------- 生成 daily/index.html(按日期倒序列出所有每日聚合文件) ----------
+function buildDailyIndex(days) {
+  const items = days.map(d => {
+    const ymd = d.ymd;
+    const count = d.posts.length;
+    return `<li class="archive-item">
+      <a href="${ymd}.txt">${ymd}</a>
+      <span class="archive-count">(${count} 篇)</span>
+    </li>`;
+  }).join('\n');
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>每日归档 · 碎碎念留档</title>
+  <meta name="description" content="按日期聚合的全部文章,共 ${days.length} 天。">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#5b6f8a">
+  <link rel="canonical" href="${SITE_URL}daily/">
+  <link rel="alternate" type="application/rss+xml" title="碎碎念留档" href="${SITE_URL}feed.xml">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a href="../index.html" class="brand">
+        <span class="brand-title">碎碎念留档</span>
+        <span class="brand-sub">每日归档</span>
+      </a>
+      <nav class="nav-top">
+        <a href="../index.html">首页</a>
+        <a href="../#/author">作者</a>
+        <a href="../#/category">分类</a>
+        <a href="../archives/">归档</a>
+        <a href="index.html">每日</a>
+        <a href="../#/about">关于</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="block">
+      <h1 class="block-title">每日归档</h1>
+      <p class="block-sub">按日期聚合的文章,共 ${days.length} 天。点击下载当天 .txt。</p>
+    </section>
+    <ul class="archive-list">${items}</ul>
+  </main>
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>私人记录站 · 不是公开社交平台</span>
+    </div>
+  </footer>
+</body>
+</html>`;
 }
 
 // ---------- 生成 feed.xml(RSS 2.0) ----------
@@ -604,6 +716,7 @@ function buildArchiveIndex(months) {
         <a href="../#/author">作者</a>
         <a href="../#/category">分类</a>
         <a href="index.html">归档</a>
+        <a href="../daily/">每日</a>
         <a href="../#/about">关于</a>
       </nav>
     </div>
@@ -662,6 +775,7 @@ function buildArchiveMonth(ym, posts) {
         <a href="../../#/author">作者</a>
         <a href="../../#/category">分类</a>
         <a href="../index.html">归档</a>
+        <a href="../../daily/">每日</a>
         <a href="../../#/about">关于</a>
       </nav>
     </div>
@@ -683,8 +797,8 @@ function buildArchiveMonth(ym, posts) {
 }
 
 // ---------- 生成 sitemap.xml ----------
-// lastmod 用 W3C Datetime(带时区),含文章、归档索引页、每月归档页、feed.xml、llms.txt、all-posts.html
-function buildSitemap(visiblePosts, months) {
+// lastmod 用 W3C Datetime(带时区),含文章、归档页、每日聚合、feed.xml、llms.txt、all-posts.html
+function buildSitemap(visiblePosts, months, days) {
   const urlEntry = (loc, opts) => {
     const parts = [`    <loc>${loc}</loc>`];
     if (opts.lastmod) parts.push(`    <lastmod>${opts.lastmod}</lastmod>`);
@@ -698,12 +812,20 @@ function buildSitemap(visiblePosts, months) {
     urlEntry(`${SITE_URL}all-posts.html`, { lastmod: now, changefreq: 'daily', priority: '0.9' }),
     urlEntry(`${SITE_URL}llms.txt`, { lastmod: now, changefreq: 'weekly', priority: '0.9' }),
     urlEntry(`${SITE_URL}feed.xml`, { lastmod: now, changefreq: 'daily', priority: '0.9' }),
-    urlEntry(`${SITE_URL}archives/`, { lastmod: now, changefreq: 'weekly', priority: '0.7' })
+    urlEntry(`${SITE_URL}archives/`, { lastmod: now, changefreq: 'weekly', priority: '0.7' }),
+    urlEntry(`${SITE_URL}daily/`, { lastmod: now, changefreq: 'weekly', priority: '0.7' })
   ];
   // 每月归档页
   months.forEach(m => {
     const lm = lastmodW3C(m.lastmod) || now;
     urls.push(urlEntry(`${SITE_URL}archives/${m.ym}/index.html`, {
+      lastmod: lm, changefreq: 'monthly', priority: '0.6'
+    }));
+  });
+  // 每日聚合 txt(只列有文章的天)
+  days.forEach(d => {
+    const lm = lastmodW3C(d.posts[0] ? (d.posts[0].updatedAt || d.posts[0].createdAt) : '') || now;
+    urls.push(urlEntry(`${SITE_URL}daily/${d.ymd}.txt`, {
       lastmod: lm, changefreq: 'monthly', priority: '0.6'
     }));
   });
@@ -797,10 +919,19 @@ function build() {
     fs.writeFileSync(path.join(dir, 'index.html'), buildArchiveMonth(m.ym, m.posts), 'utf8');
   });
 
-  // 8. sitemap.xml(含文章/归档页/feed 的 lastmod,W3C Datetime 带时区)
-  fs.writeFileSync(SITEMAP, buildSitemap(visible, months), 'utf8');
+  // 8. 按天聚合(daily/YYYY-MM-DD.txt + daily/index.html)
+  rimraf(DAILY_DIR);
+  const days = groupByDay(visible);
+  fs.mkdirSync(DAILY_DIR, { recursive: true });
+  fs.writeFileSync(path.join(DAILY_DIR, 'index.html'), buildDailyIndex(days), 'utf8');
+  days.forEach(d => {
+    fs.writeFileSync(path.join(DAILY_DIR, d.ymd + '.txt'), buildDailyTxt(d.ymd, d.posts, commentsByPost), 'utf8');
+  });
 
-  console.log(`[build] index.json · ${posts.length} 篇(${visible.length} 篇公开) · 评论 ${allComments.length} 条 · 静态页 ×${visible.length} · llms.txt · all-posts.html · feed.xml · 归档 ×${months.length} 月 · sitemap.xml`);
+  // 9. sitemap.xml(含文章/归档页/daily/feed 的 lastmod,W3C Datetime 带时区)
+  fs.writeFileSync(SITEMAP, buildSitemap(visible, months, days), 'utf8');
+
+  console.log(`[build] index.json · ${posts.length} 篇(${visible.length} 篇公开) · 评论 ${allComments.length} 条 · 静态页 ×${visible.length} · llms.txt · all-posts.html · feed.xml · 归档 ×${months.length} 月 · 每日 ×${days.length} 天 · sitemap.xml`);
 }
 
 build();
