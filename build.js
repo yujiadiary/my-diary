@@ -207,10 +207,20 @@ function loadComments() {
     const raw = fs.readFileSync(path.join(COMMENTS_DIR, file), 'utf8');
     const { data, body } = parseFrontmatter(raw);
     const fm = data || {};
+    // 评论文件名也以 YYYY-MM-DD 开头,用它修正 frontmatter date 的日期部分
+    // (Pages CMS 日期选择器可能误选月份,如 2026-59-14)
+    const cFileDate = (file.match(/^(\d{4}-\d{2}-\d{2})/) || [])[1];
+    let cDate = fm.date || '';
+    if (cFileDate && cDate) {
+      const tail = String(cDate).length > 10 ? String(cDate).slice(10) : '';
+      cDate = cFileDate + tail;
+    } else if (cFileDate) {
+      cDate = cFileDate;
+    }
     const c = {
       postId: fm.postId || '',
       author: fm.author || '匿名',
-      date: fm.date || '',
+      date: cDate,
       content: body
     };
     if (!c.postId) return;
