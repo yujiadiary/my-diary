@@ -19,6 +19,11 @@ content:
     path: posts
     type: collection
     create: true
+    # 文件名自动按「日期-作者-标题」生成,创建时可手动改。
+    # 避免出现 2026-09-14-.md(标题没填就保存)这类空标题文件名。
+    filename:
+      template: "{year}-{month}-{day}-{author}-{title}.md"
+      field: create
     view:
       fields: [title, author, category, createdAt]
       primary: title

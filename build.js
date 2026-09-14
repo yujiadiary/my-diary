@@ -854,6 +854,20 @@ function build() {
     const { data, body } = parseFrontmatter(raw);
     const slug = file.replace(/\.md$/, '');
     const fm = data || {};
+    // 文件名里的日期才是真相(Pages CMS 生成文件名时用当天日期,
+    // 但 frontmatter 的 createdAt 日期选择器可能被误选到别的月份)。
+    // 若文件名以 YYYY-MM-DD 开头,就用它覆盖 createdAt 的日期部分,
+    // 时分秒仍保留 frontmatter 的值(没有就用 00:00:00)。
+    const fileDateMatch = slug.match(/^(\d{4}-\d{2}-\d{2})/);
+    const fileDate = fileDateMatch ? fileDateMatch[1] : null;
+    function normalizeDate(fmVal) {
+      if (!fmVal) return fileDate || null;
+      if (!fileDate) return fmVal;
+      const s = String(fmVal);
+      // 只保留日期之后的部分(T 或空格 + 时分秒),与文件名日期拼接
+      const tail = s.length > 10 ? s.slice(10) : '';
+      return fileDate + tail;
+    }
     return {
       slug,
       title: fm.title || slug,
@@ -864,8 +878,8 @@ function build() {
       pinned: toBool(fm.pinned, false),
       hidden: toBool(fm.hidden, false),
       draft: toBool(fm.draft, false),
-      createdAt: fm.createdAt || null,
-      updatedAt: fm.updatedAt || null,
+      createdAt: normalizeDate(fm.createdAt),
+      updatedAt: normalizeDate(fm.updatedAt),
       excerpt: excerpt(body, 160),
       content: body
     };
