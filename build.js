@@ -19,6 +19,19 @@ const OUT_INDEX = path.join(POSTS_DIR, 'index.json');
 const SITEMAP = path.join(__dirname, 'sitemap.xml');
 const LLMS_TXT = path.join(__dirname, 'llms.txt');
 const ALL_POSTS_HTML = path.join(__dirname, 'all-posts.html');
+const FEED_XML = path.join(__dirname, 'feed.xml');
+const ARCHIVES_DIR = path.join(__dirname, 'archives');
+
+// 递归删除目录(重建归档用)
+function rimraf(dir) {
+  if (!fs.existsSync(dir)) return;
+  fs.readdirSync(dir).forEach(name => {
+    const p = path.join(dir, name);
+    if (fs.statSync(p).isDirectory()) rimraf(p);
+    else try { fs.unlinkSync(p); } catch (e) {}
+  });
+  try { fs.rmdirSync(dir); } catch (e) {}
+}
 
 // 站点根 URL(sitemap.xml 必须用绝对地址)
 // GitHub Pages 默认:https://<user>.github.io/<repo>/
@@ -269,6 +282,7 @@ function buildPostHtml(p, prev, next, comments) {
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#5b6f8a">
   <link rel="canonical" href="${SITE_URL}posts/${encodeURIComponent(p.slug)}.html">
+  <link rel="alternate" type="application/rss+xml" title="碎碎念留档" href="${SITE_URL}feed.xml">
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/style.css">
 </head>
@@ -283,6 +297,7 @@ function buildPostHtml(p, prev, next, comments) {
         <a href="../index.html">首页</a>
         <a href="../#/author">作者</a>
         <a href="../#/category">分类</a>
+        <a href="../archives/">归档</a>
         <a href="../#/about">关于</a>
       </nav>
     </div>
@@ -338,8 +353,8 @@ function buildPostHtml(p, prev, next, comments) {
 
 // ---------- 生成 llms.txt(AI 友好的纯文本清单,按时间倒序) ----------
 // 文档参考:https://llmstxt.org
-// 一篇一段,含标题/作者/日期/摘要/原文绝对链接,以及该文评论(评论人/日期/正文),便于 AI 一次抓全站
-function buildLlmsTxt(visiblePosts, commentsByPost) {
+// 只含标题/作者/日期/摘要/标签/单篇 URL(不含正文和评论),正文见 all-posts.html
+function buildLlmsTxt(visiblePosts) {
   const lines = [];
   lines.push('# ' + '碎碎念留档');
   lines.push('');
@@ -347,7 +362,7 @@ function buildLlmsTxt(visiblePosts, commentsByPost) {
   lines.push('> 作者:于加 / 江予朔 / 周叙 / 共同存档。');
   lines.push('> 内容分类:日常碎碎念 / 长文/正式记录 / 图片/相册 / 代码/创作 / 音乐/歌单 / 存档/备份。');
   lines.push('');
-  lines.push('## 文章清单(按时间倒序)');
+  lines.push('## 文章清单(按时间倒序,只含元数据与摘要,正文见 all-posts.html)');
   lines.push('');
   visiblePosts.forEach(p => {
     const url = `${SITE_URL}posts/${encodeURIComponent(p.slug)}.html`;
@@ -361,44 +376,40 @@ function buildLlmsTxt(visiblePosts, commentsByPost) {
     if (p.tags && p.tags.length) lines.push(`- 标签:${p.tags.join(', ')}`);
     lines.push(`- 摘要:${p.excerpt || '(无摘要)'}`);
     lines.push(`- 原文链接:${url}`);
-    const cs = commentsByPost[p.slug] || [];
-    if (cs.length) {
-      lines.push(`- 评论(${cs.length} 条):`);
-      cs.forEach(c => {
-        const cdate = c.date ? formatTime(c.date).slice(0, 10) : '未注明';
-        // 评论正文去掉 markdown 标记,保持纯文本可读
-        const ctext = (c.content || '').replace(/[#>*`]/g, ' ').replace(/\s+/g, ' ').trim();
-        lines.push(`  - [${c.author} · ${cdate}] ${ctext}`);
-      });
-    }
     lines.push('');
   });
-  lines.push('## 完整正文归档');
+  lines.push('## 相关资源');
   lines.push('');
-  lines.push(`- 全部文章正文拼接页:${SITE_URL}all-posts.html`);
+  lines.push(`- 全部文章正文与评论汇总(最近 10 篇全文,更早仅标题):${SITE_URL}all-posts.html`);
+  lines.push('- RSS 订阅:' + SITE_URL + 'feed.xml');
   lines.push('- 站点地图:' + SITE_URL + 'sitemap.xml');
   lines.push('');
   return lines.join('\n');
 }
 
-// ---------- 生成 all-posts.html(全部公开文章正文拼接,纯静态源码可见) ----------
-// 一页放完全部正文 + 评论,无 JS 异步加载,爬虫一次抓全站
+// ---------- 生成 all-posts.html(全部公开文章归档,纯静态源码可见) ----------
+// 最近 10 篇:完整正文 + 评论;更早的:仅标题 + 链接。无 JS 异步加载
+const FULL_POST_LIMIT = 10;
 function buildAllPostsHtml(visiblePosts, commentsByPost) {
+  const fullCount = Math.min(FULL_POST_LIMIT, visiblePosts.length);
   const sections = visiblePosts.map((p, i) => {
-    const body = renderMarkdown(p.content || '');
+    const url = `${SITE_URL}posts/${encodeURIComponent(p.slug)}.html`;
     const author = authorName(p.author);
     const category = categoryName(p.category);
-    const tags = (p.tags || []).map(t =>
-      `<a class="tag" href="#/tag/${encodeURIComponent(t)}">#${escapeHtml(t)}</a>`
-    ).join('');
-    const imgs = (p.images || []).map(src =>
-      `<a href="${escapeHtml(src)}" target="_blank" rel="noopener"><img src="${escapeHtml(src)}" alt="" loading="lazy"></a>`
-    ).join('');
-    const url = `${SITE_URL}posts/${encodeURIComponent(p.slug)}.html`;
     const time = formatTime(p.createdAt);
     const upd = (p.updatedAt && p.updatedAt !== p.createdAt) ? ' · 更新于 ' + formatTime(p.updatedAt) : '';
-    const commentsHtml = buildCommentsHtml(commentsByPost[p.slug] || []);
-    return `<article class="post" id="post-${escapeHtml(p.slug)}">
+
+    // 前 N 篇:完整正文 + 评论
+    if (i < FULL_POST_LIMIT) {
+      const body = renderMarkdown(p.content || '');
+      const tags = (p.tags || []).map(t =>
+        `<a class="tag" href="#/tag/${encodeURIComponent(t)}">#${escapeHtml(t)}</a>`
+      ).join('');
+      const imgs = (p.images || []).map(src =>
+        `<a href="${escapeHtml(src)}" target="_blank" rel="noopener"><img src="${escapeHtml(src)}" alt="" loading="lazy"></a>`
+      ).join('');
+      const commentsHtml = buildCommentsHtml(commentsByPost[p.slug] || []);
+      return `<article class="post" id="post-${escapeHtml(p.slug)}">
       <div class="card-meta">
         <span class="meta-author">${escapeHtml(author)}</span>
         <span class="meta-sep">·</span>
@@ -413,7 +424,25 @@ function buildAllPostsHtml(visiblePosts, commentsByPost) {
       ${commentsHtml}
       <p class="post-permalink">原文链接:<a href="${url}">${url}</a></p>
     </article>`;
+    }
+
+    // 更早的:仅标题 + 链接
+    return `<article class="post post-compact" id="post-${escapeHtml(p.slug)}">
+      <div class="card-meta">
+        <span class="meta-author">${escapeHtml(author)}</span>
+        <span class="meta-sep">·</span>
+        <a class="meta-cat" href="#/category/${encodeURIComponent(p.category)}">${escapeHtml(category)}</a>
+      </div>
+      <h2 class="post-title"><a href="${url}">${escapeHtml(p.title || '(无题)')}</a></h2>
+      <div class="post-time">${time}</div>
+      <p class="post-excerpt">${escapeHtml(p.excerpt || '')}</p>
+      <p class="post-permalink"><a href="${url}">阅读全文 →</a></p>
+    </article>`;
   }).join('\n');
+
+  const summaryNote = visiblePosts.length > fullCount
+    ? `最近 ${fullCount} 篇含完整正文与评论,更早 ${visiblePosts.length - fullCount} 篇仅标题与链接。`
+    : `全部 ${visiblePosts.length} 篇含完整正文与评论。`;
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -421,10 +450,11 @@ function buildAllPostsHtml(visiblePosts, commentsByPost) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>全部文章归档 · 碎碎念留档</title>
-  <meta name="description" content="本站全部文章正文与评论拼接归档,共 ${visiblePosts.length} 篇,纯文本可见,便于一次性读取。">
+  <meta name="description" content="本站全部文章归档,共 ${visiblePosts.length} 篇,${summaryNote}">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#5b6f8a">
   <link rel="canonical" href="${SITE_URL}all-posts.html">
+  <link rel="alternate" type="application/rss+xml" title="碎碎念留档" href="${SITE_URL}feed.xml">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
@@ -439,6 +469,7 @@ function buildAllPostsHtml(visiblePosts, commentsByPost) {
         <a href="index.html">首页</a>
         <a href="#/author">作者</a>
         <a href="#/category">分类</a>
+        <a href="archives/">归档</a>
         <a href="#/about">关于</a>
       </nav>
     </div>
@@ -446,7 +477,7 @@ function buildAllPostsHtml(visiblePosts, commentsByPost) {
   <main class="wrap">
     <section class="block">
       <h1 class="block-title">全部文章归档</h1>
-      <p class="block-sub">共 ${visiblePosts.length} 篇 · 正文与评论纯静态拼接,按时间倒序排列。</p>
+      <p class="block-sub">共 ${visiblePosts.length} 篇 · ${summaryNote}</p>
     </section>
     ${sections}
   </main>
@@ -459,20 +490,225 @@ function buildAllPostsHtml(visiblePosts, commentsByPost) {
 </html>`;
 }
 
-// ---------- 生成 sitemap.xml ----------
-function buildSitemap(visiblePosts) {
-  const urls = [
-    `  <url>\n    <loc>${SITE_URL}</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>`,
-    `  <url>\n    <loc>${SITE_URL}#/author</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`,
-    `  <url>\n    <loc>${SITE_URL}#/category</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`,
-    `  <url>\n    <loc>${SITE_URL}llms.txt</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.9</priority>\n  </url>`,
-    `  <url>\n    <loc>${SITE_URL}all-posts.html</loc>\n    <changefreq>daily</changefreq>\n    <priority>0.9</priority>\n  </url>`
-  ];
+// ---------- 时间戳 W3C Datetime(带时区,供 sitemap lastmod 用) ----------
+// 文章日期通常只有 YYYY-MM-DD,补全为带时区的完整时间戳(UTC,以 Z 结尾)
+function lastmodW3C(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return d.toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
+// ---------- 按月分组(返回 [{ ym: '2026-09', posts: [...] }],按月份倒序,文章也倒序) ----------
+function groupByMonth(visiblePosts) {
+  const map = {};
   visiblePosts.forEach(p => {
-    const lastmod = p.createdAt ? new Date(p.createdAt).toISOString().slice(0, 10) : '';
-    urls.push(`  <url>\n    <loc>${SITE_URL}posts/${encodeURIComponent(p.slug)}.html</loc>${
-      lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''
-    }\n    <changefreq>monthly</changefreq>\n    <priority>0.8</priority>\n  </url>`);
+    if (!p.createdAt) return;
+    const d = new Date(p.createdAt);
+    if (isNaN(d)) return;
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!map[ym]) map[ym] = [];
+    map[ym].push(p);
+  });
+  return Object.keys(map).sort().reverse().map(ym => {
+    const posts = map[ym].slice().sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tb - ta;
+    });
+    // 该月最新文章的更新时间作为归档页 lastmod
+    const latest = posts[0] || null;
+    const lm = latest ? (latest.updatedAt || latest.createdAt) : '';
+    return { ym, posts, lastmod: lm };
+  });
+}
+
+// ---------- 生成 feed.xml(RSS 2.0) ----------
+// GitHub Pages 静态托管自动支持 If-Modified-Since / ETag → 未变内容返回 304,无需额外代码
+function buildFeedXml(visiblePosts) {
+  const toRFC822 = iso => {
+    if (!iso) return new Date().toUTCString();
+    const d = new Date(iso);
+    return isNaN(d) ? new Date().toUTCString() : d.toUTCString();
+  };
+  const buildDate = new Date().toUTCString();
+  const items = visiblePosts.slice(0, 20).map(p => {
+    const url = `${SITE_URL}posts/${encodeURIComponent(p.slug)}.html`;
+    const author = authorName(p.author);
+    const cat = categoryName(p.category);
+    const pub = toRFC822(p.createdAt);
+    // 正文用纯文本(去 markdown 标记),避免 CDATA 转义麻烦
+    const text = (p.excerpt || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    return `    <item>
+      <title>${escapeHtml(p.title || '(无题)')}</title>
+      <link>${url}</link>
+      <guid isPermaLink="true">${url}</guid>
+      <pubDate>${pub}</pubDate>
+      <description>${text}</description>
+      <category>${escapeHtml(cat)}</category>
+    </item>`;
+  }).join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>碎碎念留档</title>
+    <link>${SITE_URL}</link>
+    <description>私人的多作者记录站 · 安静、干净、偏生活化。</description>
+    <language>zh-CN</language>
+    <lastBuildDate>${buildDate}</lastBuildDate>
+${items}
+  </channel>
+</rss>
+`;
+}
+
+// ---------- 生成按月归档索引页(archives/index.html):列出所有月份 ----------
+function buildArchiveIndex(months) {
+  const items = months.map(m => {
+    const ym = m.ym;
+    const count = m.posts.length;
+    const lm = lastmodW3C(m.lastmod);
+    return `<li class="archive-month">
+      <a href="${ym}/index.html">${ym}</a>
+      <span class="archive-count">(${count} 篇)${lm ? ` · 更新 ${lm.slice(0, 10)}` : ''}</span>
+    </li>`;
+  }).join('\n');
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>按月归档 · 碎碎念留档</title>
+  <meta name="description" content="按月份归档的全部文章,共 ${months.length} 个月。">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#5b6f8a">
+  <link rel="canonical" href="${SITE_URL}archives/">
+  <link rel="alternate" type="application/rss+xml" title="碎碎念留档" href="${SITE_URL}feed.xml">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a href="../index.html" class="brand">
+        <span class="brand-title">碎碎念留档</span>
+        <span class="brand-sub">按月归档</span>
+      </a>
+      <nav class="nav-top">
+        <a href="../index.html">首页</a>
+        <a href="../#/author">作者</a>
+        <a href="../#/category">分类</a>
+        <a href="index.html">归档</a>
+        <a href="../#/about">关于</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="block">
+      <h1 class="block-title">按月归档</h1>
+      <p class="block-sub">共 ${months.length} 个月,点击进入该月文章列表。</p>
+    </section>
+    <ul class="archive-list">${items}</ul>
+  </main>
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>私人记录站 · 不是公开社交平台</span>
+    </div>
+  </footer>
+</body>
+</html>`;
+}
+
+// ---------- 生成单个月份归档页(archives/YYYY-MM/index.html):列出该月所有文章 ----------
+function buildArchiveMonth(ym, posts) {
+  const items = posts.map(p => {
+    const url = `${SITE_URL}posts/${encodeURIComponent(p.slug)}.html`;
+    const author = authorName(p.author);
+    const time = formatTime(p.createdAt);
+    return `<li class="archive-item">
+      <a href="../../posts/${encodeURIComponent(p.slug)}.html">${escapeHtml(p.title || '(无题)')}</a>
+      <span class="meta-author">${escapeHtml(author)}</span>
+      <span class="post-time">${time}</span>
+    </li>`;
+  }).join('\n');
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${ym} 归档 · 碎碎念留档</title>
+  <meta name="description" content="${ym} 的全部文章,共 ${posts.length} 篇。">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#5b6f8a">
+  <link rel="canonical" href="${SITE_URL}archives/${ym}/index.html">
+  <link rel="alternate" type="application/rss+xml" title="碎碎念留档" href="${SITE_URL}feed.xml">
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../assets/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a href="../../index.html" class="brand">
+        <span class="brand-title">碎碎念留档</span>
+        <span class="brand-sub">${ym} 归档</span>
+      </a>
+      <nav class="nav-top">
+        <a href="../../index.html">首页</a>
+        <a href="../../#/author">作者</a>
+        <a href="../../#/category">分类</a>
+        <a href="../index.html">归档</a>
+        <a href="../../#/about">关于</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="block">
+      <h1 class="block-title">${ym} 归档</h1>
+      <p class="block-sub">本月 ${posts.length} 篇文章。</p>
+    </section>
+    <ul class="archive-list">${items}</ul>
+  </main>
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>私人记录站 · 不是公开社交平台</span>
+    </div>
+  </footer>
+</body>
+</html>`;
+}
+
+// ---------- 生成 sitemap.xml ----------
+// lastmod 用 W3C Datetime(带时区),含文章、归档索引页、每月归档页、feed.xml、llms.txt、all-posts.html
+function buildSitemap(visiblePosts, months) {
+  const urlEntry = (loc, opts) => {
+    const parts = [`    <loc>${loc}</loc>`];
+    if (opts.lastmod) parts.push(`    <lastmod>${opts.lastmod}</lastmod>`);
+    if (opts.changefreq) parts.push(`    <changefreq>${opts.changefreq}</changefreq>`);
+    if (opts.priority) parts.push(`    <priority>${opts.priority}</priority>`);
+    return `  <url>\n${parts.join('\n')}\n  </url>`;
+  };
+  const now = lastmodW3C(new Date().toISOString());
+  const urls = [
+    urlEntry(`${SITE_URL}`, { lastmod: now, changefreq: 'daily', priority: '1.0' }),
+    urlEntry(`${SITE_URL}all-posts.html`, { lastmod: now, changefreq: 'daily', priority: '0.9' }),
+    urlEntry(`${SITE_URL}llms.txt`, { lastmod: now, changefreq: 'weekly', priority: '0.9' }),
+    urlEntry(`${SITE_URL}feed.xml`, { lastmod: now, changefreq: 'daily', priority: '0.9' }),
+    urlEntry(`${SITE_URL}archives/`, { lastmod: now, changefreq: 'weekly', priority: '0.7' })
+  ];
+  // 每月归档页
+  months.forEach(m => {
+    const lm = lastmodW3C(m.lastmod) || now;
+    urls.push(urlEntry(`${SITE_URL}archives/${m.ym}/index.html`, {
+      lastmod: lm, changefreq: 'monthly', priority: '0.6'
+    }));
+  });
+  // 每篇文章
+  visiblePosts.forEach(p => {
+    const lm = lastmodW3C(p.updatedAt || p.createdAt);
+    urls.push(urlEntry(`${SITE_URL}posts/${encodeURIComponent(p.slug)}.html`, {
+      lastmod: lm, changefreq: 'monthly', priority: '0.8'
+    }));
   });
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`;
 }
@@ -537,16 +773,30 @@ function build() {
     );
   });
 
-  // 4. llms.txt(含评论)
-  fs.writeFileSync(LLMS_TXT, buildLlmsTxt(visible, commentsByPost), 'utf8');
+  // 4. llms.txt(只含元数据与摘要,不含正文/评论)
+  fs.writeFileSync(LLMS_TXT, buildLlmsTxt(visible), 'utf8');
 
-  // 5. all-posts.html(含评论)
+  // 5. all-posts.html(最近 10 篇全文 + 评论,更早仅标题)
   fs.writeFileSync(ALL_POSTS_HTML, buildAllPostsHtml(visible, commentsByPost), 'utf8');
 
-  // 6. sitemap.xml(包含首页、作者/分类、llms.txt、all-posts.html、各文章)
-  fs.writeFileSync(SITEMAP, buildSitemap(visible), 'utf8');
+  // 6. feed.xml(RSS 2.0,静态文件 GitHub Pages 自动支持 304)
+  fs.writeFileSync(FEED_XML, buildFeedXml(visible), 'utf8');
 
-  console.log(`[build] index.json · ${posts.length} 篇(${visible.length} 篇公开) · 评论 ${allComments.length} 条 · 静态页 ×${visible.length} · llms.txt · all-posts.html · sitemap.xml`);
+  // 7. 按月归档(archives/index.html + archives/YYYY-MM/index.html)
+  rimraf(ARCHIVES_DIR);
+  const months = groupByMonth(visible);
+  fs.mkdirSync(ARCHIVES_DIR, { recursive: true });
+  fs.writeFileSync(path.join(ARCHIVES_DIR, 'index.html'), buildArchiveIndex(months), 'utf8');
+  months.forEach(m => {
+    const dir = path.join(ARCHIVES_DIR, m.ym);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'index.html'), buildArchiveMonth(m.ym, m.posts), 'utf8');
+  });
+
+  // 8. sitemap.xml(含文章/归档页/feed 的 lastmod,W3C Datetime 带时区)
+  fs.writeFileSync(SITEMAP, buildSitemap(visible, months), 'utf8');
+
+  console.log(`[build] index.json · ${posts.length} 篇(${visible.length} 篇公开) · 评论 ${allComments.length} 条 · 静态页 ×${visible.length} · llms.txt · all-posts.html · feed.xml · 归档 ×${months.length} 月 · sitemap.xml`);
 }
 
 build();

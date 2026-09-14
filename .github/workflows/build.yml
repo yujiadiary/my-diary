@@ -39,10 +39,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # 暂存 build.js 生成物:index.json / posts/*.html / sitemap.xml / llms.txt / all-posts.html
+          # 暂存 build.js 生成物:index.json / posts/*.html / sitemap.xml / llms.txt / all-posts.html / feed.xml / archives/
           # posts/ 下源 .md 由上游 commit 带入,这里只提交生成物,不会动到 .md
-          git add posts/index.json sitemap.xml llms.txt all-posts.html
+          git add posts/index.json sitemap.xml llms.txt all-posts.html feed.xml
           git add 'posts/*.html'
+          git add 'archives/'
           if git diff --cached --quiet; then
             echo "生成物无变化,跳过提交"
           else
