@@ -19,21 +19,23 @@ content:
     path: posts
     type: collection
     create: true
-    # 文件名自动按「日期-作者-标题」生成,创建时可手动改。
-    # 避免出现 2026-09-14-.md(标题没填就保存)这类空标题文件名。
+    # 文件名按「日期-标题」自动生成,日期由系统填(永远正确)。
+    # field: create 让你新建时能看到并修改文件名。
+    # ⚠️ 请先填好标题再保存,否则文件名里标题段会是空的。
     filename:
-      template: "{year}-{month}-{day}-{author}-{title}.md"
+      template: "{year}-{month}-{day}-{primary}.md"
       field: create
     view:
-      fields: [title, author, category, createdAt]
+      fields: [title, author, category]
       primary: title
-      sort: createdAt
+      sort: title
       default: descending
     fields:
       - name: title
         label: 标题
         type: string
         required: true
+        description: ⚠️ 请先填写标题再保存,文件名会自动带标题
 
       - name: author
         label: 作者
@@ -78,24 +80,10 @@ content:
         default: false
         description: 勾选后前台不会显示这篇
 
-      - name: createdAt
-        label: 创建时间
-        type: date
-        required: true
-        readonly: true
-        description: 自动填入当天日期,无需手动修改
-        options:
-          time: true
-          format: yyyy-mm-dd
-
-      - name: updatedAt
-        label: 更新时间
-        type: date
-        readonly: true
-        description: 自动填入当天日期,无需手动修改
-        options:
-          time: true
-          format: yyyy-mm-dd
+      # 日期字段已从 CMS 移除!
+      # 之前 Pages CMS 日期选择器会把月份写成 35/04/58/49 等乱码,
+      # 现在日期完全由文件名决定(系统生成的 {year}-{month}-{day} 永远正确),
+      # build.js 构建时以文件名日期为准,不需要 frontmatter 里有 createdAt。
 
       - name: body
         label: 正文
@@ -103,17 +91,18 @@ content:
         description: 支持换行、> 引用、```代码块```、图片链接
 
   # ---------- 评论集合 ----------
-  # 评论文件名建议:<postId>-<时间戳或序号>.md
-  # postId 填对应文章的文件名(不含 .md),例如 2026-09-13-jiang-xxx
   - name: comments
     label: 评论
     path: comments
     type: collection
     create: true
+    filename:
+      template: "{year}-{month}-{day}-{primary}.md"
+      field: create
     view:
-      fields: [postId, author, date]
+      fields: [postId, author]
       primary: postId
-      sort: date
+      sort: postId
       default: descending
     fields:
       - name: postId
@@ -129,24 +118,9 @@ content:
         default: 于加
         description: 评论人名字,如:于加 / 江予朔 / 周叙
 
-      - name: date
-        label: 评论日期
-        type: date
-        required: true
-        readonly: true
-        description: 自动填入当天日期,无需手动修改
-        options:
-          time: true
-          format: yyyy-mm-dd
+      # 日期字段已从 CMS 移除,同文章一样由文件名决定
 
       - name: body
         label: 评论正文
         type: rich-text
         description: Markdown 格式,支持换行、引用、加粗
-
-# 如果以后要加别的集合(比如「关于页」内容也走 CMS 管理),可以再加:
-#  - name: pages
-#    label: 单页
-#    path: pages
-#    type: file
-#    fields: [...]
