@@ -374,7 +374,7 @@ function buildLlmsTxt(visiblePosts) {
     lines.push(`- 分类:${cat}`);
     lines.push(`- 日期:${date}`);
     if (p.tags && p.tags.length) lines.push(`- 标签:${p.tags.join(', ')}`);
-    lines.push(`- 摘要:${p.excerpt || '(无摘要)'}`);
+    lines.push(`- 摘要:${excerpt(p.content, 50) || '(无摘要)'}`);
     lines.push(`- 原文链接:${url}`);
     lines.push('');
   });
@@ -490,13 +490,16 @@ function buildAllPostsHtml(visiblePosts, commentsByPost) {
 </html>`;
 }
 
-// ---------- 时间戳 W3C Datetime(带时区,供 sitemap lastmod 用) ----------
-// 文章日期通常只有 YYYY-MM-DD,补全为带时区的完整时间戳(UTC,以 Z 结尾)
+// ---------- 时间戳 W3C Datetime(带时区,供 sitemap/feed lastmod 用) ----------
+// 格式:2026-09-14T18:00:00+08:00 (东八区)
 function lastmodW3C(iso) {
   if (!iso) return '';
   const d = new Date(iso);
   if (isNaN(d)) return '';
-  return d.toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const pad = n => String(n).padStart(2, '0');
+  // +08:00 时区:UTC 时间 + 8 小时
+  const local = new Date(d.getTime() + 8 * 3600 * 1000);
+  return `${local.getUTCFullYear()}-${pad(local.getUTCMonth() + 1)}-${pad(local.getUTCDate())}T${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}:${pad(local.getUTCSeconds())}+08:00`;
 }
 
 // ---------- 按月分组(返回 [{ ym: '2026-09', posts: [...] }],按月份倒序,文章也倒序) ----------
@@ -524,7 +527,7 @@ function groupByMonth(visiblePosts) {
 }
 
 // ---------- 生成 feed.xml(RSS 2.0) ----------
-// GitHub Pages 静态托管自动支持 If-Modified-Since / ETag → 未变内容返回 304,无需额外代码
+// 每条含:标题/链接/pubDate(发布时间)/lastmod(最后修改时间)
 function buildFeedXml(visiblePosts) {
   const toRFC822 = iso => {
     if (!iso) return new Date().toUTCString();
@@ -534,9 +537,9 @@ function buildFeedXml(visiblePosts) {
   const buildDate = new Date().toUTCString();
   const items = visiblePosts.slice(0, 20).map(p => {
     const url = `${SITE_URL}posts/${encodeURIComponent(p.slug)}.html`;
-    const author = authorName(p.author);
     const cat = categoryName(p.category);
     const pub = toRFC822(p.createdAt);
+    const lm = lastmodW3C(p.updatedAt || p.createdAt);
     // 正文用纯文本(去 markdown 标记),避免 CDATA 转义麻烦
     const text = (p.excerpt || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
     return `    <item>
@@ -544,6 +547,7 @@ function buildFeedXml(visiblePosts) {
       <link>${url}</link>
       <guid isPermaLink="true">${url}</guid>
       <pubDate>${pub}</pubDate>
+      <lastmod>${lm}</lastmod>
       <description>${text}</description>
       <category>${escapeHtml(cat)}</category>
     </item>`;
