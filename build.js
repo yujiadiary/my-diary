@@ -581,14 +581,14 @@ function buildDailyTxt(ymd, posts, commentsByPost) {
   return lines.join('\n');
 }
 
-// ---------- 生成 daily/index.html(按日期倒序列出所有每日聚合文件) ----------
+// ---------- 生成 daily/index.html(每日 AI 阅读包入口,链接直指 .txt 本身) ----------
 function buildDailyIndex(days) {
   const items = days.map(d => {
     const ymd = d.ymd;
     const count = d.posts.length;
-    return `<li class="archive-item">
-      <a href="${ymd}.txt">${ymd}</a>
-      <span class="archive-count">(${count} 篇)</span>
+    return `<li class="archive-item daily-item">
+      <a href="${ymd}.txt" download>${ymd}.txt</a>
+      <span class="archive-count">(${count} 篇文章)</span>
     </li>`;
   }).join('\n');
   return `<!DOCTYPE html>
@@ -596,8 +596,8 @@ function buildDailyIndex(days) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>每日归档 · 碎碎念留档</title>
-  <meta name="description" content="按日期聚合的全部文章,共 ${days.length} 天。">
+  <title>每日 AI 阅读包 · 碎碎念留档</title>
+  <meta name="description" content="按日期聚合的纯文本包,可直接下载发给 AI 阅读,共 ${days.length} 天。">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#5b6f8a">
   <link rel="canonical" href="${SITE_URL}daily/">
@@ -610,7 +610,7 @@ function buildDailyIndex(days) {
     <div class="wrap header-inner">
       <a href="../index.html" class="brand">
         <span class="brand-title">碎碎念留档</span>
-        <span class="brand-sub">每日归档</span>
+        <span class="brand-sub">每日 AI 阅读包</span>
       </a>
       <nav class="nav-top">
         <a href="../index.html">首页</a>
@@ -624,10 +624,10 @@ function buildDailyIndex(days) {
   </header>
   <main class="wrap">
     <section class="block">
-      <h1 class="block-title">每日归档</h1>
-      <p class="block-sub">按日期聚合的文章,共 ${days.length} 天。点击下载当天 .txt。</p>
+      <h1 class="block-title">每日 AI 阅读包</h1>
+      <p class="block-sub">每天一个纯文本包,含当天所有文章的标题/作者/正文/评论。点击下载当天 .txt,可直接发给 AI 阅读。共 ${days.length} 天。</p>
     </section>
-    <ul class="archive-list">${items}</ul>
+    <ul class="archive-list daily-list">${items}</ul>
   </main>
   <footer class="site-footer">
     <div class="wrap footer-inner">
