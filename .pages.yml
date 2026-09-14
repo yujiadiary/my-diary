@@ -82,6 +82,8 @@ content:
         label: 创建时间
         type: date
         required: true
+        readonly: true
+        description: 自动填入当天日期,无需手动修改
         options:
           time: true
           format: yyyy-mm-dd
@@ -89,6 +91,8 @@ content:
       - name: updatedAt
         label: 更新时间
         type: date
+        readonly: true
+        description: 自动填入当天日期,无需手动修改
         options:
           time: true
           format: yyyy-mm-dd
@@ -129,6 +133,8 @@ content:
         label: 评论日期
         type: date
         required: true
+        readonly: true
+        description: 自动填入当天日期,无需手动修改
         options:
           time: true
           format: yyyy-mm-dd
