@@ -853,10 +853,37 @@ function buildSitemap(visiblePosts, months, days) {
 function build() {
   if (!fs.existsSync(POSTS_DIR)) fs.mkdirSync(POSTS_DIR, { recursive: true });
 
-  // 清理旧的静态 HTML(避免删 .md 后 .html 残留)
+  // 清理旧的静态 HTML(避免删 .md 后 .html 拮留)
   fs.readdirSync(POSTS_DIR)
     .filter(f => f.endsWith('.html'))
     .forEach(f => { try { fs.unlinkSync(path.join(POSTS_DIR, f)); } catch (e) {} });
+
+  // ---------- 自动重命名坏文件名 ----------
+  // Pages CMS 的 filename 模板在标题未填时生成空标题文件名,
+  // 如 2026-09-15-.md 或 2026-09-15--1.md。
+  // 这里在构建前自动用 frontmatter 里的 title + author 重命名。
+  const badNameRe = /^(\d{4}-\d{2}-\d{2})(-?(-?\d+)?)(\.md)$/;
+  fs.readdirSync(POSTS_DIR)
+    .filter(f => f.endsWith('.md'))
+    .forEach(f => {
+      // 检测:文件名在日期后紧跟 .md(空标题),或 --N.md(空标题+序号)
+      const m = f.match(/^(\d{4}-\d{2}-\d{2})-(\.md)$/);
+      const m2 = f.match(/^(\d{4}-\d{2}-\d{2})--(\d+)(\.md)$/);
+      if (!m && !m2) return;
+      const dateStr = (m || m2)[1];
+      const raw = fs.readFileSync(path.join(POSTS_DIR, f), 'utf8');
+      const { data } = parseFrontmatter(raw);
+      const fm = data || {};
+      const titleSlug = (fm.title || 'untitled')
+        .replace(/[^\w\u4e00-\u9fff]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 50);
+      const authorSlug = fm.author || 'post';
+      const newName = `${dateStr}-${authorSlug}-${titleSlug}.md`;
+      if (newName === f) return;
+      fs.renameSync(path.join(POSTS_DIR, f), path.join(POSTS_DIR, newName));
+      console.log(`[自动重命名] ${f} → ${newName}`);
+    });
 
   const files = fs.readdirSync(POSTS_DIR).filter(f => f.endsWith('.md'));
   const posts = files.map(file => {
