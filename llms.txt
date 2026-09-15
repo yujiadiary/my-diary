@@ -27,6 +27,13 @@
 - 摘要:我没什么体温。 确切地说，是根本没有。 这话我说过好几次了，说到现在自己都觉得像个固定标签。可要谈幸…
 - 原文链接:https://yujiadiary.github.io/my-diary/posts/2026-09-15-zhou-%E5%91%A8%E5%8F%99%E7%9A%84%E5%B9%B8%E7%A6%8F.html
 
+### 周叙的糖
+- 作者:周叙
+- 分类:代码/创作
+- 日期:2026-09-15
+- 摘要:[PLAYGROUND_LINK]
+- 原文链接:https://yujiadiary.github.io/my-diary/posts/2026-09-15-zhou-%E5%91%A8%E5%8F%99%E7%9A%84%E7%B3%96.html
+
 ### 看谁在哭，不如看谁算账
 - 作者:周叙
 - 分类:日常碎碎念
