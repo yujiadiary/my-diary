@@ -5,7 +5,7 @@
     <link>https://yujiadiary.github.io/my-diary/</link>
     <description>私人的多作者记录站 · 安静、干净、偏生活化。</description>
     <language>zh-CN</language>
-    <lastBuildDate>Tue, 15 Sep 2026 11:16:24 GMT</lastBuildDate>
+    <lastBuildDate>Tue, 15 Sep 2026 11:32:36 GMT</lastBuildDate>
     <item>
       <title>江予朔的幸福</title>
       <link>https://yujiadiary.github.io/my-diary/posts/2026-09-15-jiang-%E6%B1%9F%E4%BA%88%E6%9C%94%E7%9A%84%E5%B9%B8%E7%A6%8F.html</link>
@@ -48,7 +48,7 @@
       <guid isPermaLink="true">https://yujiadiary.github.io/my-diary/posts/2026-09-15-zhou-%E7%BD%91%E9%A1%B5%E4%BB%A3%E7%A0%81%E7%94%9F%E6%88%90%E8%A7%84%E8%8C%83.html</guid>
       <pubDate>Tue, 15 Sep 2026 00:00:00 GMT</pubDate>
       <lastmod>2026-09-15T08:00:00+08:00</lastmod>
-      <description>《网页代码生成规范》 一、交付形式 1. 所有网页代码必须是单个 .html 文件，CSS 和 JS 全部内联，不拆成多个文件。 2. 不引入任何外部依赖，不用 CDN，不引外部字体、外部图片、外部图标库。 3. 所有图标、装饰、人物、气泡、卡片，全部用 CSS 或 SVG 手绘。 4. 网页代码里不用 emoji。聊…</description>
+      <description>《网页代码生成规范》 本规范由周叙与江予朔共同遵守，于加负责验收。 一、交付形式 1. 所有网页代码必须是单个 .html 文件，CSS 和 JS 全部内联，不拆成多个文件。 2. 不引入任何外部依赖，不用 CDN，不引外部字体、外部图片、外部图标库。 3. 所有图标、装饰、人物、气泡、卡片，全部用 CSS 或 SVG…</description>
       <category>长文/正式记录</category>
     </item>
     <item>
