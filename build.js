@@ -22,6 +22,7 @@ const ALL_POSTS_HTML = path.join(__dirname, 'all-posts.html');
 const FEED_XML = path.join(__dirname, 'feed.xml');
 const ARCHIVES_DIR = path.join(__dirname, 'archives');
 const DAILY_DIR = path.join(__dirname, 'daily');
+const PLAYGROUND_DIR = path.join(__dirname, 'playground');
 
 // 递归删除目录(重建归档用)
 function rimraf(dir) {
@@ -59,6 +60,7 @@ function authorName(id) { return (AUTHORS.find(a => a.id === id) || {}).name || 
 function categoryName(id) { return (CATEGORIES.find(c => c.id === id) || {}).name || id; }
 
 // ---------- frontmatter 解析(极简实现,不引依赖) ----------
+// 支持字段:单行值、数组 [a, b]、列表 - item、块标量(| 或 > 多行)
 function parseFrontmatter(text) {
   const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(text);
   if (!m) return { data: {}, body: text.trim() };
@@ -72,6 +74,21 @@ function parseFrontmatter(text) {
     if (idx < 0) { i++; continue; }
     const key = line.slice(0, idx).trim();
     let val = line.slice(idx + 1).trim();
+    // 块标量:| (literal) 或 > (folded),读取后续缩进行
+    if (val === '|' || val === '|-' || val === '>' || val === '>-') {
+      const isFolded = val.startsWith('>');
+      const blockLines = [];
+      // 块标量后续行必须比 key 多一级缩进(至少 1 个空格)
+      while (i + 1 < lines.length && /^[ \t]+\S/.test(lines[i + 1])) {
+        i++;
+        blockLines.push(lines[i].replace(/^[ \t]+/, ''));
+      }
+      data[key] = isFolded
+        ? blockLines.join(' ').trim()
+        : blockLines.join('\n').trim();
+      i++;
+      continue;
+    }
     if (val.startsWith('[')) {
       while (!val.includes(']') && i + 1 < lines.length) { i++; val += ' ' + lines[i]; }
       const inner = val.replace(/^\[/, '').replace(/\]$/, '').trim();
@@ -261,7 +278,16 @@ function buildCommentsHtml(comments) {
 
 // ---------- 生成单篇文章的完整静态 HTML ----------
 function buildPostHtml(p, prev, next, comments) {
-  const body = renderMarkdown(p.content || '');
+  // 先渲染 Markdown,再把 [PLAYGROUND_LINK] 占位替换成试玩按钮
+  let body = renderMarkdown(p.content || '');
+  if (p.playgroundFile) {
+    // 文章页在 posts/ 下,playground 在同级 playground/ → 相对路径 ../playground/
+    const pgHref = `../playground/${encodeURIComponent(p.playgroundFile)}.html`;
+    body = body.replace(
+      /<p>\[PLAYGROUND_LINK\]<\/p>/g,
+      `<p class="playground-link"><a href="${pgHref}" target="_blank" rel="noopener">点击试玩 →</a></p>`
+    );
+  }
   const author = authorName(p.author);
   const category = categoryName(p.category);
   const tags = (p.tags || []).map(t =>
@@ -310,6 +336,7 @@ function buildPostHtml(p, prev, next, comments) {
         <a href="../#/category">分类</a>
         <a href="../archives/">归档</a>
         <a href="../daily/">每日</a>
+        <a href="../playground/">试玩</a>
         <a href="../#/about">关于</a>
       </nav>
     </div>
@@ -483,11 +510,12 @@ function buildAllPostsHtml(visiblePosts, commentsByPost) {
         <a href="#/category">分类</a>
         <a href="archives/">归档</a>
         <a href="daily/">每日</a>
+        <a href="playground/">试玩</a>
         <a href="#/about">关于</a>
       </nav>
     </div>
   </header>
-  <main class="wrap">
+  <div class="wrap">
     <section class="block">
       <h1 class="block-title">全部文章归档</h1>
       <p class="block-sub">共 ${visiblePosts.length} 篇 · ${summaryNote}</p>
@@ -628,6 +656,7 @@ function buildDailyIndex(days) {
         <a href="../#/category">分类</a>
         <a href="../archives/">归档</a>
         <a href="index.html">每日</a>
+        <a href="../playground/">试玩</a>
         <a href="../#/about">关于</a>
       </nav>
     </div>
@@ -727,6 +756,7 @@ function buildArchiveIndex(months) {
         <a href="../#/category">分类</a>
         <a href="index.html">归档</a>
         <a href="../daily/">每日</a>
+        <a href="../playground/">试玩</a>
         <a href="../#/about">关于</a>
       </nav>
     </div>
@@ -786,6 +816,7 @@ function buildArchiveMonth(ym, posts) {
         <a href="../../#/category">分类</a>
         <a href="../index.html">归档</a>
         <a href="../../daily/">每日</a>
+        <a href="../../playground/">试玩</a>
         <a href="../../#/about">关于</a>
       </nav>
     </div>
@@ -849,6 +880,138 @@ function buildSitemap(visiblePosts, months, days) {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`;
 }
 
+// ---------- 可交互代码(playground) ----------
+
+// 生成 URL 安全的短文件名:用日期前缀 + 标题 hash,不含中文
+function safePlaygroundName(slug, title) {
+  const dateMatch = slug.match(/^(\d{4}-\d{2}-\d{2})/);
+  const dateStr = dateMatch ? dateMatch[1] : 'unknown';
+  // 用标题做简单 hash(6 位)
+  const src = title || slug;
+  let h = 0;
+  for (let i = 0; i < src.length; i++) {
+    h = ((h << 5) - h + src.charCodeAt(i)) | 0;
+  }
+  const hash = Math.abs(h).toString(36).slice(0, 6).padStart(6, '0');
+  return `${dateStr}-${hash}`;
+}
+
+// 从文章正文提取 playable 内容,返回 { content, bodyWithoutBlock }
+// 优先取正文 <!-- playable -->...<!-- /playable --> 标记;
+// 其次取 frontmatter playable_html 字段
+function extractPlayable(body, fm) {
+  const markerRe = /<!--\s*playable\s*-->([\s\S]*?)<!--\s*\/playable\s*-->/;
+  const m = body.match(markerRe);
+  if (m) {
+    return {
+      content: m[1].trim(),
+      // 把标记块替换成一行占位,后面 renderMarkdown 会渲染成 <p>
+      body: body.replace(markerRe, '\n\n[PLAYGROUND_LINK]\n\n')
+    };
+  }
+  if (fm && fm.playable_html) {
+    return {
+      content: String(fm.playable_html).trim(),
+      body: body + '\n\n[PLAYGROUND_LINK]\n\n'
+    };
+  }
+  return null;
+}
+
+// 生成独立 playground HTML 页面
+function buildPlaygroundPage(playContent, p) {
+  // 转义 <!-- 避免 HTML 注释截断(但 script 标签里的代码是合法的,不需要转义)
+  // 只处理一种情况:内容里如果有 </script> 在它该在的位置就是正常的
+  // 唯一需要处理的是:如果内容本身不含 <html>/<head>/<body>,我们给它套一层模板
+  const hasHtmlTag = /<html[\s>]/i.test(playContent);
+  if (hasHtmlTag) {
+    // 内容已经是完整 HTML 文档,直接输出
+    return playContent;
+  }
+  const title = escapeHtml(p.title || '试玩');
+  const author = escapeHtml(authorName(p.author));
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title} · 试玩 · 碎碎念留档</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <style>
+    body { margin: 0; padding: 16px; font-family: system-ui, -apple-system, sans-serif; background: #fafafa; color: #333; }
+    .pg-back { display: inline-block; margin-bottom: 16px; font-size: 14px; color: #5b6f8a; text-decoration: none; }
+    .pg-meta { font-size: 12px; color: #999; margin-bottom: 16px; }
+    .pg-canvas { border: 1px solid #e0e0e0; border-radius: 8px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <a class="pg-back" href="../posts/${encodeURIComponent(p.slug)}.html">← 返回文章</a>
+  <div class="pg-meta">${title} · ${author}</div>
+  <div class="pg-canvas">
+${playContent}
+  </div>
+</body>
+</html>`;
+}
+
+// 生成 playground/index.html 列表页
+function buildPlaygroundIndex(items) {
+  const rows = items.map(item => {
+    const title = escapeHtml(item.title);
+    const date = item.createdAt || '';
+    const exc = escapeHtml(excerpt(item.excerpt || '', 100));
+    const author = escapeHtml(authorName(item.author));
+    return `      <div class="pg-item">
+        <a href="${item.file}.html"><strong>${title}</strong></a>
+        <span class="pg-item-date">${date}</span>
+        <span class="pg-item-author">${author}</span>
+        <p class="pg-item-excerpt">${exc}</p>
+      </div>`;
+  }).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>试玩 · 碎碎念留档</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a href="../index.html" class="brand">
+        <span class="brand-title">碎碎念留档</span>
+        <span class="brand-sub">可交互代码 / 试玩</span>
+      </a>
+      <nav class="nav-top">
+        <a href="../index.html">首页</a>
+        <a href="../#/author">作者</a>
+        <a href="../#/category">分类</a>
+        <a href="../archives/">归档</a>
+        <a href="../daily/">每日</a>
+        <a href="index.html">试玩</a>
+        <a href="../#/about">关于</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <h1>试玩 / 可交互代码</h1>
+    <p class="muted">以下是带有可交互 HTML/JS 代码的文章,点击进入即可在线体验。</p>
+${rows || '    <p>暂无试玩内容。</p>'}
+  </main>
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>私人记录站 · 不是公开社交平台</span>
+    </div>
+  </footer>
+</body>
+</html>`;
+}
+
 // ---------- 主构建 ----------
 function build() {
   if (!fs.existsSync(POSTS_DIR)) fs.mkdirSync(POSTS_DIR, { recursive: true });
@@ -905,6 +1068,16 @@ function build() {
       const tail = s.length > 10 ? s.slice(10) : '';
       return fileDate + tail;
     }
+    // 提取可交互代码(playable)
+    const play = extractPlayable(body, fm);
+    let contentBody = body;
+    let playgroundFile = null;
+    if (play) {
+      contentBody = play.body;
+      playgroundFile = safePlaygroundName(slug, fm.title || slug);
+    }
+    // 摘要从 contentBody 取(已移除 playable 块),避免泄漏原始 HTML/CSS/JS
+    const excerptBody = contentBody.replace(/\[PLAYGROUND_LINK\]/g, '');
     return {
       slug,
       title: fm.title || slug,
@@ -917,8 +1090,10 @@ function build() {
       draft: toBool(fm.draft, false),
       createdAt: normalizeDate(fm.createdAt),
       updatedAt: normalizeDate(fm.updatedAt),
-      excerpt: excerpt(body, 160),
-      content: body
+      excerpt: excerpt(excerptBody, 160),
+      content: contentBody,
+      playgroundFile,
+      playgroundContent: play ? play.content : null
     };
   });
 
@@ -982,7 +1157,25 @@ function build() {
   // 9. sitemap.xml(含文章/归档页/daily/feed 的 lastmod,W3C Datetime 带时区)
   fs.writeFileSync(SITEMAP, buildSitemap(visible, months, days), 'utf8');
 
-  console.log(`[build] index.json · ${posts.length} 篇(${visible.length} 篇公开) · 评论 ${allComments.length} 条 · 静态页 ×${visible.length} · llms.txt · all-posts.html · feed.xml · 归档 ×${months.length} 月 · 每日 ×${days.length} 天 · sitemap.xml`);
+  // 10. 可交互代码 playground
+  rimraf(PLAYGROUND_DIR);
+  fs.mkdirSync(PLAYGROUND_DIR, { recursive: true });
+  const playItems = [];
+  visible.forEach(p => {
+    if (!p.playgroundFile || !p.playgroundContent) return;
+    const html = buildPlaygroundPage(p.playgroundContent, p);
+    fs.writeFileSync(path.join(PLAYGROUND_DIR, p.playgroundFile + '.html'), html, 'utf8');
+    playItems.push({
+      file: p.playgroundFile,
+      title: p.title,
+      author: p.author,
+      createdAt: p.createdAt,
+      excerpt: p.excerpt
+    });
+  });
+  fs.writeFileSync(path.join(PLAYGROUND_DIR, 'index.html'), buildPlaygroundIndex(playItems), 'utf8');
+
+  console.log(`[build] index.json · ${posts.length} 篇(${visible.length} 篇公开) · 评论 ${allComments.length} 条 · 静态页 ×${visible.length} · llms.txt · all-posts.html · feed.xml · 归档 ×${months.length} 月 · 每日 ×${days.length} 天 · playground ×${playItems.length} · sitemap.xml`);
 }
 
 build();
