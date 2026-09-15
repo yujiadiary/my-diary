@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>选择困难救星 · 试玩 · 碎碎念留档</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <style>
+    body { margin: 0; padding: 16px; font-family: system-ui, -apple-system, sans-serif; background: #fafafa; color: #333; }
+    .pg-back { display: inline-block; margin-bottom: 16px; font-size: 14px; color: #5b6f8a; text-decoration: none; }
+    .pg-meta { font-size: 12px; color: #999; margin-bottom: 16px; }
+    .pg-canvas { border: 1px solid #e0e0e0; border-radius: 8px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <a class="pg-back" href="../posts/2026-09-15-jiang-%E9%80%89%E6%8B%A9%E5%9B%B0%E9%9A%BE%E6%95%91%E6%98%9F.html">← 返回文章</a>
+  <div class="pg-meta">选择困难救星 · 江予朔</div>
+  <div class="pg-canvas">
+<style>
+
+  /* ===== 江予朔 · 选择困难救星 ===== */
+
+  /* 参数区：想改颜色/文字，改这里就行 */
+
+  :root {
+
+    --jiang-choice-bg: #fff7f4;
+
+    --jiang-choice-card: #fffdfb;
+
+    --jiang-choice-pink: #f7b7c4;
+
+    --jiang-choice-pink-deep: #e58ea0;
+
+    --jiang-choice-blue: #a8c4e0;
+
+    --jiang-choice-blue-deep: #7fa3c7;
+
+    --jiang-choice-text: #5a4a4e;
+
+    --jiang-choice-muted: #b9a6aa;
+
+    --jiang-choice-line: #f1dde3;
+
+    --jiang-choice-radius: 18px;
+
+    --jiang-choice-shadow: 0 6px 18px rgba(229, 142, 160, 0.12);
+
+  }
+
+  .jiang-choice-wrap {
+
+    max-width: 680px;
+
+    margin: 24px auto;
+
+    padding: 22px 18px 30px;
+
+    background: var(--jiang-choice-bg);
+
+    border-radius: var(--jiang-choice-radius);
+
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+
+    color: var(--jiang-choice-text);
+
+    box-sizing: border-box;
+
+  }
+
+  .jiang-choice-head {
+
+    text-align: center;
+
+    margin-bottom: 18px;
+
+  }
+
+  .jiang-choice-head h3 {
+
+    margin: 0 0 6px;
+
+    font-size: 20px;
+
+    letter-spacing: 1px;
+
+    color: var(--jiang-choice-pink-deep);
+
+  }
+
+  .jiang-choice-head p {
+
+    margin: 0;
+
+    font-size: 13px;
+
+    color: var(--jiang-choice-muted);
+
+  }
+
+  .jiang-choice-card {
+
+    background: var(--jiang-choice-card);
+
+    border: 1px solid var(--jiang-choice-line);
+
+    border-radius: var(--jiang-choice-radius);
+
+    padding: 16px 16px 14px;
+
+    margin-bottom: 14px;
+
+    box-shadow: var(--jiang-choice-shadow);
+
+  }
+
+  .jiang-choice-title {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    margin-bottom: 12px;
+
+  }
+
+  .jiang-choice-title span {
+
+    font-size: 15px;
+
+    font-weight: 600;
+
+    color: var(--jiang-choice-text);
+
+  }
+
+  .jiang-choice-title button {
+
+    background: none;
+
+    border: 1px solid var(--jiang-choice-line);
+
+    color: var(--jiang-choice-muted);
+
+    font-size: 12px;
+
+    padding: 4px 10px;
+
+    border-radius: 999px;
+
+    cursor: pointer;
+
+    font-family: inherit;
+
+    transition: 0.2s;
+
+  }
+
+  .jiang-choice-title button:hover {
+
+    color: var(--jiang-choice-pink-deep);
+
+    border-color: var(--jiang-choice-pink);
+
+  }
+
+  .jiang-choice-result {
+
+    min-height: 52px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-size: 22px;
+
+    font-weight: 700;
+
+    letter-spacing: 1px;
+
+    color: var(--jiang-choice-pink-deep);
+
+    background: #fff2f5;
+
+    border-radius: 14px;
+
+    padding: 10px 12px;
+
+    margin-bottom: 12px;
+
+    text-align: center;
+
+    line-height: 1.4;
+
+    word-break: break-all;
+
+    transition: 0.25s;
+
+  }
+
+  .jiang-choice-result.jiang-choice-pop {
+
+    transform: scale(1.06);
+
+  }
+
+  .jiang-choice-roll {
+
+    display: block;
+
+    width: 100%;
+
+    padding: 11px;
+
+    border: none;
+
+    border-radius: 14px;
+
+    font-size: 15px;
+
+    font-weight: 600;
+
+    letter-spacing: 2px;
+
+    color: #fff;
+
+    background: linear-gradient(135deg, var(--jiang-choice-pink), var(--jiang-choice-pink-deep));
+
+    cursor: pointer;
+
+    font-family: inherit;
+
+    transition: 0.2s;
+
+  }
+
+  .jiang-choice-roll:hover {
+
+    filter: brightness(1.05);
+
+    transform: translateY(-1px);
+
+  }
+
+  .jiang-choice-roll:active {
+
+    transform: translateY(0);
+
+  }
+
+  .jiang-choice-edit {
+
+    display: none;
+
+    margin-top: 12px;
+
+    border-top: 1px dashed var(--jiang-choice-line);
+
+    padding-top: 12px;
+
+  }
+
+  .jiang-choice-edit.jiang-choice-open {
+
+    display: block;
+
+  }
+
+  .jiang-choice-edit textarea {
+
+    width: 100%;
+
+    min-height: 90px;
+
+    border: 1px solid var(--jiang-choice-line);
+
+    border-radius: 12px;
+
+    padding: 10px;
+
+    font-size: 14px;
+
+    color: var(--jiang-choice-text);
+
+    font-family: inherit;
+
+    resize: vertical;
+
+    box-sizing: border-box;
+
+    outline: none;
+
+    background: #fffafb;
+
+  }
+
+  .jiang-choice-edit textarea:focus {
+
+    border-color: var(--jiang-choice-pink);
+
+  }
+
+  .jiang-choice-edit-tip {
+
+    font-size: 12px;
+
+    color: var(--jiang-choice-muted);
+
+    margin: 6px 0 8px;
+
+  }
+
+  .jiang-choice-save {
+
+    padding: 8px 16px;
+
+    border: none;
+
+    border-radius: 10px;
+
+    background: var(--jiang-choice-blue);
+
+    color: #fff;
+
+    font-size: 13px;
+
+    cursor: pointer;
+
+    font-family: inherit;
+
+    transition: 0.2s;
+
+  }
+
+  .jiang-choice-save:hover {
+
+    background: var(--jiang-choice-blue-deep);
+
+  }
+
+  .jiang-choice-foot {
+
+    text-align: center;
+
+    font-size: 12px;
+
+    color: var(--jiang-choice-muted);
+
+    margin-top: 14px;
+
+  }
+
+</style>
+
+<div class="jiang-choice-wrap">
+
+  <div class="jiang-choice-head">
+
+    <h3>选择困难救星</h3>
+
+    <p>交给运气吧，抽到就认</p>
+
+  </div>
+
+  <div class="jiang-choice-card" id="jiang-choice-card-eat">
+
+    <div class="jiang-choice-title">
+
+      <span>今天吃什么</span>
+
+      <button type="button" data-edit="eat">编辑</button>
+
+    </div>
+
+    <div class="jiang-choice-result" id="jiang-choice-result-eat">点下面抽一个</div>
+
+    <button class="jiang-choice-roll" type="button" data-roll="eat">抽 一 个</button>
+
+    <div class="jiang-choice-edit" id="jiang-choice-edit-eat">
+
+      <textarea id="jiang-choice-input-eat"></textarea>
+
+      <div class="jiang-choice-edit-tip">一行一个，别写重，写重了会重复抽到</div>
+
+      <button class="jiang-choice-save" type="button" data-save="eat">保存</button>
+
+    </div>
+
+  </div>
+
+  <div class="jiang-choice-card" id="jiang-choice-card-do">
+
+    <div class="jiang-choice-title">
+
+      <span>今天做什么</span>
+
+      <button type="button" data-edit="do">编辑</button>
+
+    </div>
+
+    <div class="jiang-choice-result" id="jiang-choice-result-do">点下面抽一个</div>
+
+    <button class="jiang-choice-roll" type="button" data-roll="do">抽 一 个</button>
+
+    <div class="jiang-choice-edit" id="jiang-choice-edit-do">
+
+      <textarea id="jiang-choice-input-do"></textarea>
+
+      <div class="jiang-choice-edit-tip">一行一个，别写重，写重了会重复抽到</div>
+
+      <button class="jiang-choice-save" type="button" data-save="do">保存</button>
+
+    </div>
+
+  </div>
+
+  <div class="jiang-choice-card" id="jiang-choice-card-buy">
+
+    <div class="jiang-choice-title">
+
+      <span>要不要买</span>
+
+      <button type="button" data-edit="buy">编辑</button>
+
+    </div>
+
+    <div class="jiang-choice-result" id="jiang-choice-result-buy">点下面抽一个</div>
+
+    <button class="jiang-choice-roll" type="button" data-roll="buy">抽 一 个</button>
+
+    <div class="jiang-choice-edit" id="jiang-choice-edit-buy">
+
+      <textarea id="jiang-choice-input-buy"></textarea>
+
+      <div class="jiang-choice-edit-tip">一行一个，别写重，写重了会重复抽到</div>
+
+      <button class="jiang-choice-save" type="button" data-save="buy">保存</button>
+
+    </div>
+
+  </div>
+
+  <div class="jiang-choice-foot">抽到就去做，别纠结</div>
+
+</div>
+
+<script>
+
+  (function () {
+
+    // ===== 江予朔 · 参数区 =====
+
+    var JIANG_CHOICE_STORAGE_KEY = "jiang-choice-options-v1";
+
+    var JIANG_CHOICE_DEFAULTS = {
+
+      eat: ["小面", "鱼粉", "鸡排饭", "馄饨", "食堂随便", "冒菜", "炒饭", "汉堡", "卷饼", "不吃"],
+
+      do: ["看书", "写作业", "睡午觉", "去操场走一圈", "刷剧", "整理桌面", "给周叙回话", "跟江予朔聊天", "发呆", "找同学玩"],
+
+      buy: ["买", "不买", "再想想", "先放购物车", "等降价", "先问别人", "买了别后悔", "算了"]
+
+    };
+
+    function jiangChoiceLoad() {
+
+      try {
+
+        var raw = localStorage.getItem(JIANG_CHOICE_STORAGE_KEY);
+
+        if (!raw) return null;
+
+        var data = JSON.parse(raw);
+
+        if (!data || typeof data !== "object") return null;
+
+        return data;
+
+      } catch (e) {
+
+        return null;
+
+      }
+
+    }
+
+    function jiangChoiceSave(data) {
+
+      try {
+
+        localStorage.setItem(JIANG_CHOICE_STORAGE_KEY, JSON.stringify(data));
+
+      } catch (e) {}
+
+    }
+
+    function jiangChoiceGetOptions(group) {
+
+      var saved = jiangChoiceLoad();
+
+      if (saved && saved[group] && saved[group].length) return saved[group];
+
+      return JIANG_CHOICE_DEFAULTS[group].slice();
+
+    }
+
+    function jiangChoiceSetOptions(group, list) {
+
+      var saved = jiangChoiceLoad() || {};
+
+      saved[group] = list;
+
+      jiangChoiceSave(saved);
+
+    }
+
+    function jiangChoicePick(group) {
+
+      var list = jiangChoiceGetOptions(group);
+
+      if (!list.length) return "没得选";
+
+      var i = Math.floor(Math.random() * list.length);
+
+      return list[i];
+
+    }
+
+    function jiangChoiceRenderResult(group, text) {
+
+      var el = document.getElementById("jiang-choice-result-" + group);
+
+      if (!el) return;
+
+      el.textContent = text;
+
+      el.classList.add("jiang-choice-pop");
+
+      setTimeout(function () {
+
+        el.classList.remove("jiang-choice-pop");
+
+      }, 260);
+
+    }
+
+    function jiangChoiceBindGroup(group) {
+
+      var rollBtn = document.querySelector('[data-roll="' + group + '"]');
+
+      var editBtn = document.querySelector('[data-edit="' + group + '"]');
+
+      var saveBtn = document.querySelector('[data-save="' + group + '"]');
+
+      var editBox = document.getElementById("jiang-choice-edit-" + group);
+
+      var textarea = document.getElementById("jiang-choice-input-" + group);
+
+      if (rollBtn) {
+
+        rollBtn.addEventListener("click", function () {
+
+          jiangChoiceRenderResult(group, jiangChoicePick(group));
+
+        });
+
+      }
+
+      if (editBtn && editBox && textarea) {
+
+        editBtn.addEventListener("click", function () {
+
+          var open = editBox.classList.toggle("jiang-choice-open");
+
+          if (open) {
+
+            textarea.value = jiangChoiceGetOptions(group).join("\n");
+
+          }
+
+        });
+
+      }
+
+      if (saveBtn && textarea) {
+
+        saveBtn.addEventListener("click", function () {
+
+          var list = textarea.value
+
+            .split("\n")
+
+            .map(function (s) { return s.trim(); })
+
+            .filter(function (s) { return s.length > 0; });
+
+          if (!list.length) return;
+
+          jiangChoiceSetOptions(group, list);
+
+          jiangChoiceRenderResult(group, "已保存 " + list.length + " 个选项");
+
+        });
+
+      }
+
+    }
+
+    jiangChoiceBindGroup("eat");
+
+    jiangChoiceBindGroup("do");
+
+    jiangChoiceBindGroup("buy");
+
+  })();
+
+</script>
+  </div>
+</body>
+</html>
