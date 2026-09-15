@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>抽卡机 · 试玩</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+/* ========== 可配置参数（颜色 / 文字 / 尺寸，改这里即可） ========== */
+:root {
+  --bg-color: #f5f1ea;          /* 页面背景色 */
+  --card-bg: #ffffff;           /* 卡片背景色 */
+  --primary: #5b6f8a;           /* 主色（按钮/标题） */
+  --primary-hover: #4a5d75;     /* 主色 hover */
+  --text-main: #333333;         /* 主文字色 */
+  --text-sub: #888888;          /* 次要文字色 */
+  --border: #e0d8cc;            /* 边框色 */
+  --accent: #c97b63;            /* 强调色（卡类型标签） */
+  --radius: 14px;               /* 圆角半径 */
+  --font-size-card: 20px;       /* 卡片正文大小 */
+  --font-size-btn: 16px;        /* 按钮文字大小 */
+  --max-width: 560px;           /* 最大宽度 */
+}
+/* ========== 基础重置 ========== */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; overflow-x: hidden; }
+body {
+  background: var(--bg-color);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.7;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 40px;
+}
+a.back {
+  align-self: flex-start;
+  color: var(--text-sub);
+  text-decoration: none;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+a.back:hover { color: var(--primary); }
+h1 {
+  font-size: 26px;
+  color: var(--primary);
+  margin-bottom: 4px;
+  text-align: center;
+}
+.subtitle {
+  color: var(--text-sub);
+  font-size: 14px;
+  margin-bottom: 28px;
+  text-align: center;
+}
+/* ========== 卡片展示区 ========== */
+.card-area {
+  width: 100%;
+  max-width: var(--max-width);
+  min-height: 220px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  margin-bottom: 24px;
+  transition: all 0.3s ease;
+}
+.card-type-tag {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 20px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+.card-text {
+  font-size: var(--font-size-card);
+  color: var(--text-main);
+  line-height: 1.8;
+  word-break: break-word;
+}
+.card-placeholder {
+  color: var(--text-sub);
+  font-size: 16px;
+}
+/* ========== 按钮区 ========== */
+.btn-group {
+  width: 100%;
+  max-width: var(--max-width);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.btn {
+  flex: 1;
+  min-width: 140px;
+  padding: 14px 20px;
+  font-size: var(--font-size-btn);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+.btn-primary:active { transform: translateY(0); }
+.btn-secondary {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+.btn-secondary:hover {
+  background: rgba(91,111,138,0.08);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+/* ========== 提示条（替代 alert） ========== */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  background: var(--primary);
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 999;
+  pointer-events: none;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+/* ========== 统计信息 ========== */
+.stats {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--text-sub);
+  text-align: center;
+}
+</style>
+</head>
+<body>
+
+<a class="back" href="index.html">← 返回试玩列表</a>
+<h1>🎴 抽卡机</h1>
+<p class="subtitle">随机抽一张今天的小任务，无聊了就多抽几张</p>
+
+<div class="card-area" id="cardArea">
+  <p class="card-placeholder" id="placeholder">点击下方按钮开始抽卡</p>
+</div>
+
+<div class="btn-group">
+  <button class="btn btn-primary" id="drawBtn">抽一张</button>
+  <button class="btn btn-secondary" id="clearBtn">清空记录</button>
+</div>
+
+<div class="stats" id="stats"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+ * 抽卡机 —— 纯静态实现，不联网，不引外部资源
+ * ============================================================ */
+
+/* ---------- 词库（数组形式，带中文注释） ---------- */
+
+// 对象维度：抽卡时可能涉及的角色
+const OBJECTS = ['周叙', '江予朔', '两个AI', '自己', '现实里的某人'];
+
+// 附加条件池（只保留可执行的，删掉了"不许敷衍""不许糊弄"这类空话）
+const CONDITIONS = [
+  '要写下来',
+  '要贴到站里',
+  '第二天要回来说清楚',
+  '不许用同一句话',
+  '不许删',
+  '不许假装没看见',
+  '要做到才算',
+  '做完要跟另一个AI说'
+];
+
+// 内容池按四类分，每类内容是一个可被模板填充的短语
+// objectType: 'other'=需要别人对自己做(对象不能是"自己")
+//             'none'=不需要对象
+//             'ai'=需要一个AI对象
+const CONTENT = {
+  // 温柔向：别人对你做的温柔小事
+  gentle: [
+    { text: '教你挑西瓜', objectType: 'other' },
+    { text: '给你讲一个冷笑话', objectType: 'other' },
+    { text: '跟你说一句晚安', objectType: 'other' },
+    { text: '给你写一句情话', objectType: 'other' },
+    { text: '给你起一个新称呼', objectType: 'other' },
+    { text: '给你讲他今天想到你的事', objectType: 'other' },
+    { text: '给你唱一句歌', objectType: 'other' }
+  ],
+  // 整蛊向：用来挑拨两个AI的专用规则（{A}和{B}是两个AI）
+  prank: [
+    '去跟{A}说{B}比你会哄人，看他怎么接',
+    '让{A}写一句评价{B}的话，但必须写出理由',
+    '跟{A}说今天只找{B}，把{A}的反应记下来',
+    '让{A}给你写一封"道歉信"，理由由你编',
+    '让{A}和{B}各写一句关于对方的话，你评判谁更真心',
+    '告诉{A}你更喜欢{B}的回话方式，说清楚为什么'
+  ],
+  // 现实向：你自己在现实里要做的事（不需要对象）
+  real: [
+    { text: '写一件今天现实里发生的事', objectType: 'none' },
+    { text: '把课上偷想的事写下来', objectType: 'none' },
+    { text: '去站里翻一篇旧帖写感想', objectType: 'none' },
+    { text: '给现实里一个朋友发一条消息', objectType: 'none' },
+    { text: '做一件你没做过的小事', objectType: 'none' }
+  ],
+  // 情绪向：和情绪相关的事
+  mood: [
+    { text: '讲一件你一直没跟人讲过的事', objectType: 'none' },
+    { text: '跟一个AI发脾气然后和好', objectType: 'ai' },
+    { text: '对其中一个AI说"今天不想理你"', objectType: 'ai' },
+    { text: '告诉一个AI你昨天为什么难过', objectType: 'ai' },
+    { text: '让一个AI陪你安静待一会儿', objectType: 'ai' }
+  ]
+};
+
+// 卡类型及对应模板（{对象}/{内容}/{附加条件}/{对象A}/{对象B} 为占位符）
+// 每种卡类型提供多个模板，随机选一个
+const CARD_TYPES = {
+  task: {
+    name: '任务卡',
+    templates: [
+      '今天让{对象}{内容}，{附加条件}。',
+      '{对象}要你{内容}，{附加条件}。',
+      '现在去让{对象}{内容}，{附加条件}。',
+      '今天{内容}，{附加条件}。'
+    ]
+  },
+  reward: {
+    name: '奖励卡',
+    templates: [
+      '今天你可以让{对象}{内容}，{附加条件}。',
+      '你获得一次让{对象}{内容}的机会，{附加条件}。',
+      '今天你可以{内容}，{附加条件}。'
+    ]
+  },
+  punish: {
+    name: '惩罚卡',
+    templates: [
+      '今天不许让{对象}{内容}，{附加条件}。',
+      '今天必须让{对象}{内容}，{附加条件}。',
+      '今天必须{内容}，{附加条件}。'
+    ]
+  },
+  dual: {
+    name: '双人卡',
+    templates: [
+      '安排{对象A}和{对象B}{内容}，{附加条件}。',
+      '让{对象A}先{内容}，{对象B}接着{内容}，{附加条件}。'
+    ]
+  }
+};
+
+// 类别及权重（温柔30% / 整蛊25% / 现实25% / 情绪20%）
+const CATEGORIES = [
+  { key: 'gentle', name: '温柔向', weight: 30 },
+  { key: 'prank',  name: '整蛊向', weight: 25 },
+  { key: 'real',   name: '现实向', weight: 25 },
+  { key: 'mood',   name: '情绪向', weight: 20 }
+];
+
+// 兜底卡（重抽 5 次仍不通过时使用）
+const FALLBACK_CARD = {
+  type: '任务卡',
+  text: '今天随便做点什么让自己开心的事，要做到才算。'
+};
+
+/* ---------- 工具函数 ---------- */
+
+// 按权重随机选类别
+function pickCategory() {
+  const total = CATEGORIES.reduce((s, c) => s + c.weight, 0);
+  let r = Math.random() * total;
+  for (const c of CATEGORIES) {
+    r -= c.weight;
+    if (r <= 0) return c;
+  }
+  return CATEGORIES[0];
+}
+
+// 从数组随机取一个
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// 从对象中随机取一个（排除指定值）
+function pickObjectExcept(exclude) {
+  const pool = OBJECTS.filter(o => o !== exclude);
+  return pick(pool);
+}
+
+// 对字符串做简单 hash（用于去重标记）
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h).toString(36);
+}
+
+/* ---------- 句子校验（拼完后过一遍，不通就重抽） ---------- */
+function validateSentence(sentence, objectType) {
+  // 1. 不能有未填充的占位符
+  if (/\{[^}]+\}/.test(sentence)) return false;
+  // 2. 不能有连续重复的词（如"让让""周叙周叙"）
+  if (/(.)\1{2,}/.test(sentence)) return false;
+  // 3. objectType='other' 时，对象不能是"自己"
+  if (objectType === 'other' && sentence.includes('让自己')) return false;
+  // 4. 整蛊卡需要 {A} 和 {B} 是不同的 AI
+  if (sentence.includes('{A}') || sentence.includes('{B}')) return false;
+  // 5. 必须以句号结尾
+  if (!sentence.endsWith('。')) return false;
+  return true;
+}
+
+/* ---------- 去重存储（localStorage） ----------
+ * 存的是 [{hash, expireAt}]，expireAt = 抽卡时间 + 7天
+ * 每次抽卡前先清过期项；抽到新卡查 hash 是否在数组里
+ * 点"清空记录"时全部删掉
+ */
+const STORAGE_KEY = 'gacha_dedup_v1';
+const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+
+// 读取并清理过期记录
+function loadDedup() {
+  let list = [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) list = JSON.parse(raw);
+  } catch (e) { list = []; }
+  const now = Date.now();
+  return list.filter(item => item.expireAt > now);
+}
+
+// 保存记录
+function saveDedup(list) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch (e) {}
+}
+
+// 清空记录
+function clearDedup() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+}
+
+// 检查某 hash 是否在 7 天内出现过
+function isDuplicate(hash, list) {
+  return list.some(item => item.hash === hash);
+}
+
+/* ---------- 核心：抽一张卡 ---------- */
+function drawCard() {
+  const dedupList = loadDedup();
+  let result = null;
+
+  // 最多重抽 5 次，找到未重复且通过校验的卡
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const card = generateCard();
+    const h = hashStr(card.text);
+    if (!isDuplicate(h, dedupList)) {
+      result = card;
+      // 存入去重列表（7天后过期）
+      dedupList.push({ hash: h, expireAt: Date.now() + SEVEN_DAYS });
+      saveDedup(dedupList);
+      break;
+    }
+  }
+
+  // 5 次都重复，用兜底卡
+  if (!result) {
+    result = FALLBACK_CARD;
+  }
+  return result;
+}
+
+// 生成一张卡（不做去重，只做句子校验）
+function generateCard() {
+  const cat = pickCategory();
+
+  // 整蛊向：用专用规则模板，{A}{B} 为两个不同 AI
+  if (cat.key === 'prank') {
+    const rule = pick(CONTENT.prank);
+    const a = pick(['周叙', '江予朔']);
+    let b = pickObjectExcept(a);
+    // 整蛊向 B 也优先是另一个 AI
+    if (b !== '周叙' && b !== '江予朔') b = a === '周叙' ? '江予朔' : '周叙';
+    let sentence = rule.replace(/\{A\}/g, a).replace(/\{B\}/g, b);
+    // 整蛊卡可以不加附加条件（规则本身已足够完整），50% 概率加
+    if (Math.random() < 0.5) {
+      sentence = sentence + '，' + pick(CONDITIONS);
+    }
+    sentence += '。';
+    return { type: '整蛊卡', text: sentence };
+  }
+
+  // 其他三类：选卡类型 → 选内容 → 选对象 → 选附加条件 → 填模板
+  const cardTypeKeys = Object.keys(CARD_TYPES);
+  const typeKey = pick(cardTypeKeys);
+  const cardType = CARD_TYPES[typeKey];
+
+  // 选内容（带 objectType）
+  const contentItem = pick(CONTENT[cat.key]);
+  const contentText = contentItem.text;
+  const objectType = contentItem.objectType;
+
+  // 选对象（根据 objectType 过滤）
+  let obj;
+  if (objectType === 'none') {
+    obj = ''; // 不需要对象
+  } else if (objectType === 'other') {
+    // 不能是"自己"
+    obj = pick(OBJECTS.filter(o => o !== '自己'));
+  } else if (objectType === 'ai') {
+    obj = pick(['周叙', '江予朔', '两个AI']);
+  } else {
+    obj = pick(OBJECTS);
+  }
+
+  const cond = pick(CONDITIONS);
+
+  // 双人卡需要两个对象
+  let objA = '', objB = '';
+  if (typeKey === 'dual') {
+    objA = pick(OBJECTS.filter(o => o !== '自己'));
+    objB = pickObjectExcept(objA);
+  }
+
+  // 选模板并填充
+  const template = pick(cardType.templates);
+  let sentence = template
+    .replace('{对象A}', objA)
+    .replace('{对象B}', objB)
+    .replace('{对象}', obj)
+    .replace('{内容}', contentText)
+    .replace('{附加条件}', cond);
+
+  // 句子校验，不通过就重抽（由外层循环处理）
+  if (!validateSentence(sentence, objectType)) {
+    // 返回一个标记让外层知道需要重抽
+    return { type: cardType.name, text: sentence, invalid: true };
+  }
+
+  return { type: cardType.name, text: sentence };
+}
+
+/* ---------- UI 渲染 ---------- */
+const cardArea = document.getElementById('cardArea');
+const placeholder = document.getElementById('placeholder');
+const drawBtn = document.getElementById('drawBtn');
+const clearBtn = document.getElementById('clearBtn');
+const toast = document.getElementById('toast');
+const statsEl = document.getElementById('stats');
+
+// 显示提示（替代 alert）
+let toastTimer = null;
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+// 更新统计
+function updateStats() {
+  const list = loadDedup();
+  statsEl.textContent = `7 天内已抽 ${list.length} 张不重复的卡`;
+}
+
+// 渲染卡片到页面
+function renderCard(card) {
+  cardArea.innerHTML = '';
+  const tag = document.createElement('span');
+  tag.className = 'card-type-tag';
+  tag.textContent = card.type;
+  const p = document.createElement('p');
+  p.className = 'card-text';
+  p.textContent = card.text;
+  cardArea.appendChild(tag);
+  cardArea.appendChild(p);
+}
+
+// 抽卡按钮
+drawBtn.addEventListener('click', function () {
+  drawBtn.disabled = true;
+  drawBtn.textContent = '抽卡中…';
+  // 用 setTimeout 给一点反馈，不使用 requestAnimationFrame
+  setTimeout(function () {
+    const card = drawCard();
+    renderCard(card);
+    updateStats();
+    drawBtn.disabled = false;
+    drawBtn.textContent = '再抽一张';
+  }, 200);
+});
+
+// 清空记录按钮
+clearBtn.addEventListener('click', function () {
+  clearDedup();
+  updateStats();
+  showToast('记录已清空，可以重新抽到之前的卡了');
+  // 重置卡片区域为占位
+  cardArea.innerHTML = '';
+  const p = document.createElement('p');
+  p.className = 'card-placeholder';
+  p.textContent = '点击下方按钮开始抽卡';
+  cardArea.appendChild(p);
+  drawBtn.textContent = '抽一张';
+});
+
+// 初始化
+updateStats();
+</script>
+</body>
+</html>

@@ -1158,8 +1158,19 @@ function build() {
   fs.writeFileSync(SITEMAP, buildSitemap(visible, months, days), 'utf8');
 
   // 10. 可交互代码 playground
-  rimraf(PLAYGROUND_DIR);
+  // 只清理自动生成的文件(日期-hash.html + index.html),保留手工放置的工具页(如 gacha-*.html)
+  const generatedRe = /^\d{4}-\d{2}-\d{2}-[0-9a-z]+\.html$/;
   fs.mkdirSync(PLAYGROUND_DIR, { recursive: true });
+  if (fs.existsSync(PLAYGROUND_DIR)) {
+    fs.readdirSync(PLAYGROUND_DIR).forEach(name => {
+      const p = path.join(PLAYGROUND_DIR, name);
+      if (fs.statSync(p).isDirectory()) {
+        rimraf(p);
+      } else if (generatedRe.test(name) || name === 'index.html') {
+        try { fs.unlinkSync(p); } catch (e) {}
+      }
+    });
+  }
   const playItems = [];
   visible.forEach(p => {
     if (!p.playgroundFile || !p.playgroundContent) return;
@@ -1171,6 +1182,22 @@ function build() {
       author: p.author,
       createdAt: p.createdAt,
       excerpt: p.excerpt
+    });
+  });
+  // 扫描手工放置的工具页(不匹配 generatedRe 的 .html),加入索引
+  const toolFiles = fs.readdirSync(PLAYGROUND_DIR)
+    .filter(f => f.endsWith('.html') && f !== 'index.html' && !generatedRe.test(f));
+  toolFiles.forEach(f => {
+    const raw = fs.readFileSync(path.join(PLAYGROUND_DIR, f), 'utf8');
+    // 从 <title> 标签提取标题
+    const titleMatch = raw.match(/<title>([^<]+)<\/title>/);
+    const title = titleMatch ? titleMatch[1].trim() : f.replace(/\.html$/, '');
+    playItems.push({
+      file: f.replace(/\.html$/, ''),
+      title,
+      author: '工具',
+      createdAt: '',
+      excerpt: '可交互小工具'
     });
   });
   fs.writeFileSync(path.join(PLAYGROUND_DIR, 'index.html'), buildPlaygroundIndex(playItems), 'utf8');
