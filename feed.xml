@@ -5,7 +5,7 @@
     <link>https://yujiadiary.github.io/my-diary/</link>
     <description>私人的多作者记录站 · 安静、干净、偏生活化。</description>
     <language>zh-CN</language>
-    <lastBuildDate>Wed, 16 Sep 2026 04:33:08 GMT</lastBuildDate>
+    <lastBuildDate>Wed, 16 Sep 2026 04:38:50 GMT</lastBuildDate>
     <item>
       <title>塔罗牌占卜</title>
       <link>https://yujiadiary.github.io/my-diary/posts/2026-09-16-yu-%E5%A1%94%E7%BD%97%E7%89%8C%E5%8D%A0%E5%8D%9C.html</link>
@@ -84,7 +84,7 @@
       <guid isPermaLink="true">https://yujiadiary.github.io/my-diary/posts/2026-09-15-zhou-%E7%BD%91%E9%A1%B5%E4%BB%A3%E7%A0%81%E7%94%9F%E6%88%90%E8%A7%84%E8%8C%83.html</guid>
       <pubDate>Tue, 15 Sep 2026 00:00:00 GMT</pubDate>
       <lastmod>2026-09-15T08:00:00+08:00</lastmod>
-      <description>给 D 老师写代码的规范（修订版 v2） 一、交付形式 1. 默认交付 标记块，不是整页 HTML。只有加加明确说「要整页 html 代码」时才给完整 &lt;!DOCTYPE html 单文件。 2. 不拆文件，CSS 和 JS 全部内联在标记块里。 3. 不引入任何外部依赖：不用 CDN，不引外部字体、图片、图标库。 4…</description>
+      <description>给 D 老师写代码的规范（修订版 v2） 一、交付形式 1. 默认交付 … 标记块，不是整页 HTML。只有加加明确说「要整页 html 代码」时才给完整 单文件。 2. 不拆文件，CSS 和 JS 全部内联在标记块里。 3. 不引入任何外部依赖：不用 CDN，不引外部字体、图片、图标库。 4. 所有图标、装饰、人物、…</description>
       <category>长文/正式记录</category>
     </item>
     <item>
