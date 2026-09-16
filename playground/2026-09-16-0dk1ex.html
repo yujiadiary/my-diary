@@ -1,0 +1,2062 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>塔罗牌 · 试玩 · 碎碎念留档</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <style>
+    body { margin: 0; padding: 16px 16px 48px; font-family: system-ui, -apple-system, sans-serif; background: #fafafa; color: #333; }
+    .pg-back { display: block; margin-bottom: 8px; font-size: 14px; color: #5b6f8a; text-decoration: none; }
+    .pg-meta { display: block; font-size: 12px; color: #999; margin: 0 0 16px; }
+    .pg-canvas { border: 1px solid #e0e0e0; border-radius: 8px; overflow: auto; }
+    button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body>
+  <a class="pg-back" href="../posts/2026-09-16-yu-%E5%A1%94%E7%BD%97%E7%89%8C.html">← 返回文章</a>
+  <div class="pg-meta">塔罗牌 · 于加</div>
+  <div class="pg-canvas">
+<style>
+
+  /* ============================================================
+
+     全部样式限定在 .tarot-app 内，不污染文章页
+
+     ============================================================ */
+
+  .tarot-app,
+
+  .tarot-app *,
+
+  .tarot-app *::before,
+
+  .tarot-app *::after { box-sizing: border-box; }
+
+  /* 可调参数区：想改配色、尺寸改这里 */
+
+  .tarot-app {
+
+    --t-night-1: #0b0620;
+
+    --t-night-2: #1a0f3d;
+
+    --t-night-3: #2a1650;
+
+    --t-gold: #d9b96a;
+
+    --t-gold-soft: #f0dba6;
+
+    --t-gold-dim: rgba(217, 185, 106, 0.32);
+
+    --t-purple: #9b7fd4;
+
+    --t-pink: #e8a0c8;
+
+    --t-ink: #ece4f7;
+
+    --t-ink-soft: #a89cc8;
+
+    --t-card-face: #f5efdf;
+
+    --t-card-ink: #3d2f56;
+
+    --t-max-w: 620px;
+
+    --t-radius: 22px;
+
+    position: relative;
+
+    width: 100%;
+
+    max-width: var(--t-max-w);
+
+    margin: 0 auto;
+
+    padding: 26px 18px 32px;
+
+    border-radius: var(--t-radius);
+
+    background:
+
+      radial-gradient(circle at 20% 10%, rgba(155, 127, 212, 0.28), transparent 45%),
+
+      radial-gradient(circle at 82% 82%, rgba(232, 160, 200, 0.18), transparent 50%),
+
+      linear-gradient(165deg, var(--t-night-1) 0%, var(--t-night-2) 50%, var(--t-night-3) 100%);
+
+    color: var(--t-ink);
+
+    font-family: Georgia, "Songti SC", "STSong", "SimSun", serif;
+
+    -webkit-font-smoothing: antialiased;
+
+    overflow: hidden;
+
+    isolation: isolate;
+
+  }
+
+  /* 星空层 */
+
+  .tarot-app .t-stars {
+
+    position: absolute;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    z-index: 0;
+
+    background-image:
+
+      radial-gradient(1.4px 1.4px at 12% 18%, rgba(255,255,255,0.85), transparent),
+
+      radial-gradient(1px 1px at 34% 62%, rgba(255,255,255,0.6), transparent),
+
+      radial-gradient(1.6px 1.6px at 58% 26%, rgba(240,219,166,0.85), transparent),
+
+      radial-gradient(1px 1px at 76% 74%, rgba(255,255,255,0.55), transparent),
+
+      radial-gradient(1.2px 1.2px at 88% 34%, rgba(240,219,166,0.7), transparent),
+
+      radial-gradient(1px 1px at 24% 86%, rgba(255,255,255,0.5), transparent),
+
+      radial-gradient(1.3px 1.3px at 66% 88%, rgba(232,160,200,0.7), transparent),
+
+      radial-gradient(1px 1px at 44% 12%, rgba(255,255,255,0.6), transparent),
+
+      radial-gradient(1px 1px at 92% 58%, rgba(255,255,255,0.45), transparent);
+
+    animation: t-twinkle 7s ease-in-out infinite;
+
+  }
+
+  @keyframes t-twinkle {
+
+    0%, 100% { opacity: 0.9; }
+
+    50%      { opacity: 0.45; }
+
+  }
+
+  /* 所有直接子元素都在星空层之上 */
+
+  .tarot-app > *:not(.t-stars) { position: relative; z-index: 1; }
+
+  .tarot-app > * { flex: 0 0 auto; }
+
+  /* ---------- 标题 ---------- */
+
+  .tarot-app .t-head { text-align: center; margin-bottom: 20px; }
+
+  .tarot-app .t-title {
+
+    margin: 0 0 8px;
+
+    font-size: 25px;
+
+    letter-spacing: 6px;
+
+    font-weight: normal;
+
+    background: linear-gradient(120deg, var(--t-gold-soft) 0%, var(--t-purple) 50%, var(--t-pink) 100%);
+
+    -webkit-background-clip: text;
+
+    background-clip: text;
+
+    -webkit-text-fill-color: transparent;
+
+    color: var(--t-gold);
+
+  }
+
+  .tarot-app .t-sub {
+
+    margin: 0;
+
+    font-size: 13px;
+
+    color: var(--t-ink-soft);
+
+    letter-spacing: 2px;
+
+  }
+
+  /* ---------- 问题输入 ---------- */
+
+  .tarot-app .t-qbox {
+
+    width: 100%;
+
+    margin-bottom: 14px;
+
+  }
+
+  .tarot-app .t-qbox-label {
+
+    display: block;
+
+    font-size: 12px;
+
+    color: var(--t-gold-soft);
+
+    letter-spacing: 2px;
+
+    margin-bottom: 8px;
+
+    opacity: 0.85;
+
+  }
+
+  .tarot-app .t-q {
+
+    width: 100%;
+
+    padding: 13px 16px;
+
+    font-family: inherit;
+
+    font-size: 14px;
+
+    color: var(--t-ink);
+
+    background: rgba(255, 255, 255, 0.06);
+
+    border: 1px solid var(--t-gold-dim);
+
+    border-radius: 14px;
+
+    outline: none;
+
+    transition: border-color 0.25s ease, background-color 0.25s ease,
+
+                box-shadow 0.25s ease;
+
+    -webkit-appearance: none;
+
+    appearance: none;
+
+  }
+
+  .tarot-app .t-q::placeholder { color: rgba(168, 156, 200, 0.7); }
+
+  .tarot-app .t-q:hover { border-color: rgba(217, 185, 106, 0.55); }
+
+  .tarot-app .t-q:focus {
+
+    border-color: var(--t-gold);
+
+    background: rgba(255, 255, 255, 0.09);
+
+    box-shadow: 0 0 0 3px rgba(217, 185, 106, 0.15);
+
+  }
+
+  /* ---------- 牌阵切换 ---------- */
+
+  .tarot-app .t-spread {
+
+    display: flex;
+
+    gap: 10px;
+
+    justify-content: center;
+
+    margin-bottom: 16px;
+
+    width: 100%;
+
+  }
+
+  .tarot-app .t-spread-btn {
+
+    flex: 1 1 0;
+
+    max-width: 150px;
+
+    font-family: inherit;
+
+    font-size: 13px;
+
+    letter-spacing: 3px;
+
+    color: var(--t-ink-soft);
+
+    background: rgba(255, 255, 255, 0.04);
+
+    border: 1px solid rgba(168, 156, 200, 0.28);
+
+    border-radius: 999px;
+
+    padding: 9px 12px;
+
+    cursor: pointer;
+
+    transition: all 0.25s ease;
+
+    -webkit-appearance: none;
+
+    appearance: none;
+
+  }
+
+  .tarot-app .t-spread-btn:hover {
+
+    color: var(--t-gold-soft);
+
+    border-color: rgba(217, 185, 106, 0.5);
+
+    background: rgba(217, 185, 106, 0.08);
+
+  }
+
+  .tarot-app .t-spread-btn.t-active {
+
+    color: var(--t-night-1);
+
+    background: linear-gradient(135deg, var(--t-gold-soft), var(--t-gold));
+
+    border-color: transparent;
+
+    box-shadow: 0 4px 14px rgba(217, 185, 106, 0.35);
+
+  }
+
+  .tarot-app .t-spread-btn:focus-visible {
+
+    outline: 2px solid var(--t-gold);
+
+    outline-offset: 3px;
+
+  }
+
+  /* ---------- 主按钮 ---------- */
+
+  .tarot-app .t-actions {
+
+    display: flex;
+
+    gap: 12px;
+
+    justify-content: center;
+
+    width: 100%;
+
+    margin-bottom: 22px;
+
+  }
+
+  .tarot-app .t-btn {
+
+    font-family: inherit;
+
+    font-size: 15px;
+
+    letter-spacing: 4px;
+
+    border: none;
+
+    border-radius: 999px;
+
+    padding: 13px 34px;
+
+    cursor: pointer;
+
+    transition: transform 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease;
+
+    -webkit-appearance: none;
+
+    appearance: none;
+
+    white-space: nowrap;
+
+  }
+
+  .tarot-app .t-btn-main {
+
+    color: var(--t-night-1);
+
+    background: linear-gradient(135deg, var(--t-gold-soft) 0%, var(--t-gold) 55%, #b8924a 100%);
+
+    box-shadow: 0 8px 22px rgba(217, 185, 106, 0.32),
+
+                inset 0 1px 0 rgba(255, 255, 255, 0.5);
+
+    font-weight: bold;
+
+  }
+
+  .tarot-app .t-btn-main:hover:not(:disabled) {
+
+    transform: translateY(-2px);
+
+    box-shadow: 0 12px 28px rgba(217, 185, 106, 0.5),
+
+                inset 0 1px 0 rgba(255, 255, 255, 0.5);
+
+  }
+
+  .tarot-app .t-btn-main:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+
+  .tarot-app .t-btn-main:disabled {
+
+    opacity: 0.4;
+
+    cursor: not-allowed;
+
+  }
+
+  .tarot-app .t-btn-ghost {
+
+    color: var(--t-ink-soft);
+
+    background: rgba(255, 255, 255, 0.05);
+
+    border: 1px solid rgba(168, 156, 200, 0.3);
+
+  }
+
+  .tarot-app .t-btn-ghost:hover {
+
+    color: var(--t-gold-soft);
+
+    border-color: rgba(217, 185, 106, 0.55);
+
+    background: rgba(217, 185, 106, 0.08);
+
+    transform: translateY(-2px);
+
+  }
+
+  .tarot-app .t-btn-ghost:active { transform: translateY(0) scale(0.97); }
+
+  .tarot-app .t-btn:focus-visible {
+
+    outline: 2px solid var(--t-gold);
+
+    outline-offset: 3px;
+
+  }
+
+  /* ---------- 舞台 ---------- */
+
+  .tarot-app .t-stage {
+
+    position: relative;
+
+    width: 100%;
+
+    min-height: 250px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 10px 0 6px;
+
+  }
+
+  /* 洗牌堆：三张叠着的牌背抖动 */
+
+  .tarot-app .t-deck {
+
+    position: relative;
+
+    width: 96px;
+
+    height: 158px;
+
+  }
+
+  .tarot-app .t-deck-card {
+
+    position: absolute;
+
+    inset: 0;
+
+    border-radius: 12px;
+
+    background: linear-gradient(160deg, #241748 0%, #150c30 100%);
+
+    border: 1px solid var(--t-gold-dim);
+
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+
+    color: var(--t-gold);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    animation: t-shuffle 1.15s ease-in-out infinite;
+
+  }
+
+  .tarot-app .t-deck-card:nth-child(2) { animation-delay: 0.12s; }
+
+  .tarot-app .t-deck-card:nth-child(3) { animation-delay: 0.24s; }
+
+  @keyframes t-shuffle {
+
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+
+    25%      { transform: translateY(-10px) rotate(-3.5deg); }
+
+    75%      { transform: translateY(10px) rotate(3.5deg); }
+
+  }
+
+  .tarot-app .t-deck-card svg {
+
+    width: 62%;
+
+    height: 62%;
+
+    opacity: 0.85;
+
+  }
+
+  /* 洗牌提示 */
+
+  .tarot-app .t-shuffle-tip {
+
+    position: absolute;
+
+    bottom: -30px;
+
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    font-size: 12px;
+
+    letter-spacing: 3px;
+
+    color: var(--t-ink-soft);
+
+    white-space: nowrap;
+
+  }
+
+  /* ---------- 牌桌（抽出的牌） ---------- */
+
+  .tarot-app .t-table {
+
+    display: flex;
+
+    gap: 14px;
+
+    justify-content: center;
+
+    flex-wrap: nowrap;
+
+    width: 100%;
+
+  }
+
+  .tarot-app .t-table[data-spread="three"] { gap: 10px; }
+
+  /* 单张牌 */
+
+  .tarot-app .t-card {
+
+    position: relative;
+
+    width: 100%;
+
+    max-width: 150px;
+
+    aspect-ratio: 100 / 165;
+
+    perspective: 1000px;
+
+    cursor: pointer;
+
+    transition: transform 0.25s ease;
+
+  }
+
+  .tarot-app .t-table[data-spread="three"] .t-card { max-width: 118px; }
+
+  .tarot-app .t-card.t-untouchable { cursor: default; }
+
+  .tarot-app .t-card:not(.t-flipped):not(.t-untouchable):hover {
+
+    transform: translateY(-6px);
+
+  }
+
+  .tarot-app .t-card:not(.t-flipped):not(.t-untouchable):active {
+
+    transform: translateY(-2px) scale(0.98);
+
+  }
+
+  .tarot-app .t-card-inner {
+
+    position: relative;
+
+    width: 100%;
+
+    height: 100%;
+
+    transform-style: preserve-3d;
+
+    transition: transform 0.85s cubic-bezier(0.4, 0.05, 0.2, 1);
+
+  }
+
+  .tarot-app .t-card.t-flipped .t-card-inner {
+
+    transform: rotateY(180deg);
+
+  }
+
+  .tarot-app .t-face,
+
+  .tarot-app .t-back {
+
+    position: absolute;
+
+    inset: 0;
+
+    border-radius: 12px;
+
+    backface-visibility: hidden;
+
+    -webkit-backface-visibility: hidden;
+
+    overflow: hidden;
+
+  }
+
+  /* 牌背 */
+
+  .tarot-app .t-back {
+
+    background:
+
+      radial-gradient(circle at 50% 50%, rgba(155, 127, 212, 0.35), transparent 60%),
+
+      linear-gradient(160deg, #241748 0%, #150c30 100%);
+
+    border: 1px solid var(--t-gold-dim);
+
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.55),
+
+                inset 0 0 20px rgba(155, 127, 212, 0.15);
+
+    color: var(--t-gold);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+  }
+
+  .tarot-app .t-back svg { width: 70%; height: 70%; opacity: 0.85; }
+
+  /* 牌面 */
+
+  .tarot-app .t-face {
+
+    transform: rotateY(180deg);
+
+    background:
+
+      radial-gradient(circle at 50% 45%, #fdfaf0 0%, var(--t-card-face) 55%, #e8dfc8 100%);
+
+    border: 1.5px solid var(--t-gold);
+
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5),
+
+                inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+
+    color: var(--t-card-ink);
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 12px 8px;
+
+    text-align: center;
+
+  }
+
+  /* 牌面内框 */
+
+  .tarot-app .t-face::before {
+
+    content: "";
+
+    position: absolute;
+
+    inset: 5px;
+
+    border: 1px solid rgba(217, 185, 106, 0.55);
+
+    border-radius: 8px;
+
+    pointer-events: none;
+
+  }
+
+  .tarot-app .t-face > * { position: relative; z-index: 1; }
+
+  .tarot-app .t-num {
+
+    font-size: 11px;
+
+    letter-spacing: 2px;
+
+    color: #8a7540;
+
+    align-self: flex-start;
+
+    padding-left: 4px;
+
+  }
+
+  .tarot-app .t-sym {
+
+    flex: 1 1 auto;
+
+    width: 100%;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    color: #7a5f1f;
+
+    transition: transform 0.5s ease;
+
+  }
+
+  /* 逆位：符号旋转 180 度 */
+
+  .tarot-app .t-card.t-reversed .t-sym { transform: rotate(180deg); }
+
+  .tarot-app .t-sym svg {
+
+    width: 72%;
+
+    height: 72%;
+
+    max-height: 90px;
+
+    fill: none;
+
+    stroke: currentColor;
+
+    stroke-width: 2.4;
+
+    stroke-linecap: round;
+
+    stroke-linejoin: round;
+
+  }
+
+  .tarot-app .t-name {
+
+    font-size: 13px;
+
+    letter-spacing: 2px;
+
+    color: var(--t-card-ink);
+
+    font-weight: bold;
+
+    line-height: 1.3;
+
+  }
+
+  .tarot-app .t-en {
+
+    font-size: 9px;
+
+    letter-spacing: 1px;
+
+    color: #8a7540;
+
+    margin-top: 2px;
+
+    font-style: italic;
+
+  }
+
+  /* 逆位小标签 */
+
+  .tarot-app .t-rev-tag {
+
+    position: absolute;
+
+    top: 8px;
+
+    right: 8px;
+
+    font-size: 9px;
+
+    letter-spacing: 1px;
+
+    color: #fff;
+
+    background: #a86b8c;
+
+    padding: 2px 6px;
+
+    border-radius: 999px;
+
+    opacity: 0;
+
+    transition: opacity 0.4s ease 0.5s;
+
+    z-index: 2;
+
+  }
+
+  .tarot-app .t-card.t-flipped.t-reversed .t-rev-tag { opacity: 1; }
+
+  /* 位置标签（三张牌时） */
+
+  .tarot-app .t-pos {
+
+    position: absolute;
+
+    bottom: -24px;
+
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    font-size: 11px;
+
+    letter-spacing: 3px;
+
+    color: var(--t-gold-soft);
+
+    opacity: 0;
+
+    transition: opacity 0.4s ease 0.4s;
+
+    white-space: nowrap;
+
+  }
+
+  .tarot-app .t-card.t-flipped .t-pos { opacity: 0.9; }
+
+  /* 提示文字 */
+
+  .tarot-app .t-hint {
+
+    margin: 28px 0 0;
+
+    font-size: 12.5px;
+
+    letter-spacing: 2px;
+
+    color: var(--t-ink-soft);
+
+    text-align: center;
+
+    line-height: 1.9;
+
+    min-height: 20px;
+
+    transition: opacity 0.3s ease;
+
+  }
+
+  /* ---------- 解析区 ---------- */
+
+  .tarot-app .t-reading {
+
+    width: 100%;
+
+    margin-top: 22px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 14px;
+
+  }
+
+  .tarot-app .t-read-item {
+
+    background: rgba(255, 255, 255, 0.045);
+
+    border: 1px solid var(--t-gold-dim);
+
+    border-radius: 16px;
+
+    padding: 15px 17px;
+
+    animation: t-fade-up 0.55s ease both;
+
+  }
+
+  @keyframes t-fade-up {
+
+    from { opacity: 0; transform: translateY(10px); }
+
+    to   { opacity: 1; transform: translateY(0); }
+
+  }
+
+  .tarot-app .t-read-head {
+
+    display: flex;
+
+    align-items: baseline;
+
+    gap: 10px;
+
+    flex-wrap: wrap;
+
+    margin-bottom: 8px;
+
+  }
+
+  .tarot-app .t-read-pos {
+
+    font-size: 11px;
+
+    letter-spacing: 2px;
+
+    color: var(--t-night-1);
+
+    background: linear-gradient(135deg, var(--t-gold-soft), var(--t-gold));
+
+    padding: 3px 10px;
+
+    border-radius: 999px;
+
+    white-space: nowrap;
+
+  }
+
+  .tarot-app .t-read-name {
+
+    font-size: 16px;
+
+    letter-spacing: 2px;
+
+    color: var(--t-gold-soft);
+
+    font-weight: bold;
+
+  }
+
+  .tarot-app .t-read-orient {
+
+    font-size: 11px;
+
+    letter-spacing: 1px;
+
+    color: var(--t-ink-soft);
+
+    padding: 2px 8px;
+
+    border: 1px solid rgba(168, 156, 200, 0.35);
+
+    border-radius: 999px;
+
+  }
+
+  .tarot-app .t-read-orient.t-rev {
+
+    color: #e8b7cf;
+
+    border-color: rgba(232, 183, 207, 0.5);
+
+  }
+
+  .tarot-app .t-read-kw {
+
+    font-size: 12.5px;
+
+    letter-spacing: 1.5px;
+
+    color: var(--t-pink);
+
+    margin-bottom: 10px;
+
+  }
+
+  .tarot-app .t-read-text {
+
+    margin: 0;
+
+    font-size: 14px;
+
+    line-height: 1.9;
+
+    color: var(--t-ink);
+
+    letter-spacing: 0.4px;
+
+  }
+
+  /* 综合解读 */
+
+  .tarot-app .t-summary {
+
+    margin-top: 4px;
+
+    padding: 18px 18px 20px;
+
+    border-radius: 18px;
+
+    background:
+
+      radial-gradient(circle at 0% 0%, rgba(217, 185, 106, 0.14), transparent 60%),
+
+      radial-gradient(circle at 100% 100%, rgba(232, 160, 200, 0.14), transparent 60%),
+
+      rgba(255, 255, 255, 0.05);
+
+    border: 1px solid rgba(217, 185, 106, 0.45);
+
+    animation: t-fade-up 0.6s ease both;
+
+  }
+
+  .tarot-app .t-summary-title {
+
+    font-size: 13px;
+
+    letter-spacing: 4px;
+
+    color: var(--t-gold-soft);
+
+    margin: 0 0 10px;
+
+    text-align: center;
+
+  }
+
+  .tarot-app .t-summary-path {
+
+    text-align: center;
+
+    font-size: 13px;
+
+    letter-spacing: 1.5px;
+
+    color: var(--t-ink-soft);
+
+    margin: 0 0 12px;
+
+    line-height: 1.9;
+
+  }
+
+  .tarot-app .t-summary-path b {
+
+    color: var(--t-pink);
+
+    font-weight: normal;
+
+  }
+
+  .tarot-app .t-summary-text {
+
+    margin: 0;
+
+    font-size: 14.5px;
+
+    line-height: 2;
+
+    color: var(--t-ink);
+
+    letter-spacing: 0.5px;
+
+    text-align: center;
+
+  }
+
+  /* 隐藏工具类 */
+
+  .tarot-app .t-hidden { display: none !important; }
+
+  @media (max-width: 420px) {
+
+    .tarot-app { padding: 22px 14px 26px; }
+
+    .tarot-app .t-title { font-size: 21px; letter-spacing: 4px; }
+
+    .tarot-app .t-btn { padding: 12px 24px; font-size: 14px; letter-spacing: 3px; }
+
+    .tarot-app .t-spread-btn { font-size: 12px; letter-spacing: 2px; }
+
+    .tarot-app .t-table[data-spread="three"] { gap: 7px; }
+
+    .tarot-app .t-table[data-spread="three"] .t-card { max-width: 100px; }
+
+    .tarot-app .t-face { padding: 9px 6px; }
+
+    .tarot-app .t-name { font-size: 11px; letter-spacing: 1px; }
+
+    .tarot-app .t-en { font-size: 8px; }
+
+    .tarot-app .t-sym svg { stroke-width: 2.8; }
+
+    .tarot-app .t-read-name { font-size: 15px; }
+
+    .tarot-app .t-read-text { font-size: 13.5px; }
+
+  }
+
+</style>
+
+<div class="tarot-app" id="t-app">
+
+  <div class="t-stars" aria-hidden="true"></div>
+
+  <header class="t-head">
+
+    <h2 class="t-title">塔 罗 占 卜</h2>
+
+    <p class="t-sub">让一张牌，照见你心里早就知道的事</p>
+
+  </header>
+
+  <div class="t-qbox">
+
+    <label class="t-qbox-label" for="t-q">在心里默念，或写下来</label>
+
+    <input class="t-q" id="t-q" type="text" maxlength="60"
+
+           placeholder="你现在最想问的是什么？" autocomplete="off">
+
+  </div>
+
+  <div class="t-spread" id="t-spread">
+
+    <button class="t-spread-btn t-active" type="button" data-spread="single">单 张</button>
+
+    <button class="t-spread-btn" type="button" data-spread="three">三 张</button>
+
+  </div>
+
+  <div class="t-actions">
+
+    <button class="t-btn t-btn-main" id="t-start" type="button">开 始 占 卜</button>
+
+    <button class="t-btn t-btn-ghost t-hidden" id="t-reset" type="button">重 来</button>
+
+  </div>
+
+  <div class="t-stage" id="t-stage">
+
+    <!-- 内容由 JS 渲染 -->
+
+  </div>
+
+  <p class="t-hint" id="t-hint"></p>
+
+  <div class="t-reading" id="t-reading"></div>
+
+</div>
+
+<script>
+
+(function () {
+
+  'use strict';
+
+  /* ============================================================
+
+     一、塔罗牌数据：22 张大阿尔卡纳
+
+     svg 为牌面符号，用统一的金色描边渲染
+
+     up = 正位，rev = 逆位
+
+     ============================================================ */
+
+  var TAROT = [
+
+    { n: '0', name: '愚者', en: 'The Fool',
+
+      svg: '<circle cx="50" cy="60" r="19"/><path d="M28 46 Q50 20 72 46"/><circle cx="50" cy="22" r="2.5"/>',
+
+      up:  { kw: '起点 · 冒险 · 自由', t: '你正站在一段旅程的开端，心里有个声音在催你出发。不必等到万事俱备，此刻的天真与勇气就是最好的行囊。允许自己笨拙一点，允许自己不知道答案——路是走出来的。' },
+
+      rev: { kw: '鲁莽 · 犹豫 · 逃避', t: '想迈步，又怕踏空。这张牌在提醒你：冲动和拖延其实是同一件事的两面，都是在回避真正的选择。先停下来，分清"我想逃"和"我想去"，再决定要不要走。' } },
+
+    { n: 'I', name: '魔术师', en: 'The Magician',
+
+      svg: '<path d="M30 50 C30 39 41 39 50 50 C59 61 70 61 70 50 C70 39 59 39 50 50 C41 61 30 61 30 50 Z"/>',
+
+      up:  { kw: '创造 · 行动 · 能力', t: '你手上已经握着需要的工具，只是还没完全相信自己有。现在不是等时机，是动手的时候。把想法落成第一个具体动作，资源会跟着行动聚拢过来。' },
+
+      rev: { kw: '空转 · 自欺 · 拖延', t: '计划做了很多，真正落地的很少。或者你在用技巧掩盖一个不愿面对的空洞。回到最朴素的问题：你真正想做的事是什么？去掉所有表演，剩下的那件事，才是起点。' } },
+
+    { n: 'II', name: '女祭司', en: 'The High Priestess',
+
+      svg: '<path d="M62 26 A25 25 0 1 0 62 74 A19 19 0 1 1 62 26"/><path d="M50 20 L50 80"/>',
+
+      up:  { kw: '直觉 · 潜意识 · 静观', t: '答案不在外面，在你还没说出口的那个感觉里。这张牌建议你先别急着要结论，安静几天，让模糊的直觉浮上来。相信你第一时间的感受，它比逻辑更早知道真相。' },
+
+      rev: { kw: '忽视直觉 · 秘密 · 混乱', t: '你可能一直在用"应该"压住"感觉"。外界太吵，你自己那点微弱的直觉被盖过去了。有些事你其实早就知道，只是不愿意承认。' } },
+
+    { n: 'III', name: '皇后', en: 'The Empress',
+
+      svg: '<path d="M50 72 C30 56 26 40 36 33 C43 28 50 33 50 40 C50 33 57 28 64 33 C74 40 70 56 50 72 Z"/>',
+
+      up:  { kw: '丰饶 · 滋养 · 创造', t: '一段被好好照顾的时期。无论是关系、创作还是身体，都适合用温柔的方式去养。不要逼自己冲刺，开花需要时间。你给出的善意，会以别的形式回来。' },
+
+      rev: { kw: '枯竭 · 依赖 · 忽视自己', t: '你在照顾别人上花太多力气，自己那部分却一直空着。这张牌不是让你更努力，而是让你先把自己喂饱。枯竭的人给不出真正的滋养，只会给出委屈。' } },
+
+    { n: 'IV', name: '皇帝', en: 'The Emperor',
+
+      svg: '<path d="M28 66 L28 46 L38 56 L50 38 L62 56 L72 46 L72 66 Z"/><path d="M28 66 L72 66"/><path d="M28 74 L72 74"/>',
+
+      up:  { kw: '秩序 · 权威 · 稳定', t: '现在需要的不是灵感，是结构。把混乱的事情列成清单，定下规则，然后执行。这张牌支持你拿出决断力——你不必让所有人满意，你只需要对自己负责。' },
+
+      rev: { kw: '控制 · 僵化 · 失去主导', t: '要么你控制得太紧，要么你被别人的规则捆住了。这张牌在问：这个框架还适合现在的你吗？有些规矩是保护，有些只是习惯。分清它们，再决定留哪些、拆哪些。' } },
+
+    { n: 'V', name: '教皇', en: 'The Hierophant',
+
+      svg: '<path d="M50 22 L50 80"/><path d="M38 38 L62 38"/><path d="M34 52 L66 52"/><path d="M30 66 L70 66"/>',
+
+      up:  { kw: '传统 · 指引 · 学习', t: '这时候适合向前人借力。找一个走过这条路的人聊聊，或者回到那些被反复验证过的方法里。不必什么都自己摸索，接受指引不是软弱，是聪明。' },
+
+      rev: { kw: '打破常规 · 质疑 · 独立', t: '你正在和某套"应该怎样"的规则拉开距离。这张牌支持你质疑——但不支持你为了反抗而反抗。先弄清楚你到底不同意什么，再决定要不要离开。' } },
+
+    { n: 'VI', name: '恋人', en: 'The Lovers',
+
+      svg: '<circle cx="39" cy="50" r="19"/><circle cx="61" cy="50" r="19"/>',
+
+      up:  { kw: '联结 · 选择 · 契合', t: '一个关于"选"的时刻。不是选对错，是选哪一个更像你自己。无论是关系还是方向，真正的契合不需要你削掉自己的一部分去迁就。选那个让你更完整的方向。' },
+
+      rev: { kw: '失衡 · 犹豫 · 价值冲突', t: '两边的重量在心里打架，你迟迟不肯选。这张牌提醒你，不选本身也是一种选择，而且往往是最耗人的那一种。把两个选项各自最坏的结果写出来，你会知道哪个更能承受。' } },
+
+    { n: 'VII', name: '战车', en: 'The Chariot',
+
+      svg: '<circle cx="50" cy="50" r="23"/><circle cx="50" cy="50" r="5"/><path d="M50 27 L50 73 M27 50 L73 50 M34 34 L66 66 M66 34 L34 66"/>',
+
+      up:  { kw: '意志 · 前进 · 掌控', t: '靠一股劲往前冲的时候到了。这张牌不讲温柔，讲的是你愿不愿意握紧缰绳。方向已经清楚，剩下的是专注和纪律。别分心，这段路只能靠意志走完。' },
+
+      rev: { kw: '失控 · 方向不明 · 内耗', t: '你在动，但不知道往哪动。或者两股力量在互相拉扯，消耗掉所有力气。这张牌让你先停下来校准方向——跑错方向比原地不动更累。' } },
+
+    { n: 'VIII', name: '力量', en: 'Strength',
+
+      svg: '<circle cx="50" cy="34" r="13"/><path d="M30 68 C30 59 41 59 50 68 C59 77 70 77 70 68 C70 59 59 59 50 68 C41 77 30 77 30 68 Z"/>',
+
+      up:  { kw: '温柔的勇气 · 耐心 · 驯服', t: '真正的力量不是压住什么，是和它共处。这张牌说的是用耐心和温柔去面对你心里那头野兽——不管是欲望、恐惧还是愤怒。不硬碰，也不逃跑，慢慢让它安静下来。' },
+
+      rev: { kw: '自我怀疑 · 失控 · 硬撑', t: '你可能在用蛮力对付一件需要耐心的事。越用力，越反弹。这张牌建议你退一步，先安抚自己，而不是逼自己。勇气有时候是承认"我现在做不到"。' } },
+
+    { n: 'IX', name: '隐士', en: 'The Hermit',
+
+      svg: '<path d="M35 40 L65 40 L60 76 L40 76 Z"/><path d="M42 40 L42 28 L58 28 L58 40"/><circle cx="50" cy="58" r="6"/>',
+
+      up:  { kw: '独处 · 内省 · 寻找', t: '往内走的时候到了。这张牌不鼓励社交，鼓励你关上门，问自己一些不太好回答的问题。答案会在安静里慢慢浮出来。孤独不是惩罚，是你正在为自己腾出空间。' },
+
+      rev: { kw: '孤立 · 逃避 · 拒绝求助', t: '独处和躲起来是两回事。这张牌在问：你是在沉淀，还是在逃避？如果已经很久没和任何人说真话，也许该打开门了。内省不是为了把自己关起来。' } },
+
+    { n: 'X', name: '命运之轮', en: 'Wheel of Fortune',
+
+      svg: '<circle cx="50" cy="50" r="24"/><circle cx="50" cy="50" r="15"/><circle cx="50" cy="50" r="3.5"/><path d="M50 26 L50 74 M26 50 L74 50 M33 33 L67 67 M67 33 L33 67"/>',
+
+      up:  { kw: '转机 · 循环 · 顺流', t: '事情正在转动，而且是往好的方向。这张牌提醒你，变化已经开始了，你不需要控制它，只需要顺着走。有些结束是为了给新的东西腾位置。' },
+
+      rev: { kw: '停滞 · 反复 · 抗拒变化', t: '同一个模式又出现了。这张牌不是在说你运气差，是在说你可能一直用同样的方式应对同样的事。想要轮子转起来，先改一个你一直在做的小动作。' } },
+
+    { n: 'XI', name: '正义', en: 'Justice',
+
+      svg: '<path d="M50 26 L50 74"/><path d="M26 74 L74 74"/><path d="M22 44 L50 32 L78 44"/><circle cx="22" cy="54" r="7"/><circle cx="78" cy="54" r="7"/>',
+
+      up:  { kw: '平衡 · 因果 · 公正', t: '该算的账要算了，该做的决定要做。这张牌支持你诚实面对自己的部分——包括你不想承认的那部分。你付出的和你得到的，正在被重新对齐。' },
+
+      rev: { kw: '偏颇 · 逃避责任 · 失衡', t: '有什么东西歪了。可能是别人对你不公平，也可能是你在对自己不公平。这张牌让你先别急着指责，先看清楚：在这件事里，你真正该负的责任是什么。' } },
+
+    { n: 'XII', name: '倒吊人', en: 'The Hanged Man',
+
+      svg: '<path d="M50 22 L50 40"/><path d="M28 40 L72 40"/><path d="M28 40 L50 76 L72 40"/>',
+
+      up:  { kw: '暂停 · 换视角 · 主动等待', t: '现在不适合推进，适合看。这张牌说，停下来不是失败，是为了换个角度看清楚。有些事你越使劲越僵，松手反而会松动。允许自己暂时什么都不做。' },
+
+      rev: { kw: '拖延 · 牺牲无意义 · 僵持', t: '你可能在一个不值得的位置上耗太久了。这张牌在问：你在等什么？如果等待本身没有意义，那它就不是"倒吊"，是"卡住"。该结束了。' } },
+
+    { n: 'XIII', name: '死神', en: 'Death',
+
+      svg: '<path d="M50 22 L50 80"/><path d="M30 40 L70 40"/><circle cx="50" cy="30" r="8"/><path d="M50 56 L62 70 M50 56 L38 70"/>',
+
+      up:  { kw: '结束 · 蜕变 · 放手', t: '一段关系、一个阶段、一种身份，正在结束。这张牌不温柔，但它诚实：结束不是灾难，是必然。你不需要假装不痛，但也不需要挽留。放手之后，新的东西才有位置。' },
+
+      rev: { kw: '抗拒结束 · 停滞 · 反复', t: '你知道该结束了，但一直在拖。这张牌说的是：拖得越久，痛得越久。有些事不会因为你的不舍而改变，只会因为你接受了而过去。' } },
+
+    { n: 'XIV', name: '节制', en: 'Temperance',
+
+      svg: '<path d="M28 38 L44 38 L44 54 L28 54 Z"/><path d="M56 46 L72 46 L72 62 L56 62 Z"/><path d="M40 54 Q50 68 60 62"/>',
+
+      up:  { kw: '平衡 · 调和 · 耐心', t: '慢一点，稳一点。这张牌说的是找到一个可持续的节奏，不是极端的左或右。把冷和热、动和静调在一起。你正在学一门叫"刚刚好"的手艺。' },
+
+      rev: { kw: '失衡 · 过犹不及 · 急躁', t: '要么太多，要么太少。你在某件事上用力过猛，又在另一件事上完全缺席。这张牌建议你把生活重新分一次配额——不是平均，是合适。' } },
+
+    { n: 'XV', name: '恶魔', en: 'The Devil',
+
+      svg: '<path d="M50 82 L38 42 L72 60 L28 60 L62 42 Z"/><circle cx="50" cy="20" r="3"/>',
+
+      up:  { kw: '束缚 · 欲望 · 阴影', t: '有什么东西在绑着你——可能是一段关系、一个习惯、一种恐惧。这张牌不评判，只是让你看见它。看见是解开的第一步。你以为是牢笼的东西，其实门没锁。' },
+
+      rev: { kw: '挣脱 · 觉察 · 松绑', t: '你正在意识到那根绳子是松的。这张牌支持你解开它。不用一次断干净，先做一个小动作——少一次妥协、少一次自欺，慢慢就自由了。' } },
+
+    { n: 'XVI', name: '塔', en: 'The Tower',
+
+      svg: '<path d="M34 78 L34 40 L66 40 L66 78 Z"/><path d="M42 40 L42 28 L58 28 L58 40"/><path d="M28 40 L28 78 M72 40 L72 78"/><path d="M60 26 L50 46 L58 46 L46 68"/>',
+
+      up:  { kw: '崩塌 · 突变 · 觉醒', t: '有些东西要塌了，而且你拦不住。这张牌不是坏消息，是真相被揭开。塌掉的是本来就站不住的部分。痛会过去，但清醒会留下来。' },
+
+      rev: { kw: '拖延崩塌 · 恐惧变化 · 余震', t: '你在拼命扶住一个已经歪掉的东西。这张牌在问：你是在修，还是在怕？有些坍塌是必须的，早点让它发生，比一直在余震里晃好。' } },
+
+    { n: 'XVII', name: '星星', en: 'The Star',
+
+      svg: '<path d="M50 18 L54 42 L70 30 L58 48 L82 52 L58 56 L70 74 L54 62 L50 86 L46 62 L30 74 L42 56 L18 52 L42 48 L30 30 L46 42 Z"/>',
+
+      up:  { kw: '希望 · 疗愈 · 灵感', t: '风暴之后，天开始亮了。这张牌带来的是安静的希望——不是狂喜，是一种"还能继续"的确信。你在慢慢好起来，允许自己享受这段平静。' },
+
+      rev: { kw: '失望 · 信心不足 · 迷茫', t: '你有点不相信好事会发生了。这张牌不是说希望不存在，是说你现在看不见它。先做一件小到不可能失败的事，光会从小事里透出来。' } },
+
+    { n: 'XVIII', name: '月亮', en: 'The Moon',
+
+      svg: '<path d="M60 24 A26 26 0 1 0 60 76 A20 20 0 1 1 60 24"/><path d="M28 32 L30 38 L36 40 L30 42 L28 48 L26 42 L20 40 L26 38 Z"/>',
+
+      up:  { kw: '幻象 · 潜意识 · 不安', t: '你走在雾里，分不清哪些是真相，哪些是恐惧投射出来的影子。这张牌不让你急着做决定——月夜里看不清的东西，天亮再说。相信直觉，但也别被它吓住。' },
+
+      rev: { kw: '迷雾散去 · 真相浮现 · 释怀', t: '雾正在散。那些让你不安的东西，慢慢显出了本来的样子——可能没那么可怕。这张牌支持你把隐藏的事摊开来说，说出来就不那么吓人了。' } },
+
+    { n: 'XIX', name: '太阳', en: 'The Sun',
+
+      svg: '<circle cx="50" cy="50" r="16"/><path d="M50 20 L50 30 M50 70 L50 80 M20 50 L30 50 M70 50 L80 50 M30 30 L37 37 M70 30 L63 37 M30 70 L37 63 M70 70 L63 63"/>',
+
+      up:  { kw: '喜悦 · 成功 · 清晰', t: '光明正大的好。这张牌没什么玄机，就是告诉你：会好的，而且是你想要的那种好。享受它，别急着找下一个小麻烦。你有权利开心。' },
+
+      rev: { kw: '延迟 · 过度乐观 · 疲惫', t: '晴天里有云，但云不是问题。这张牌说的是"延迟的满足"——事情会成，只是慢一点。或者你正在用"必须开心"绑架自己。允许自己先累一会儿。' } },
+
+    { n: 'XX', name: '审判', en: 'Judgement',
+
+      svg: '<path d="M22 66 L52 44 L58 50 L28 72 Z"/><path d="M62 24 L62 60 M54 36 L70 36 M54 48 L70 48"/>',
+
+      up:  { kw: '觉醒 · 召唤 · 重生', t: '一件过去的事被重新翻出来，但这次不是为了清算，是为了放手。这张牌说的是：你已经准备好了，可以给某个旧故事画上句号。听见那个召唤了吗？' },
+
+      rev: { kw: '自我怀疑 · 逃避召唤 · 悬置', t: '你知道该做什么，但一直不肯承认自己知道。这张牌在问：你在等谁给你许可？没有人会来。这个决定只能你自己做。' } },
+
+    { n: 'XXI', name: '世界', en: 'The World',
+
+      svg: '<circle cx="50" cy="50" r="26"/><ellipse cx="50" cy="50" rx="26" ry="9"/><circle cx="50" cy="50" r="3" fill="currentColor" stroke="none"/>',
+
+      up:  { kw: '圆满 · 完成 · 整合', t: '一个循环走完了。这张牌是终点，也是新的起点。你整合了这一路学到的东西，现在可以带着完整的自己，走向下一段。好好庆祝一下。' },
+
+      rev: { kw: '未完成 · 差一步 · 悬而未决', t: '快到终点了，但还差一口气。这张牌提醒你，别在最后一公里松手。把剩下那点事做完，再谈下一个目标。' } }
+
+  ];
+
+  /* 牌阵位置定义 */
+
+  var SPREADS = {
+
+    single: [ { label: '', prefix: '' } ],
+
+    three: [
+
+      { label: '过去', prefix: '在过去的脉络里，' },
+
+      { label: '现在', prefix: '眼下的状况中，' },
+
+      { label: '未来', prefix: '接下来的走向上，' }
+
+    ]
+
+  };
+
+  /* ============================================================
+
+     二、状态
+
+     ============================================================ */
+
+  var state = 'idle';          // idle | shuffling | drawn | revealed
+
+  var spread = 'single';       // single | three
+
+  var drawnCards = [];         // [{ cardIndex, reversed }]
+
+  var revealedCount = 0;
+
+  var question = '';
+
+  /* ============================================================
+
+     三、DOM
+
+     ============================================================ */
+
+  var appEl     = document.getElementById('t-app');
+
+  var qEl       = document.getElementById('t-q');
+
+  var spreadEl  = document.getElementById('t-spread');
+
+  var startBtn  = document.getElementById('t-start');
+
+  var resetBtn  = document.getElementById('t-reset');
+
+  var stageEl   = document.getElementById('t-stage');
+
+  var hintEl    = document.getElementById('t-hint');
+
+  var readingEl = document.getElementById('t-reading');
+
+  /* ============================================================
+
+     四、工具函数
+
+     ============================================================ */
+
+  function shuffle(arr) {
+
+    var a = arr.slice();
+
+    for (var i = a.length - 1; i > 0; i--) {
+
+      var j = Math.floor(Math.random() * (i + 1));
+
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+
+    }
+
+    return a;
+
+  }
+
+  /* 生成单张牌（正面朝下）
+
+     参数 idx 为这张牌在牌桌上的序号，用于延迟和点击绑定 */
+
+  function buildCardEl(idx) {
+
+    var wrap = document.createElement('div');
+
+    wrap.className = 't-card';
+
+    wrap.setAttribute('role', 'button');
+
+    wrap.setAttribute('tabindex', '0');
+
+    wrap.setAttribute('aria-label', '点击翻开这张牌');
+
+    wrap.innerHTML =
+
+      '<div class="t-card-inner">' +
+
+        '<div class="t-back">' +
+
+          '<svg viewBox="0 0 60 100" aria-hidden="true">' +
+
+            '<rect x="3" y="3" width="54" height="94" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>' +
+
+            '<rect x="8" y="8" width="44" height="84" rx="4" fill="none" stroke="currentColor" stroke-width="0.7" opacity="0.7"/>' +
+
+            '<circle cx="30" cy="50" r="15" fill="none" stroke="currentColor" stroke-width="1"/>' +
+
+            '<circle cx="30" cy="50" r="9" fill="none" stroke="currentColor" stroke-width="0.8"/>' +
+
+            '<path d="M30 35 L30 65 M15 50 L45 50" stroke="currentColor" stroke-width="0.7" opacity="0.8"/>' +
+
+            '<path d="M30 41 L39 50 L30 59 L21 50 Z" fill="none" stroke="currentColor" stroke-width="0.9"/>' +
+
+            '<circle cx="30" cy="50" r="2.2" fill="currentColor" stroke="none"/>' +
+
+          '</svg>' +
+
+        '</div>' +
+
+        '<div class="t-face">' +
+
+          '<span class="t-num"></span>' +
+
+          '<span class="t-sym"></span>' +
+
+          '<span class="t-name"></span>' +
+
+          '<span class="t-en"></span>' +
+
+          '<span class="t-rev-tag">逆 位</span>' +
+
+        '</div>' +
+
+      '</div>' +
+
+      '<span class="t-pos"></span>';
+
+    return wrap;
+
+  }
+
+  /* 把牌面内容填进已经生成好的卡片元素 */
+
+  function fillCardFace(el, cardIndex, reversed) {
+
+    var card = TAROT[cardIndex];
+
+    el.querySelector('.t-num').textContent  = card.n;
+
+    el.querySelector('.t-sym').innerHTML    = '<svg viewBox="0 0 100 100" aria-hidden="true">' + card.svg + '</svg>';
+
+    el.querySelector('.t-name').textContent = [card.name](http://card.name);
+
+    el.querySelector('.t-en').textContent   = card.en;
+
+    if (reversed) el.classList.add('t-reversed');
+
+  }
+
+  /* ============================================================
+
+     五、界面状态同步
+
+     ============================================================ */
+
+  function syncUI() {
+
+    var running = (state === 'shuffling');
+
+    var finished = (state === 'revealed');
+
+    // 主按钮
+
+    startBtn.disabled = running;
+
+    startBtn.textContent = '开 始 占 卜';
+
+    startBtn.classList.toggle('t-hidden', finished);
+
+    resetBtn.classList.toggle('t-hidden', !finished);
+
+    // 牌阵切换：出牌后禁用
+
+    var btns = spreadEl.querySelectorAll('.t-spread-btn');
+
+    for (var i = 0; i < btns.length; i++) {
+
+      btns[i].disabled = (state !== 'idle');
+
+      btns[i].style.opacity = (state === 'idle') ? '' : '0.5';
+
+      btns[i].style.cursor  = (state === 'idle') ? '' : 'not-allowed';
+
+    }
+
+    // 问题输入：出牌后禁用
+
+    qEl.disabled = (state !== 'idle');
+
+    [qEl.style](http://qEl.style).opacity = (state === 'idle') ? '' : '0.6';
+
+  }
+
+  /* ============================================================
+
+     六、洗牌动画
+
+     ============================================================ */
+
+  function renderShuffle() {
+
+    stageEl.innerHTML =
+
+      '<div class="t-deck">' +
+
+        '<div class="t-deck-card">' +
+
+          '<svg viewBox="0 0 60 100" aria-hidden="true">' +
+
+            '<rect x="3" y="3" width="54" height="94" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>' +
+
+            '<circle cx="30" cy="50" r="15" fill="none" stroke="currentColor" stroke-width="1"/>' +
+
+            '<circle cx="30" cy="50" r="9" fill="none" stroke="currentColor" stroke-width="0.8"/>' +
+
+            '<path d="M30 41 L39 50 L30 59 L21 50 Z" fill="none" stroke="currentColor" stroke-width="0.9"/>' +
+
+          '</svg>' +
+
+        '</div>' +
+
+        '<div class="t-deck-card">' +
+
+          '<svg viewBox="0 0 60 100" aria-hidden="true">' +
+
+            '<rect x="3" y="3" width="54" height="94" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>' +
+
+            '<circle cx="30" cy="50" r="15" fill="none" stroke="currentColor" stroke-width="1"/>' +
+
+            '<circle cx="30" cy="50" r="9" fill="none" stroke="currentColor" stroke-width="0.8"/>' +
+
+            '<path d="M30 41 L39 50 L30 59 L21 50 Z" fill="none" stroke="currentColor" stroke-width="0.9"/>' +
+
+          '</svg>' +
+
+        '</div>' +
+
+        '<div class="t-deck-card">' +
+
+          '<svg viewBox="0 0 60 100" aria-hidden="true">' +
+
+            '<rect x="3" y="3" width="54" height="94" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/>' +
+
+            '<circle cx="30" cy="50" r="15" fill="none" stroke="currentColor" stroke-width="1"/>' +
+
+            '<circle cx="30" cy="50" r="9" fill="none" stroke="currentColor" stroke-width="0.8"/>' +
+
+            '<path d="M30 41 L39 50 L30 59 L21 50 Z" fill="none" stroke="currentColor" stroke-width="0.9"/>' +
+
+          '</svg>' +
+
+        '</div>' +
+
+        '<span class="t-shuffle-tip">洗 牌 中…</span>' +
+
+      '</div>';
+
+    hintEl.textContent = '';
+
+    readingEl.innerHTML = '';
+
+  }
+
+  /* ============================================================
+
+     七、抽牌与展示
+
+     ============================================================ */
+
+  function drawCards() {
+
+    var total = SPREADS[spread].length;
+
+    var pool = shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]);
+
+    drawnCards = [];
+
+    for (var i = 0; i < total; i++) {
+
+      drawnCards.push({
+
+        cardIndex: pool[i],
+
+        reversed: Math.random() < 0.4   // 40% 概率逆位，视觉上更有层次
+
+      });
+
+    }
+
+  }
+
+  function renderTable() {
+
+    var table = document.createElement('div');
+
+    table.className = 't-table';
+
+    table.setAttribute('data-spread', spread);
+
+    var positions = SPREADS[spread];
+
+    for (var i = 0; i < drawnCards.length; i++) {
+
+      var el = buildCardEl(i);
+
+      fillCardFace(el, drawnCards[i].cardIndex, drawnCards[i].reversed);
+
+      // 位置标签
+
+      if (positions[i].label) {
+
+        el.querySelector('.t-pos').textContent = positions[i].label;
+
+      }
+
+      // 绑定点击翻开
+
+      (function (node, idx) {
+
+        function flip() {
+
+          if (node.classList.contains('t-flipped')) return;
+
+          if (node.classList.contains('t-untouchable')) return;
+
+          if (state !== 'drawn') return;
+
+          node.classList.add('t-flipped');
+
+          node.classList.add('t-untouchable');
+
+          node.removeAttribute('tabindex');
+
+          node.setAttribute('aria-label', '已翻开');
+
+          revealedCount++;
+
+          renderReading(idx);
+
+          if (revealedCount === drawnCards.length) {
+
+            state = 'revealed';
+
+            renderSummary();
+
+            hintEl.textContent = '牌 已 全 部 揭 晓';
+
+            syncUI();
+
+          } else {
+
+            hintEl.textContent = '还 有 ' + (drawnCards.length - revealedCount) + ' 张 等 着 你';
+
+          }
+
+        }
+
+        node.addEventListener('click', flip);
+
+        node.addEventListener('keydown', function (e) {
+
+          if (e.key === 'Enter' || e.key === ' ') {
+
+            e.preventDefault();
+
+            flip();
+
+          }
+
+        });
+
+      })(el, i);
+
+      table.appendChild(el);
+
+    }
+
+    stageEl.innerHTML = '';
+
+    stageEl.appendChild(table);
+
+    state = 'drawn';
+
+    revealedCount = 0;
+
+    hintEl.textContent = drawnCards.length > 1
+
+      ? '依 次 点 击 每 张 牌 ， 把 它 翻 开'
+
+      : '点 击 牌 面 ， 把 它 翻 开';
+
+    syncUI();
+
+  }
+
+  /* ============================================================
+
+     八、解析文案
+
+     ============================================================ */
+
+  function renderReading(idx) {
+
+    var item = drawnCards[idx];
+
+    var card = TAROT[item.cardIndex];
+
+    var pos  = SPREADS[spread][idx];
+
+    var orient = item.reversed ? '逆位' : '正位';
+
+    var meaning = item.reversed ? card.rev : card.up;
+
+    var box = document.createElement('div');
+
+    box.className = 't-read-item';
+
+    var posHtml = pos.label
+
+      ? '<span class="t-read-pos">' + pos.label + '</span>'
+
+      : '';
+
+    box.innerHTML =
+
+      '<div class="t-read-head">' +
+
+        posHtml +
+
+        '<span class="t-read-name">' + [card.name](http://card.name) + '</span>' +
+
+        '<span class="t-read-orient' + (item.reversed ? ' t-rev' : '') + '">' + orient + '</span>' +
+
+      '</div>' +
+
+      '<div class="t-read-kw">' + [meaning.kw](http://meaning.kw) + '</div>' +
+
+      '<p class="t-read-text">' + pos.prefix + meaning.t + '</p>';
+
+    readingEl.appendChild(box);
+
+    // 让新内容滚动进视野（不抢焦点，平滑）
+
+    try {
+
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    } catch (e) { /* 老浏览器忽略 */ }
+
+  }
+
+  /* 综合解读：三张牌串成一条线 */
+
+  function renderSummary() {
+
+    if (drawnCards.length === 0) return;
+
+    // 单张牌不给综合段落，牌面解析已经说完了
+
+    if (drawnCards.length === 1) {
+
+      var only = drawnCards[0];
+
+      var c = TAROT[only.cardIndex];
+
+      var m = only.reversed ? c.rev : c.up;
+
+      var one = document.createElement('div');
+
+      one.className = 't-summary';
+
+      one.innerHTML =
+
+        '<p class="t-summary-title">· 一 句 话 ·</p>' +
+
+        '<p class="t-summary-text">' + sentenceFor(c, only.reversed, m) + '</p>';
+
+      readingEl.appendChild(one);
+
+      return;
+
+    }
+
+    // 三张牌：过去 → 现在 → 未来
+
+    var past   = drawnCards[0];
+
+    var now    = drawnCards[1];
+
+    var future = drawnCards[2];
+
+    var cp = TAROT[past.cardIndex];
+
+    var cn = TAROT[now.cardIndex];
+
+    var cf = TAROT[future.cardIndex];
+
+    var mp = past.reversed   ? cp.rev : cp.up;
+
+    var mn = now.reversed    ? cn.rev : cn.up;
+
+    var mf = future.reversed ? cf.rev : cf.up;
+
+    // 关键词：取每条 kw 的第一段
+
+    function firstKw(kw) { return kw.split(' · ')[0]; }
+
+    // 正位数量决定综合语气
+
+    var uprightCount = 0;
+
+    if (!past.reversed)   uprightCount++;
+
+    if (!now.reversed)    uprightCount++;
+
+    if (!future.reversed) uprightCount++;
+
+    var overall;
+
+    if (uprightCount === 3) {
+
+      overall = '三张都是正位，这条路是顺的。你要做的不是挣扎，是保持方向，别在半路怀疑自己。';
+
+    } else if (uprightCount === 2) {
+
+      overall = '有两张正位、一张逆位，说明阻力存在，但不是死路。那张逆位就是你的功课——把它解开了，路自然就通。';
+
+    } else if (uprightCount === 1) {
+
+      overall = '只有一张正位，说明你现在更需要的不是冲，是停。把注意力放在那张正位上，它是唯一的支点。';
+
+    } else {
+
+      overall = '三张都逆着，别再硬推了。这种时候停下来不叫失败，叫止损。先把自己安顿好，再谈别的。';
+
+    }
+
+    var summary = document.createElement('div');
+
+    summary.className = 't-summary';
+
+    summary.innerHTML =
+
+      '<p class="t-summary-title">· 综 合 解 读 ·</p>' +
+
+      '<p class="t-summary-path">' +
+
+        '从 <b>' + firstKw([mp.kw](http://mp.kw)) + '</b> 出发，' +
+
+        '经过 <b>' + firstKw([mn.kw](http://mn.kw)) + '</b>，' +
+
+        '走向 <b>' + firstKw([mf.kw](http://mf.kw)) + '</b>' +
+
+      '</p>' +
+
+      '<p class="t-summary-text">' + overall + '</p>';
+
+    readingEl.appendChild(summary);
+
+  }
+
+  /* 单张牌的一句话总结：取解析第一句 */
+
+  function sentenceFor(card, reversed, meaning) {
+
+    var t = meaning.t;
+
+    var stop = t.indexOf('。');
+
+    var first = stop > 0 ? t.slice(0, stop + 1) : t;
+
+    return first;
+
+  }
+
+  /* ============================================================
+
+     九、主流程
+
+     ============================================================ */
+
+  function begin() {
+
+    if (state === 'shuffling') return;
+
+    question = qEl.value.trim();
+
+    state = 'shuffling';
+
+    readingEl.innerHTML = '';
+
+    renderShuffle();
+
+    syncUI();
+
+    // 洗牌动画 1.15s，结束后出牌
+
+    window.setTimeout(function () {
+
+      if (state !== 'shuffling') return;  // 用户可能已经点了重来
+
+      drawCards();
+
+      renderTable();
+
+    }, 1150);
+
+  }
+
+  function resetAll() {
+
+    state = 'idle';
+
+    drawnCards = [];
+
+    revealedCount = 0;
+
+    question = '';
+
+    qEl.value = '';
+
+    stageEl.innerHTML = '';
+
+    readingEl.innerHTML = '';
+
+    hintEl.textContent = '';
+
+    syncUI();
+
+  }
+
+  /* ============================================================
+
+     十、事件绑定
+
+     ============================================================ */
+
+  startBtn.addEventListener('click', begin);
+
+  resetBtn.addEventListener('click', resetAll);
+
+  spreadEl.addEventListener('click', function (e) {
+
+    var btn = [e.target](http://e.target).closest('.t-spread-btn');
+
+    if (!btn) return;
+
+    if (state !== 'idle') return;
+
+    var val = btn.getAttribute('data-spread');
+
+    if (val !== 'single' && val !== 'three') return;
+
+    spread = val;
+
+    var btns = spreadEl.querySelectorAll('.t-spread-btn');
+
+    for (var i = 0; i < btns.length; i++) {
+
+      btns[i].classList.toggle('t-active', btns[i] === btn);
+
+    }
+
+  });
+
+  /* 初始化 */
+
+  resetAll();
+
+})();
+
+</script>
+  </div>
+</body>
+</html>
