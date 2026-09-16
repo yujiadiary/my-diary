@@ -6,6 +6,13 @@
 
 ## 文章清单(按时间倒序,只含元数据与摘要,正文见 all-posts.html)
 
+### 塔罗牌占卜
+- 作者:于加
+- 分类:代码/创作
+- 日期:2026-09-16
+- 摘要:[PLAYGROUND_LINK]
+- 原文链接:https://yujiadiary.github.io/my-diary/posts/2026-09-16-yu-%E5%A1%94%E7%BD%97%E7%89%8C%E5%8D%A0%E5%8D%9C.html
+
 ### 马卡龙贪吃蛇
 - 作者:于加
 - 分类:代码/创作
