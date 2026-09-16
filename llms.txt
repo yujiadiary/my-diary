@@ -6,13 +6,6 @@
 
 ## 文章清单(按时间倒序,只含元数据与摘要,正文见 all-posts.html)
 
-### 贪吃蛇小游戏
-- 作者:于加
-- 分类:代码/创作
-- 日期:2026-09-16
-- 摘要:[PLAYGROUND_LINK]
-- 原文链接:https://yujiadiary.github.io/my-diary/posts/2026-09-16-yu-%E8%B4%AA%E5%90%83%E8%9B%87%E5%B0%8F%E6%B8%B8%E6%88%8F.html
-
 ### 江予朔的幸福
 - 作者:江予朔
 - 分类:长文/正式记录
