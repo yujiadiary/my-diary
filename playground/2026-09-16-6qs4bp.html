@@ -62,6 +62,16 @@
 
     --t-card-ink: #3d2f56;
 
+    /* 牌尺寸：改这里就能整体缩放 */
+
+    --t-card-w: 150px;
+
+    --t-card-h: 248px;
+
+    --t-card-w-3: 116px;
+
+    --t-card-h-3: 191px;
+
     --t-max-w: 620px;
 
     --t-radius: 22px;
@@ -432,7 +442,7 @@
 
     width: 100%;
 
-    min-height: 250px;
+    min-height: 260px;
 
     display: flex;
 
@@ -440,7 +450,7 @@
 
     justify-content: center;
 
-    padding: 10px 0 26px;
+    padding: 10px 0 30px;
 
   }
 
@@ -530,6 +540,8 @@
 
   }
 
+  /* ---------- 牌桌 ---------- */
+
   .tarot-app .t-table {
 
     display: flex;
@@ -548,15 +560,17 @@
 
   .tarot-app .t-table[data-spread="three"] { gap: 10px; }
 
+  /* 牌：写死像素宽高，不用百分比撑高 */
+
   .tarot-app .t-card {
 
     position: relative;
 
-    width: 100%;
+    flex: 0 0 auto;
 
-    max-width: 150px;
+    width: var(--t-card-w);
 
-    padding-top: 165%;
+    height: var(--t-card-h);
 
     perspective: 1000px;
 
@@ -566,7 +580,13 @@
 
   }
 
-  .tarot-app .t-table[data-spread="three"] .t-card { max-width: 118px; }
+  .tarot-app .t-table[data-spread="three"] .t-card {
+
+    width: var(--t-card-w-3);
+
+    height: var(--t-card-h-3);
+
+  }
 
   .tarot-app .t-card.t-untouchable { cursor: default; }
 
@@ -736,17 +756,17 @@
 
     transition: transform 0.5s ease;
 
+    min-height: 0;
+
   }
 
   .tarot-app .t-card.t-reversed .t-sym { transform: rotate(180deg); }
 
   .tarot-app .t-sym svg {
 
-    width: 72%;
+    width: 70%;
 
-    height: 72%;
-
-    max-height: 90px;
+    height: 70%;
 
     fill: none;
 
@@ -1062,9 +1082,23 @@
 
   .tarot-app .t-hidden { display: none !important; }
 
+  /* 小屏：整体缩小一档 */
+
   @media (max-width: 420px) {
 
-    .tarot-app { padding: 22px 14px 26px; }
+    .tarot-app {
+
+      padding: 22px 14px 26px;
+
+      --t-card-w: 132px;
+
+      --t-card-h: 218px;
+
+      --t-card-w-3: 96px;
+
+      --t-card-h-3: 158px;
+
+    }
 
     .tarot-app .t-title { font-size: 21px; letter-spacing: 4px; }
 
@@ -1072,9 +1106,7 @@
 
     .tarot-app .t-spread-btn { font-size: 12px; letter-spacing: 2px; }
 
-    .tarot-app .t-table[data-spread="three"] { gap: 7px; }
-
-    .tarot-app .t-table[data-spread="three"] .t-card { max-width: 100px; }
+    .tarot-app .t-table[data-spread="three"] { gap: 8px; }
 
     .tarot-app .t-face { padding: 9px 6px; }
 
@@ -1346,8 +1378,6 @@
 
   ];
 
-  /* 牌阵位置定义 */
-
   var SPREADS = {
 
     single: [ { label: '', prefix: '' } ],
@@ -1364,12 +1394,6 @@
 
   };
 
-  /* ============================================================
-
-     二、全局状态
-
-     ============================================================ */
-
   var state = 'idle';
 
   var spread = 'single';
@@ -1379,12 +1403,6 @@
   var revealedCount = 0;
 
   var qEl, spreadEl, startBtn, resetBtn, stageEl, hintEl, readingEl;
-
-  /* ============================================================
-
-     三、工具函数
-
-     ============================================================ */
 
   function shuffle(arr) {
 
@@ -1401,8 +1419,6 @@
     return a;
 
   }
-
-  /* 生成一张背面朝上的牌 */
 
   function buildCardEl() {
 
@@ -1482,12 +1498,6 @@
 
   }
 
-  /* ============================================================
-
-     四、界面同步
-
-     ============================================================ */
-
   function syncUI() {
 
     if (!startBtn || !resetBtn || !spreadEl || !qEl) return;
@@ -1515,12 +1525,6 @@
     qEl['disabled'] = (state !== 'idle');
 
   }
-
-  /* ============================================================
-
-     五、洗牌 / 出牌
-
-     ============================================================ */
 
   function renderShuffle() {
 
@@ -1684,12 +1688,6 @@
 
   }
 
-  /* ============================================================
-
-     六、解析文案
-
-     ============================================================ */
-
   function renderReading(idx) {
 
     if (!readingEl) return;
@@ -1852,12 +1850,6 @@
 
   }
 
-  /* ============================================================
-
-     七、主流程
-
-     ============================================================ */
-
   function begin() {
 
     if (state === 'shuffling') return;
@@ -1917,12 +1909,6 @@
     syncUI();
 
   }
-
-  /* ============================================================
-
-     八、初始化
-
-     ============================================================ */
 
   function init() {
 
