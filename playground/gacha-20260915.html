@@ -186,6 +186,44 @@ h1 {
 }
 /* 爪子移动时取消晃动，恢复 translateX(-50%) 基线，避免 left+rotate 打架 */
 .claw.moving { animation: none; transform: translateX(-50%); }
+/* 第三步：下爪时爪子整体下降（top 由 JS 设置），关闭旋转动画避免打架 */
+.claw.descending { animation: none; transform: translateX(-50%); transition: left .6s ease, top .9s ease; }
+.claw.rising    { animation: none; transform: translateX(-50%); transition: left .6s ease, top .9s ease; }
+/* 抓取瞬间的轻微抖动（整组上下抖） */
+.claw.grabbing { animation: claw-grab-shake .12s ease-in-out 3; }
+@keyframes claw-grab-shake {
+  0%   { transform: translateX(-50%) translateY(0); }
+  25%  { transform: translateX(-50%) translateY(-3px); }
+  50%  { transform: translateX(-50%) translateY(2px); }
+  75%  { transform: translateX(-50%) translateY(-2px); }
+  100% { transform: translateX(-50%) translateY(0); }
+}
+/* 爪尖开合（两个 prong 分别向中线收拢） */
+.prong.prong-left  { transform: rotate(0deg); }
+.prong.prong-right { transform: rotate(0deg); }
+.prong.prong-left.closed  { transform: rotate(28deg); }
+.prong.prong-right.closed { transform: rotate(-28deg); }
+/* 抓空时爪尖抖一下（开合小幅抖动） */
+.claw.missed .prong-left  { animation: prong-miss-l .18s ease-in-out 2; }
+.claw.missed .prong-right { animation: prong-miss-r .18s ease-in-out 2; }
+@keyframes prong-miss-l { 0%,100%{transform:rotate(28deg)} 50%{transform:rotate(20deg)} }
+@keyframes prong-miss-r { 0%,100%{transform:rotate(-28deg)} 50%{transform:rotate(-20deg)} }
+
+/* 被抓起的奖品：跟随爪子移动（脱离原位，浮在爪下） */
+.prize.caught {
+  position: absolute;
+  bottom: auto;
+  opacity: 1;
+  z-index: 3;
+  transition: top .9s ease, left .6s ease, opacity .2s ease;
+  pointer-events: none;
+}
+/* 掉落到出口时的滑出动画 */
+.prize.dropping-out {
+  transition: top .6s cubic-bezier(.6,1.2,.7,1), opacity .2s ease .4s;
+}
+/* 原位变暗（被抓走后） */
+.prize.taken-ghost { opacity: 0.12; }
 
 /* 奖品摆放区 */
 .prize-floor {
@@ -967,9 +1005,111 @@ function moveClawTo(index, withSeek) {
 
 /* 爪子回顶归位（第二步只回 left=50% 中点，不下爪） */
 function resetClaw() {
-  claw.classList.remove('seeking', 'moving');
+  claw.classList.remove('seeking', 'moving', 'descending', 'rising', 'grabbing', 'missed');
   claw.style.left = '50%';
   claw.style.top = '';
+  // 爪尖打开
+  document.querySelectorAll('.prong').forEach(p => p.classList.remove('closed'));
+}
+
+/* ---------- 第三步：下爪 / 抓取 / 上升 / 掉落 ---------- */
+
+/* 让爪子下降到目标奖品上方（top 由 JS 设为 px，相对 glass）
+ * targetIndex: 目标奖品位
+ * 返回爪子最终应停的 top 值（奖品顶部附近）
+ */
+function getClawDropTop(targetIndex) {
+  const centers = getPrizeCenters();
+  const target = centers[targetIndex];
+  if (!target) return 120;
+  // 找到该奖品 DOM，取其顶部相对 glass 的 y
+  const items = prizeFloor.querySelectorAll('.prize');
+  const el = items[targetIndex];
+  if (!el) return 120;
+  const rect = el.getBoundingClientRect();
+  const glassRect = glass.getBoundingClientRect();
+  // 奖品顶部 y（相对 glass）；爪子要下降到奖品顶部稍上方
+  const prizeTop = rect.top - glassRect.top;
+  // 爪子自身从 top=12px 出发，claw 高约 96px(cable18+svg78)
+  // 让爪尖(底部)刚到奖品顶部：top = prizeTop - 爪子高度 + 一点重叠
+  return Math.max(12, prizeTop - 70);
+}
+
+/* 下爪：爪子缓慢下降 */
+async function descendClaw(targetIndex) {
+  claw.classList.remove('seeking', 'moving');
+  claw.classList.add('descending');
+  const top = getClawDropTop(targetIndex);
+  claw.style.top = top + 'px';
+  await wait(900); // 下降 0.9s
+}
+
+/* 抓取：爪尖合拢 + 停 0.5s + 整组轻微抖动反馈 */
+async function grabPrize() {
+  document.querySelectorAll('.prong').forEach(p => p.classList.add('closed'));
+  claw.classList.add('grabbing');
+  await wait(500); // 抓取停顿 0.5s
+  claw.classList.remove('grabbing');
+}
+
+/* 把被抓的奖品"贴"到爪子下方，跟随爪子上升
+ * 返回该奖品元素，后续掉落用
+ */
+function attachCaughtPrize(targetIndex) {
+  const items = prizeFloor.querySelectorAll('.prize');
+  const el = items[targetIndex];
+  if (!el) return null;
+  const glassRect = glass.getBoundingClientRect();
+  const rect = el.getBoundingClientRect();
+  // 记录奖品当前位置（相对 glass）
+  const cx = rect.left - glassRect.left + rect.width / 2;
+  // 奖品变成绝对定位，挂在爪子下方
+  el.classList.add('caught');
+  el.style.width = rect.width + 'px';
+  el.style.left = (cx - rect.width / 2) + 'px';
+  el.style.top = (parseFloat(claw.style.top || 12) + 78) + 'px'; // 爪子底
+  // 原位放一个虚影占位（视觉上"被抓走了"）
+  // 直接给自身加 ghost 不行（它已移动），所以不动；用 opacity 区分
+  return el;
+}
+
+/* 上升返回：爪子带奖品缓慢回到顶部 */
+async function riseClaw(caughtEl) {
+  claw.classList.remove('descending', 'grabbing');
+  claw.classList.add('rising');
+  claw.style.top = '12px';
+  if (caughtEl) {
+    caughtEl.style.top = (12 + 78) + 'px';
+  }
+  await wait(900);
+}
+
+/* 掉落出口：奖品从爪子下方滑到出口位置，然后淡出 */
+async function dropToChute(caughtEl) {
+  if (!caughtEl) return;
+  const glassRect = glass.getBoundingClientRect();
+  const chuteEl = document.querySelector('.chute .hole');
+  const chuteRect = chuteEl.getBoundingClientRect();
+  // 出口中心相对 glass 坐标系（出口在 glass 下方面板里，y 会超出 glass）
+  const chuteCx = chuteRect.left - glassRect.left + chuteRect.width / 2;
+  const chuteY = chuteRect.top - glassRect.top + chuteRect.height / 2;
+  caughtEl.classList.add('dropping-out');
+  caughtEl.style.left = (chuteCx - (parseFloat(caughtEl.style.width) || 50) / 2) + 'px';
+  caughtEl.style.top = chuteY + 'px';
+  await wait(600);
+  caughtEl.style.opacity = '0';
+  await wait(250);
+}
+
+/* 还原奖品到原位（为下次抓取重置） */
+function restorePrize(caughtEl) {
+  if (!caughtEl) return;
+  caughtEl.classList.remove('caught', 'dropping-out', 'taken-ghost');
+  caughtEl.style.position = '';
+  caughtEl.style.left = '';
+  caughtEl.style.top = '';
+  caughtEl.style.width = '';
+  caughtEl.style.opacity = '';
 }
 
 /* ---------- 投币：金币从投币口上方掉入 ---------- */
@@ -1089,10 +1229,30 @@ async function startDraw() {
   claw.classList.add('moving');
   await wait(200);
 
-  // 第二步到此为止：直接出卡（下爪/抓取/上升/掉落留给第三步接管）
+  // === 第三步：下爪 → 抓取 → 上升 → 掉落 → 出卡 ===
+
+  // 5) 下爪：缓慢下降到目标奖品上方
+  await descendClaw(prizeIndex);
+
+  // 6) 抓取：爪尖合拢 + 停 0.5s + 轻微抖动反馈
+  await grabPrize();
+
+  // 7) 把奖品贴到爪子下方（视觉上"抓到了"）
+  const caughtEl = attachCaughtPrize(prizeIndex);
+
+  // 8) 上升返回：爪子带奖品缓慢回顶
+  await riseClaw(caughtEl);
+
+  // 9) 掉落出口：奖品从爪下滑到出口位置，淡出
+  await dropToChute(caughtEl);
+
+  // 出卡
   const card = drawCard();
   showResult(card, prizeIndex);
   updateStats();
+
+  // 还原奖品到原位（为下次抓取重置）
+  restorePrize(caughtEl);
 
   // 爪子回顶归位
   resetClaw();
