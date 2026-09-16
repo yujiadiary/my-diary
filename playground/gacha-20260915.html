@@ -3,187 +3,493 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>抽卡机 · 试玩</title>
+<title>抓娃娃机 · 试玩</title>
 <meta name="robots" content="noindex, nofollow">
 <style>
-/* ========== 可配置参数（颜色 / 文字 / 尺寸，改这里即可） ========== */
+/* ========== 可配置参数（马卡龙配色 / 文字 / 尺寸，改这里即可） ========== */
 :root {
-  --bg-color: #f5f1ea;          /* 页面背景色 */
-  --card-bg: #ffffff;           /* 卡片背景色 */
-  --primary: #5b6f8a;           /* 主色（按钮/标题） */
-  --primary-hover: #4a5d75;     /* 主色 hover */
-  --text-main: #333333;         /* 主文字色 */
-  --text-sub: #888888;          /* 次要文字色 */
-  --border: #e0d8cc;            /* 边框色 */
-  --accent: #c97b63;            /* 强调色（卡类型标签） */
-  --radius: 14px;               /* 圆角半径 */
-  --font-size-card: 20px;       /* 卡片正文大小 */
-  --font-size-btn: 16px;        /* 按钮文字大小 */
-  --max-width: 560px;           /* 最大宽度 */
+  --cream: #faf3ea;        /* 页面米白底 */
+  --pink: #ffb6c9;         /* 粉 */
+  --pink-deep: #ff9bb3;    /* 深粉 */
+  --mint: #aee9d6;         /* 薄荷绿 */
+  --mint-deep: #7fd8bf;    /* 深薄荷 */
+  --lemon: #ffe39c;        /* 奶黄 */
+  --sky: #aed6f0;          /* 天蓝 */
+  --sky-deep: #7fbfe0;     /* 深天蓝 */
+  --ink: #6f6055;          /* 主文字（暖棕） */
+  --ink-soft: #a89a8c;     /* 次要文字 */
+  --white: #fffaf5;        /* 卡片白 */
+  --metal: #c9d7e6;        /* 金属件 */
+  --metal-deep: #9bb0c4;   /* 深金属 */
+  --glass: rgba(174,214,240,0.22); /* 玻璃罩 */
+  --radius: 18px;
+  --max-width: 420px;
 }
+
 /* ========== 基础重置 ========== */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { width: 100%; overflow-x: hidden; }
 body {
-  background: var(--bg-color);
-  color: var(--text-main);
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background:
+    radial-gradient(circle at 20% 10%, #fff3f7 0, transparent 40%),
+    radial-gradient(circle at 85% 15%, #eafaf3 0, transparent 45%),
+    var(--cream);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
   line-height: 1.7;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 16px 40px;
+  padding: 20px 14px 48px;
 }
 a.back {
   align-self: flex-start;
-  color: var(--text-sub);
+  color: var(--ink-soft);
   text-decoration: none;
   font-size: 14px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
-a.back:hover { color: var(--primary); }
+a.back:hover { color: var(--pink-deep); }
+
+/* ========== 标题 ========== */
 h1 {
-  font-size: 26px;
-  color: var(--primary);
-  margin-bottom: 4px;
+  font-size: clamp(22px, 6vw, 28px);
+  color: var(--pink-deep);
   text-align: center;
+  letter-spacing: 2px;
+  text-shadow:
+     1px 1px 0 #fff,
+     2px 2px 0 rgba(255,155,179,0.35);
+  margin-bottom: 2px;
 }
 .subtitle {
-  color: var(--text-sub);
-  font-size: 14px;
-  margin-bottom: 28px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin-bottom: 18px;
   text-align: center;
 }
-/* ========== 卡片展示区 ========== */
-.card-area {
+
+/* ========== 娃娃机机身 ========== */
+.machine {
   width: 100%;
   max-width: var(--max-width);
-  min-height: 220px;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 32px 24px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+}
+
+/* 顶部招牌 */
+.marquee {
+  background: linear-gradient(180deg, var(--pink) 0%, var(--pink-deep) 100%);
+  border-radius: var(--radius) var(--radius) 6px 6px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  position: relative;
+  box-shadow: 0 4px 0 rgba(255,155,179,0.35);
+}
+.marquee .sign {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.08);
+}
+.marquee .light {
+  position: absolute;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--lemon);
+  box-shadow: 0 0 6px var(--lemon);
+}
+.marquee .light.l1 { left: 12px; top: 50%; transform: translateY(-50%); }
+.marquee .light.l2 { right: 12px; top: 50%; transform: translateY(-50%); }
+
+/* 主柜体 */
+.cabinet {
+  background: linear-gradient(180deg, #fff6f9 0%, #eafaf3 100%);
+  border: 3px solid var(--pink);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 14px;
+  box-shadow: 0 8px 24px rgba(174,140,150,0.18);
+}
+
+/* 玻璃展示区 */
+.glass {
+  position: relative;
+  width: 100%;
+  height: clamp(240px, 62vw, 320px);
+  background: var(--glass);
+  border: 3px solid var(--sky);
+  border-radius: 14px 14px 10px 10px;
+  overflow: hidden;
+  /* 顶部弧形玻璃罩感 */
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.1) 30%, rgba(174,214,240,0.18) 100%);
+}
+/* 玻璃高光 */
+.glass::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 40%; height: 100%;
+  background: linear-gradient(115deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 60%);
+  pointer-events: none;
+}
+
+/* 顶部导轨 */
+.rail {
+  position: absolute;
+  top: 6px; left: 8px; right: 8px;
+  height: 6px;
+  background: var(--metal);
+  border-radius: 4px;
+  box-shadow: 0 2px 0 var(--metal-deep);
+}
+
+/* 爪子 */
+.claw {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: left .6s ease, top .8s ease;
+  z-index: 3;
+}
+.claw .cable {
+  width: 4px;
+  height: 18px;
+  background: var(--metal-deep);
+}
+.claw-svg { width: 60px; height: 78px; display: block; }
+.prong {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+  transition: transform .3s ease;
+}
+
+/* 奖品摆放区 */
+.prize-floor {
+  position: absolute;
+  left: 6px; right: 6px;
+  bottom: 10px;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  z-index: 2;
+}
+.prize {
+  width: clamp(40px, 13vw, 56px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  filter: drop-shadow(0 3px 2px rgba(0,0,0,0.08));
+}
+.prize svg { width: 100%; height: auto; display: block; }
+/* 抓走后变暗的占位 */
+.prize.taken { opacity: 0.15; }
+
+/* 底部货架线 */
+.shelf {
+  position: absolute;
+  left: 6px; right: 6px;
+  bottom: 8px;
+  height: 4px;
+  background: var(--mint-deep);
+  border-radius: 3px;
+  opacity: 0.5;
+  z-index: 1;
+}
+
+/* 前控制面板 */
+.panel {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--white);
+  border: 2px solid var(--mint);
+  border-radius: 14px;
+}
+/* 投币口 */
+.coin-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.coin-slot .slit {
+  width: 28px; height: 6px;
+  background: var(--metal-deep);
+  border-radius: 3px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+}
+.coin-slot .label { font-size: 11px; color: var(--ink-soft); }
+/* 摇杆装饰 */
+.joystick { display: flex; flex-direction: column; align-items: center; }
+.joystick svg { width: 46px; height: 46px; }
+/* 出口 */
+.chute {
+  position: relative;
+  width: 70px; height: 40px;
+  background: var(--metal);
+  border: 2px solid var(--metal-deep);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.chute .hole {
+  position: absolute;
+  left: 8px; right: 8px; bottom: 4px;
+  height: 18px;
+  background: #5a5048;
+  border-radius: 6px;
+}
+.chute .label {
+  position: absolute; top: 4px; left: 0; right: 0;
+  text-align: center; font-size: 10px; color: var(--ink-soft);
+}
+
+/* ========== 控制区 ========== */
+.controls {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 18px auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.btn {
+  width: 100%;
+  max-width: 320px;
+  min-height: 52px;
+  padding: 12px 20px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  border: none;
+  border-radius: 26px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+}
+.btn-primary {
+  background: linear-gradient(180deg, var(--pink) 0%, var(--pink-deep) 100%);
+  color: #fff;
+  box-shadow: 0 5px 0 rgba(255,155,179,0.45), 0 8px 16px rgba(255,155,179,0.3);
+}
+.btn-primary:hover { transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(255,155,179,0.45); }
+.btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  background: linear-gradient(180deg, var(--ink-soft) 0%, #8a7b6c 100%);
+  box-shadow: 0 3px 0 rgba(0,0,0,0.15);
+}
+.hint {
+  font-size: 12px;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+/* ========== 结果卡片（弹层） ========== */
+.result-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(111,96,85,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .3s ease, visibility .3s ease;
+  z-index: 100;
+}
+.result-mask.show { opacity: 1; visibility: visible; }
+.result-card {
+  width: 100%;
+  max-width: 340px;
+  background: var(--white);
+  border: 3px solid var(--pink);
+  border-radius: 22px;
+  padding: 26px 22px 22px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   text-align: center;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-  margin-bottom: 24px;
-  transition: all 0.3s ease;
+  position: relative;
+  transform: scale(0.7);
+  transition: transform .3s cubic-bezier(.2,1.4,.4,1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
 }
+.result-mask.show .result-card { transform: scale(1); }
+.result-card.rare { transform: scale(1.12); border-color: var(--lemon); }
+.result-mask.show .result-card.rare { transform: scale(1.12); }
+.result-close {
+  position: absolute;
+  top: 8px; right: 10px;
+  width: 30px; height: 30px;
+  border: none;
+  background: var(--mint);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+.result-prize {
+  width: 72px; height: 72px;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 4px 4px rgba(0,0,0,0.12));
+}
+.result-prize svg { width: 100%; height: 100%; }
 .card-type-tag {
   display: inline-block;
   padding: 4px 14px;
   border-radius: 20px;
-  background: var(--accent);
+  background: var(--pink);
   color: #fff;
   font-size: 13px;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 .card-text {
-  font-size: var(--font-size-card);
-  color: var(--text-main);
+  font-size: 18px;
+  color: var(--ink);
   line-height: 1.8;
   word-break: break-word;
+  margin-bottom: 18px;
 }
-.card-placeholder {
-  color: var(--text-sub);
-  font-size: 16px;
+.result-card .btn { max-width: 220px; min-height: 46px; font-size: 16px; }
+
+/* ========== 彩带容器（第四步启用） ========== */
+.confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 101;
+  overflow: hidden;
 }
-/* ========== 按钮区 ========== */
-.btn-group {
-  width: 100%;
-  max-width: var(--max-width);
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.btn {
-  flex: 1;
-  min-width: 140px;
-  padding: 14px 20px;
-  font-size: var(--font-size-btn);
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: inherit;
-}
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-}
-.btn-primary:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
-}
-.btn-primary:active { transform: translateY(0); }
-.btn-secondary {
-  background: transparent;
-  color: var(--primary);
-  border: 1px solid var(--primary);
-}
-.btn-secondary:hover {
-  background: rgba(91,111,138,0.08);
-}
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-/* ========== 提示条（替代 alert） ========== */
+
+/* ========== 提示条 / 统计 ========== */
 .toast {
   position: fixed;
   top: 20px;
   left: 50%;
   transform: translateX(-50%) translateY(-100px);
-  background: var(--primary);
+  background: var(--pink-deep);
   color: #fff;
   padding: 10px 24px;
   border-radius: 8px;
   font-size: 14px;
   opacity: 0;
-  transition: all 0.3s ease;
+  transition: all .3s ease;
   z-index: 999;
   pointer-events: none;
 }
-.toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-/* ========== 统计信息 ========== */
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .stats {
-  margin-top: 20px;
-  font-size: 13px;
-  color: var(--text-sub);
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 14px auto 0;
+  font-size: 12px;
+  color: var(--ink-soft);
   text-align: center;
+}
+.stats a {
+  color: var(--mint-deep);
+  text-decoration: underline;
+  cursor: pointer;
+  margin-left: 6px;
 }
 </style>
 </head>
 <body>
 
 <a class="back" href="index.html">← 返回试玩列表</a>
-<h1>🎴 抽卡机</h1>
-<p class="subtitle">随机抽一张今天的小任务，无聊了就多抽几张</p>
+<h1>抓娃娃机</h1>
+<p class="subtitle">投一颗币，看看今天抓到什么小任务</p>
 
-<div class="card-area" id="cardArea">
-  <p class="card-placeholder" id="placeholder">点击下方按钮开始抽卡</p>
+<div class="machine">
+  <div class="marquee">
+    <span class="light l1"></span>
+    <span class="sign">抓娃娃</span>
+    <span class="light l2"></span>
+  </div>
+
+  <div class="cabinet">
+    <div class="glass" id="glass">
+      <div class="rail"></div>
+      <div class="claw" id="claw">
+        <div class="cable"></div>
+        <svg class="claw-svg" viewBox="0 0 60 80" aria-hidden="true">
+          <rect x="20" y="0" width="20" height="8" rx="4" fill="var(--metal)"/>
+          <rect x="26" y="8" width="8" height="6" rx="3" fill="var(--metal-deep)"/>
+          <rect x="12" y="14" width="36" height="10" rx="5" fill="var(--metal)"/>
+          <path class="prong prong-left"  d="M16 24 Q8 46 18 62 Q24 56 24 48 L24 24 Z" fill="var(--metal)" stroke="var(--metal-deep)" stroke-width="1.5"/>
+          <path class="prong prong-right" d="M44 24 Q52 46 42 62 Q36 56 36 48 L36 24 Z" fill="var(--metal)" stroke="var(--metal-deep)" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="prize-floor" id="prizeFloor"></div>
+      <div class="shelf"></div>
+    </div>
+
+    <div class="panel">
+      <div class="coin-slot">
+        <span class="slit"></span>
+        <span class="label">投币口</span>
+      </div>
+      <div class="chute">
+        <span class="label">出口</span>
+        <div class="hole"></div>
+      </div>
+      <div class="joystick">
+        <svg viewBox="0 0 46 46" aria-hidden="true">
+          <circle cx="23" cy="34" r="9" fill="var(--mint)" stroke="var(--mint-deep)" stroke-width="2"/>
+          <rect x="21" y="14" width="4" height="18" rx="2" fill="var(--metal-deep)"/>
+          <circle cx="23" cy="12" r="7" fill="var(--pink)" stroke="var(--pink-deep)" stroke-width="2"/>
+        </svg>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="btn-group">
-  <button class="btn btn-primary" id="drawBtn">抽一张</button>
-  <button class="btn btn-secondary" id="clearBtn">清空记录</button>
+<div class="controls">
+  <button class="btn btn-primary" id="drawBtn">投币抓一只</button>
+  <p class="hint">每个爪子都会努力，但不一定抓得稳哦～</p>
 </div>
 
 <div class="stats" id="stats"></div>
+
+<!-- 结果卡片弹层 -->
+<div class="result-mask" id="resultMask">
+  <div class="result-card" id="resultCard">
+    <button class="result-close" id="resultClose" aria-label="关闭">×</button>
+    <div class="result-prize" id="resultPrize"></div>
+    <span class="card-type-tag" id="resultTag"></span>
+    <p class="card-text" id="resultText"></p>
+    <button class="btn btn-primary" id="againBtn">再来一次</button>
+  </div>
+</div>
+
+<div class="confetti" id="confetti"></div>
 <div class="toast" id="toast"></div>
 
 <script>
 /* ============================================================
- * 抽卡机 —— 纯静态实现，不联网，不引外部资源
+ * 抓娃娃机 —— 纯静态实现，不联网，不引外部资源
+ * 核心抽卡生成逻辑保留自原抽卡机，仅改外观与交互
  * ============================================================ */
 
 /* ---------- 词库（数组形式，带中文注释） ---------- */
@@ -473,15 +779,92 @@ function generateCard() {
   return { type: cardType.name, text: sentence };
 }
 
-/* ---------- UI 渲染 ---------- */
-const cardArea = document.getElementById('cardArea');
-const placeholder = document.getElementById('placeholder');
+/* ============================================================
+ * 以下为抓娃娃机外观 / 交互层（核心生成逻辑以上为准，保持不动）
+ * 第一步：静态布局 + 基础抽卡（暂无爪子动画，后续步骤逐步加入）
+ * ============================================================ */
+
+/* ---------- 5 个内联 SVG 手绘奖品（圆润、马卡龙配色，无 emoji） ---------- */
+const PRIZE_SVGS = [
+  // 0 圆脸兔子（粉）
+  '<svg viewBox="0 0 64 64" aria-hidden="true">'
+  + '<ellipse cx="22" cy="15" rx="6" ry="12" fill="#ffd1de" stroke="#f4a3bd" stroke-width="2"/>'
+  + '<ellipse cx="42" cy="15" rx="6" ry="12" fill="#ffd1de" stroke="#f4a3bd" stroke-width="2"/>'
+  + '<ellipse cx="22" cy="17" rx="2.5" ry="6" fill="#ffe7ef"/>'
+  + '<ellipse cx="42" cy="17" rx="2.5" ry="6" fill="#ffe7ef"/>'
+  + '<circle cx="32" cy="38" r="18" fill="#ffe1ea" stroke="#f4a3bd" stroke-width="2"/>'
+  + '<circle cx="26" cy="36" r="2.2" fill="#6f6055"/>'
+  + '<circle cx="38" cy="36" r="2.2" fill="#6f6055"/>'
+  + '<circle cx="32" cy="42" r="1.8" fill="#ff8fab"/>'
+  + '<circle cx="22" cy="43" r="2.6" fill="#ffc2d6" opacity="0.7"/>'
+  + '<circle cx="42" cy="43" r="2.6" fill="#ffc2d6" opacity="0.7"/>'
+  + '</svg>',
+  // 1 糖果（薄荷绿）
+  '<svg viewBox="0 0 64 64" aria-hidden="true">'
+  + '<path d="M6 32 L20 22 L20 42 Z" fill="#b8ecd9" stroke="#7fd8bf" stroke-width="2" stroke-linejoin="round"/>'
+  + '<path d="M58 32 L44 22 L44 42 Z" fill="#b8ecd9" stroke="#7fd8bf" stroke-width="2" stroke-linejoin="round"/>'
+  + '<rect x="20" y="22" width="24" height="20" rx="10" fill="#d3f5e8" stroke="#7fd8bf" stroke-width="2"/>'
+  + '<path d="M27 29 Q32 25 37 29" stroke="#7fd8bf" stroke-width="2" fill="none" stroke-linecap="round"/>'
+  + '<path d="M27 35 Q32 39 37 35" stroke="#7fd8bf" stroke-width="2" fill="none" stroke-linecap="round"/>'
+  + '</svg>',
+  // 2 星形（奶黄）
+  '<svg viewBox="0 0 64 64" aria-hidden="true">'
+  + '<path d="M32 6 L39 24 L58 26 L43 38 L48 57 L32 47 L16 57 L21 38 L6 26 L25 24 Z" '
+  + 'fill="#ffe39c" stroke="#f5c64a" stroke-width="2.5" stroke-linejoin="round"/>'
+  + '<circle cx="27" cy="31" r="2.2" fill="#6f6055"/>'
+  + '<circle cx="37" cy="31" r="2.2" fill="#6f6055"/>'
+  + '<path d="M28 37 Q32 40 36 37" stroke="#6f6055" stroke-width="2" fill="none" stroke-linecap="round"/>'
+  + '</svg>',
+  // 3 蝴蝶结（粉桃）
+  '<svg viewBox="0 0 64 64" aria-hidden="true">'
+  + '<path d="M30 32 C16 18 8 20 8 32 C8 44 16 46 30 32 Z" fill="#ffb3c8" stroke="#f48fb1" stroke-width="2" stroke-linejoin="round"/>'
+  + '<path d="M34 32 C48 18 56 20 56 32 C56 44 48 46 34 32 Z" fill="#ffb3c8" stroke="#f48fb1" stroke-width="2" stroke-linejoin="round"/>'
+  + '<circle cx="32" cy="32" r="5.5" fill="#ff8fab" stroke="#f48fb1" stroke-width="2"/>'
+  + '</svg>',
+  // 4 小熊（奶茶棕）
+  '<svg viewBox="0 0 64 64" aria-hidden="true">'
+  + '<circle cx="19" cy="18" r="7" fill="#d9b48f" stroke="#b88a5a" stroke-width="2"/>'
+  + '<circle cx="45" cy="18" r="7" fill="#d9b48f" stroke="#b88a5a" stroke-width="2"/>'
+  + '<circle cx="19" cy="18" r="3" fill="#f0d8b8"/>'
+  + '<circle cx="45" cy="18" r="3" fill="#f0d8b8"/>'
+  + '<circle cx="32" cy="36" r="18" fill="#e6c9a3" stroke="#b88a5a" stroke-width="2"/>'
+  + '<ellipse cx="32" cy="41" rx="10" ry="7.5" fill="#f4e0c0"/>'
+  + '<circle cx="26" cy="33" r="2.2" fill="#6f6055"/>'
+  + '<circle cx="38" cy="33" r="2.2" fill="#6f6055"/>'
+  + '<ellipse cx="32" cy="40" rx="2.2" ry="1.6" fill="#6f6055"/>'
+  + '<path d="M29 44 Q32 47 35 44" stroke="#6f6055" stroke-width="2" fill="none" stroke-linecap="round"/>'
+  + '</svg>'
+];
+
+// 稀有奖品标记（第四步彩带庆祝用）：星形为稀有
+const RARE_INDEX = 2;
+
+/* ---------- DOM 引用 ---------- */
+const prizeFloor = document.getElementById('prizeFloor');
 const drawBtn = document.getElementById('drawBtn');
-const clearBtn = document.getElementById('clearBtn');
 const toast = document.getElementById('toast');
 const statsEl = document.getElementById('stats');
+const resultMask = document.getElementById('resultMask');
+const resultCard = document.getElementById('resultCard');
+const resultPrize = document.getElementById('resultPrize');
+const resultTag = document.getElementById('resultTag');
+const resultText = document.getElementById('resultText');
+const resultClose = document.getElementById('resultClose');
+const againBtn = document.getElementById('againBtn');
 
-// 显示提示（替代 alert）
+/* ---------- 初始化奖品摆放 ---------- */
+function buildPrizes() {
+  prizeFloor.innerHTML = '';
+  PRIZE_SVGS.forEach((svg, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'prize';
+    cell.dataset.i = i;
+    cell.innerHTML = svg;
+    prizeFloor.appendChild(cell);
+  });
+}
+
+/* ---------- 显示提示（替代 alert） ---------- */
 let toastTimer = null;
 function showToast(msg) {
   toast.textContent = msg;
@@ -490,54 +873,65 @@ function showToast(msg) {
   toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
 }
 
-// 更新统计
+/* ---------- 更新统计 ---------- */
 function updateStats() {
   const list = loadDedup();
-  statsEl.textContent = `7 天内已抽 ${list.length} 张不重复的卡`;
+  statsEl.innerHTML = '7 天内已抓 ' + list.length + ' 只不重复的娃娃'
+    + ' <a id="clearLink">清空记录</a>';
+  const cl = document.getElementById('clearLink');
+  if (cl) cl.addEventListener('click', clearRecords);
 }
 
-// 渲染卡片到页面
-function renderCard(card) {
-  cardArea.innerHTML = '';
-  const tag = document.createElement('span');
-  tag.className = 'card-type-tag';
-  tag.textContent = card.type;
-  const p = document.createElement('p');
-  p.className = 'card-text';
-  p.textContent = card.text;
-  cardArea.appendChild(tag);
-  cardArea.appendChild(p);
+/* ---------- 渲染结果卡片 ---------- */
+function showResult(card, prizeIndex) {
+  resultPrize.innerHTML = PRIZE_SVGS[prizeIndex] || PRIZE_SVGS[0];
+  resultTag.textContent = card.type;
+  resultText.textContent = card.text;
+  // 稀有标记（彩带在第四步启用，此处只切换样式类）
+  resultCard.classList.toggle('rare', prizeIndex === RARE_INDEX);
+  resultMask.classList.add('show');
 }
 
-// 抽卡按钮
-drawBtn.addEventListener('click', function () {
-  drawBtn.disabled = true;
-  drawBtn.textContent = '抽卡中…';
-  // 用 setTimeout 给一点反馈，不使用 requestAnimationFrame
-  setTimeout(function () {
-    const card = drawCard();
-    renderCard(card);
-    updateStats();
-    drawBtn.disabled = false;
-    drawBtn.textContent = '再抽一张';
-  }, 200);
-});
+function hideResult() {
+  resultMask.classList.remove('show');
+}
 
-// 清空记录按钮
-clearBtn.addEventListener('click', function () {
+/* ---------- 清空记录 ---------- */
+function clearRecords() {
   clearDedup();
   updateStats();
-  showToast('记录已清空，可以重新抽到之前的卡了');
-  // 重置卡片区域为占位
-  cardArea.innerHTML = '';
-  const p = document.createElement('p');
-  p.className = 'card-placeholder';
-  p.textContent = '点击下方按钮开始抽卡';
-  cardArea.appendChild(p);
-  drawBtn.textContent = '抽一张';
+  showToast('记录已清空，可以重新抓到之前的娃娃了');
+}
+
+/* ---------- 第一步：基础抽卡（暂无爪子动画，后续步骤接管） ---------- */
+function startDraw() {
+  drawBtn.disabled = true;
+  drawBtn.textContent = '爪子正在努力…';
+  // 给一点视觉停顿，后续步骤会在此处插入完整的投币/移动/下爪流程
+  setTimeout(function () {
+    const card = drawCard();
+    // 静态阶段：随机挑一个奖品位置作为抓取结果展示
+    const prizeIndex = Math.floor(Math.random() * PRIZE_SVGS.length);
+    showResult(card, prizeIndex);
+    updateStats();
+    drawBtn.disabled = false;
+    drawBtn.textContent = '投币抓一只';
+  }, 300);
+}
+
+/* ---------- 事件绑定 ---------- */
+drawBtn.addEventListener('click', startDraw);
+againBtn.addEventListener('click', function () {
+  hideResult();
+  startDraw();
+});
+resultClose.addEventListener('click', hideResult);
+resultMask.addEventListener('click', function (e) {
+  if (e.target === resultMask) hideResult();
 });
 
-// 初始化
+/* ---------- 初始化 ---------- */
+buildPrizes();
 updateStats();
 </script>
 </body>
