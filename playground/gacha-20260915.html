@@ -440,6 +440,50 @@ h1 {
 .result-mask.show .result-card { transform: scale(1); }
 .result-card.rare { transform: scale(1.12); border-color: var(--lemon); }
 .result-mask.show .result-card.rare { transform: scale(1.12); }
+/* 第四步：稀有卡片放大庆祝 + 光晕 */
+.result-card.rare {
+  border-color: var(--lemon);
+  box-shadow: 0 0 0 4px rgba(255,227,156,0.5), 0 12px 36px rgba(245,198,74,0.35);
+  animation: rare-pop .5s cubic-bezier(.2,1.6,.4,1);
+}
+@keyframes rare-pop {
+  0%   { transform: scale(0.7) rotate(-4deg); }
+  60%  { transform: scale(1.18) rotate(2deg); }
+  100% { transform: scale(1.12) rotate(0); }
+}
+.result-card.rare .card-type-tag {
+  background: linear-gradient(90deg, var(--pink) 0%, var(--lemon) 100%);
+}
+/* 稀有标识小皇冠角标（SVG 内联，无 emoji） */
+.result-card.rare::before {
+  content: "";
+  position: absolute;
+  top: -14px; left: 50%;
+  transform: translateX(-50%);
+  width: 40px; height: 24px;
+  background: var(--lemon);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -2px 6px rgba(245,198,74,0.6);
+}
+/* 彩带碎屑（单条） */
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  width: 10px; height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+/* 彩带下落 + 旋转动画（由 JS 设置 left/delay/duration/colors） */
+.confetti-piece.fly {
+  animation: confetti-fall linear forwards;
+}
+@keyframes confetti-fall {
+  0%   { transform: translateY(0) rotate(0); opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+}
 .result-close {
   position: absolute;
   top: 8px; right: 10px;
@@ -1112,6 +1156,48 @@ function restorePrize(caughtEl) {
   caughtEl.style.opacity = '';
 }
 
+/* ---------- 第四步：稀有彩带撒落 ---------- */
+const confettiEl = document.getElementById('confetti');
+const CONFETTI_COLORS = ['#ff9bb3', '#aee9d6', '#ffe39c', '#aed6f0', '#ffb6c9', '#7fd8bf'];
+
+/* 撒彩带：从屏幕顶部撒落，覆盖整个视口 */
+function fireConfetti() {
+  // 清掉上一次残留
+  clearConfetti();
+  const count = 70; // 碎屑数量
+  const vw = window.innerWidth;
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    // 随机颜色
+    piece.style.background = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+    // 随机水平起点（覆盖整屏宽）
+    piece.style.left = (Math.random() * vw) + 'px';
+    // 随机大小
+    const w = 6 + Math.random() * 8;
+    const h = 8 + Math.random() * 10;
+    piece.style.width = w + 'px';
+    piece.style.height = h + 'px';
+    // 随机下落时长与延迟
+    const dur = 1800 + Math.random() * 1400; // 1.8~3.2s
+    const delay = Math.random() * 600; // 0~0.6s 错峰
+    piece.style.animationDuration = dur + 'ms';
+    piece.style.animationDelay = delay + 'ms';
+    // 随机初始旋转，让落下更自然
+    piece.style.transform = 'rotate(' + (Math.random() * 360) + 'deg)';
+    confettiEl.appendChild(piece);
+    // 触发动画
+    requestAnimationFrame(() => piece.classList.add('fly'));
+  }
+  // 跑完后自动清理
+  setTimeout(clearConfetti, 3800);
+}
+
+/* 清理彩带 */
+function clearConfetti() {
+  confettiEl.innerHTML = '';
+}
+
 /* ---------- 投币：金币从投币口上方掉入 ---------- */
 function dropCoin() {
   const layerRect = coinLayer.getBoundingClientRect();
@@ -1248,8 +1334,15 @@ async function startDraw() {
 
   // 出卡
   const card = drawCard();
+  const isRare = prizeIndex === RARE_INDEX;
   showResult(card, prizeIndex);
   updateStats();
+  // 第四步：稀有奖品（星形）触发彩带撒落 + 卡片放大
+  if (isRare) {
+    // 给卡片放大动画一点启动时间
+    await wait(120);
+    fireConfetti();
+  }
 
   // 还原奖品到原位（为下次抓取重置）
   restorePrize(caughtEl);
