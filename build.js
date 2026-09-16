@@ -934,7 +934,7 @@ function buildPlaygroundPage(playContent, p) {
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>${title} · 试玩 · 碎碎念留档</title>
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
@@ -943,6 +943,7 @@ function buildPlaygroundPage(playContent, p) {
     .pg-back { display: block; margin-bottom: 8px; font-size: 14px; color: #5b6f8a; text-decoration: none; }
     .pg-meta { display: block; font-size: 12px; color: #999; margin: 0 0 16px; }
     .pg-canvas { border: 1px solid #e0e0e0; border-radius: 8px; overflow: auto; }
+    button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   </style>
 </head>
 <body>
