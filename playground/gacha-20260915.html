@@ -175,6 +175,17 @@ h1 {
   transform-origin: 50% 0%;
   transition: transform .3s ease;
 }
+/* 爪子左右寻找时的轻微晃动（第二步用，整组抖动） */
+.claw.seeking {
+  animation: claw-wobble .5s ease-in-out infinite;
+}
+@keyframes claw-wobble {
+  0%   { transform: translateX(-50%) rotate(-2.5deg); }
+  50%  { transform: translateX(-50%) rotate(2.5deg); }
+  100% { transform: translateX(-50%) rotate(-2.5deg); }
+}
+/* 爪子移动时取消晃动，恢复 translateX(-50%) 基线，避免 left+rotate 打架 */
+.claw.moving { animation: none; transform: translateX(-50%); }
 
 /* 奖品摆放区 */
 .prize-floor {
@@ -259,6 +270,51 @@ h1 {
   text-align: center; font-size: 10px; color: var(--ink-soft);
 }
 
+/* ========== 投币金币掉落（第二步） ========== */
+/* 金币层：覆盖在面板上，金币相对此层定位（从投币口上方掉入） */
+.coin-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  overflow: visible;
+}
+.coin {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #fff6c2 0%, #ffe39c 55%, #f5c64a 100%);
+  border: 2px solid #f5c64a;
+  box-shadow: 0 2px 3px rgba(0,0,0,0.15), inset 0 0 0 2px #fff3b0;
+  z-index: 6;
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.coin::after {
+  content: "★";
+  font-size: 11px;
+  color: #f5c64a;
+  font-weight: 700;
+}
+/* 金币闪一下（投币瞬间高亮） */
+.coin.flash {
+  animation: coin-flash .3s ease;
+}
+@keyframes coin-flash {
+  0%   { box-shadow: 0 0 0 rgba(255,227,156,0); }
+  50%  { box-shadow: 0 0 12px 4px rgba(255,227,156,0.9); }
+  100% { box-shadow: 0 0 0 rgba(255,227,156,0); }
+}
+/* 金币掉落动画类（由 JS 设置 top 终点 + 时长后启用） */
+.coin.dropping {
+  opacity: 1;
+  transition: top .5s cubic-bezier(.5,.1,.7,1), opacity .15s ease .35s;
+}
+
 /* ========== 控制区 ========== */
 .controls {
   width: 100%;
@@ -290,6 +346,15 @@ h1 {
 }
 .btn-primary:hover { transform: translateY(-1px); }
 .btn-primary:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(255,155,179,0.45); }
+/* 投币时按钮轻微缩放反馈（不依赖 :active，用类名驱动，给几百毫秒仪式感） */
+.btn.coining {
+  animation: btn-press .35s ease;
+}
+@keyframes btn-press {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
 .btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
@@ -450,6 +515,7 @@ h1 {
         <span class="slit"></span>
         <span class="label">投币口</span>
       </div>
+      <div class="coin-layer" id="coinLayer" aria-hidden="true"></div>
       <div class="chute">
         <span class="label">出口</span>
         <div class="hole"></div>
@@ -841,6 +907,9 @@ const RARE_INDEX = 2;
 
 /* ---------- DOM 引用 ---------- */
 const prizeFloor = document.getElementById('prizeFloor');
+const claw = document.getElementById('claw');
+const glass = document.getElementById('glass');
+const coinLayer = document.getElementById('coinLayer');
 const drawBtn = document.getElementById('drawBtn');
 const toast = document.getElementById('toast');
 const statsEl = document.getElementById('stats');
@@ -851,6 +920,88 @@ const resultTag = document.getElementById('resultTag');
 const resultText = document.getElementById('resultText');
 const resultClose = document.getElementById('resultClose');
 const againBtn = document.getElementById('againBtn');
+
+/* ---------- 小工具：基于 Promise 的延时 ---------- */
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+/* ---------- 爪子定位工具 ----------
+ * 奖品位置固定为 5 个预设点（与奖品一一对应）。
+ * 爪子只从这些点里选一个，不随机飘。
+ */
+function getPrizeCenters() {
+  const items = prizeFloor.querySelectorAll('.prize');
+  const rect = glass.getBoundingClientRect();
+  const centers = [];
+  items.forEach(el => {
+    const r = el.getBoundingClientRect();
+    centers.push({
+      // 相对 glass 左上角的中心 x（px）
+      x: r.left - rect.left + r.width / 2,
+      width: r.width
+    });
+  });
+  return centers;
+}
+
+/* 把爪子移动到第 i 个奖品正上方
+ * moveCls: 'moving' 平移 / 'seeking' 晃动寻找
+ */
+function moveClawTo(index, withSeek) {
+  const centers = getPrizeCenters();
+  const target = centers[index];
+  if (!target) return;
+  // claw 宽 60，要让爪子中心对齐奖品中心：left = 中心x - 30
+  const left = target.x - 30;
+  claw.classList.remove('seeking');
+  claw.classList.add('moving');
+  claw.style.left = left + 'px';
+  // 抵达后若需要，再切到寻找晃动
+  if (withSeek) {
+    // 等 left 过渡完（.6s）再晃
+    setTimeout(() => {
+      claw.classList.remove('moving');
+      claw.classList.add('seeking');
+    }, 620);
+  }
+}
+
+/* 爪子回顶归位（第二步只回 left=50% 中点，不下爪） */
+function resetClaw() {
+  claw.classList.remove('seeking', 'moving');
+  claw.style.left = '50%';
+  claw.style.top = '';
+}
+
+/* ---------- 投币：金币从投币口上方掉入 ---------- */
+function dropCoin() {
+  const layerRect = coinLayer.getBoundingClientRect();
+  const slot = document.querySelector('.coin-slot .slit');
+  const slotRect = slot.getBoundingClientRect();
+  // 起点：投币口正上方（面板顶部附近）
+  const startX = slotRect.left - layerRect.left + slotRect.width / 2 - 11;
+  const startY = -24; // 从面板上方一点开始
+  const endY = slotRect.top - layerRect.top + 6; // 落入投币口缝
+  const coin = document.createElement('div');
+  coin.className = 'coin';
+  coin.style.left = startX + 'px';
+  coin.style.top = startY + 'px';
+  coinLayer.appendChild(coin);
+  // 强制重绘后再加类，触发闪一下
+  void coin.offsetWidth;
+  coin.classList.add('flash');
+  // 掉落
+  setTimeout(() => {
+    coin.classList.add('dropping');
+    coin.style.top = endY + 'px';
+  }, 30);
+  // 掉到底后淡出并清理
+  setTimeout(() => {
+    coin.style.opacity = '0';
+  }, 520);
+  setTimeout(() => {
+    coin.remove();
+  }, 720);
+}
 
 /* ---------- 初始化奖品摆放 ---------- */
 function buildPrizes() {
@@ -903,20 +1054,52 @@ function clearRecords() {
   showToast('记录已清空，可以重新抓到之前的娃娃了');
 }
 
-/* ---------- 第一步：基础抽卡（暂无爪子动画，后续步骤接管） ---------- */
-function startDraw() {
+/* ---------- 抽卡流程（第二步：投币 + 爪子移动寻找） ----------
+ * 本步实现：投币金币掉落 → 按钮缩放反馈 → 爪子左右寻找选定奖品位。
+ * 下爪 / 抓取 / 上升 / 掉落 / 彩带 将在第三、四步逐步加入。
+ * 流程用 async/await + wait() 串起，每步几百毫秒停顿。
+ */
+let isDrawing = false; // 防止重复触发
+async function startDraw() {
+  if (isDrawing) return;
+  isDrawing = true;
   drawBtn.disabled = true;
+  drawBtn.classList.remove('coining');
   drawBtn.textContent = '爪子正在努力…';
-  // 给一点视觉停顿，后续步骤会在此处插入完整的投币/移动/下爪流程
-  setTimeout(function () {
-    const card = drawCard();
-    // 静态阶段：随机挑一个奖品位置作为抓取结果展示
-    const prizeIndex = Math.floor(Math.random() * PRIZE_SVGS.length);
-    showResult(card, prizeIndex);
-    updateStats();
-    drawBtn.disabled = false;
-    drawBtn.textContent = '投币抓一只';
-  }, 300);
+
+  // 1) 投币：金币掉落 + 按钮缩放反馈
+  dropCoin();
+  drawBtn.classList.add('coining');
+  await wait(520); // 等金币掉落动画跑完
+
+  // 2) 爪子从顶部出发，先随机挑一个目标奖品位（5 个预设点之一）
+  const prizeIndex = Math.floor(Math.random() * PRIZE_SVGS.length);
+
+  // 3) 爪子左右寻找：先移到一个"假目标"位晃一下，再到真目标位晃一下
+  //    用两次移动 + seeking 晃动，制造"在找"的仪式感
+  const fakeIndex = (prizeIndex + 1 + Math.floor(Math.random() * 3)) % 5;
+  moveClawTo(fakeIndex, true);
+  await wait(1100); // 移动 + 寻找晃动
+
+  moveClawTo(prizeIndex, true);
+  await wait(1100);
+
+  // 4) 锁定目标，停止晃动（爪子对准真目标上方）
+  claw.classList.remove('seeking');
+  claw.classList.add('moving');
+  await wait(200);
+
+  // 第二步到此为止：直接出卡（下爪/抓取/上升/掉落留给第三步接管）
+  const card = drawCard();
+  showResult(card, prizeIndex);
+  updateStats();
+
+  // 爪子回顶归位
+  resetClaw();
+  drawBtn.classList.remove('coining');
+  drawBtn.disabled = false;
+  drawBtn.textContent = '投币抓一只';
+  isDrawing = false;
 }
 
 /* ---------- 事件绑定 ---------- */
