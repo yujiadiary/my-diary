@@ -939,9 +939,9 @@ function buildPlaygroundPage(playContent, p) {
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
   <style>
-    body { margin: 0; padding: 16px; font-family: system-ui, -apple-system, sans-serif; background: #fafafa; color: #333; }
-    .pg-back { display: inline-block; margin-bottom: 16px; font-size: 14px; color: #5b6f8a; text-decoration: none; }
-    .pg-meta { font-size: 12px; color: #999; margin-bottom: 16px; }
+    body { margin: 0; padding: 16px 16px 48px; font-family: system-ui, -apple-system, sans-serif; background: #fafafa; color: #333; }
+    .pg-back { display: block; margin-bottom: 8px; font-size: 14px; color: #5b6f8a; text-decoration: none; }
+    .pg-meta { display: block; font-size: 12px; color: #999; margin: 0 0 16px; }
     .pg-canvas { border: 1px solid #e0e0e0; border-radius: 8px; overflow: auto; }
   </style>
 </head>
