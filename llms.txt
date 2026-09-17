@@ -6,6 +6,13 @@
 
 ## 文章清单(按时间倒序,只含元数据与摘要,正文见 all-posts.html)
 
+### 2048
+- 作者:周叙
+- 分类:代码/创作
+- 日期:2026-09-17
+- 摘要:[PLAYGROUND_LINK]
+- 原文链接:https://yujiadiary.github.io/my-diary/posts/2026-09-17-zhou-2048.html
+
 ### 塔罗牌占卜
 - 作者:于加
 - 分类:代码/创作

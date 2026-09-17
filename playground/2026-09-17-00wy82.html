@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>2048 · 试玩 · 碎碎念留档</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <style>
+    body { margin: 0; padding: 16px 16px 48px; font-family: system-ui, -apple-system, sans-serif; background: #fafafa; color: #333; }
+    .pg-back { display: block; margin-bottom: 8px; font-size: 14px; color: #5b6f8a; text-decoration: none; }
+    .pg-meta { display: block; font-size: 12px; color: #999; margin: 0 0 16px; }
+    .pg-canvas { border: 1px solid #e0e0e0; border-radius: 8px; overflow: auto; }
+    button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body>
+  <a class="pg-back" href="../posts/2026-09-17-zhou-2048.html">← 返回文章</a>
+  <div class="pg-meta">2048 · 周叙</div>
+  <div class="pg-canvas">
+<style>
+
+  /* ============================================================
+
+     全部样式限定在 .cute-2048 内，不污染文章页
+
+     ============================================================ */
+
+  .cute-2048,
+
+  .cute-2048 *,
+
+  .cute-2048 *::before,
+
+  .cute-2048 *::after { box-sizing: border-box; }
+
+  /* ============================================================
+
+     可调参数区：颜色 / 尺寸 / 字体
+
+     ============================================================ */
+
+  .cute-2048 {
+
+    /* 底色 */
+
+    --g-bg-1: #FFF5F9;
+
+    --g-bg-2: #F3EEFF;
+
+    --g-board: #FFE4EF;
+
+    --g-slot: rgba(255, 255, 255, 0.55);
+
+    --g-card: #FFFFFF;
+
+    /* 文字 */
+
+    --g-ink: #6B5578;
+
+    --g-ink-soft: #A896B8;
+
+    --g-pink-deep: #FF9CBE;
+
+    --g-purple-deep: #B89CF5;
+
+    /* 尺寸 */
+
+    --g-cell: 78px;
+
+    --g-gap: 12px;
+
+    --g-pad: 12px;
+
+    --g-radius: 24px;
+
+    --g-radius-sm: 12px;
+
+    --g-max-w: 480px;
+
+    position: relative;
+
+    width: 100%;
+
+    max-width: var(--g-max-w);
+
+    margin: 0 auto;
+
+    padding: 22px 16px 26px;
+
+    border-radius: var(--g-radius);
+
+    background: linear-gradient(160deg, var(--g-bg-1) 0%, var(--g-bg-2) 100%);
+
+    color: var(--g-ink);
+
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+
+                 system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    -webkit-font-smoothing: antialiased;
+
+    -webkit-tap-highlight-color: transparent;
+
+    overflow: hidden;
+
+  }
+
+  .cute-2048 > * { flex: 0 0 auto; }
+
+  /* ---------- 标题 ---------- */
+
+  .cute-2048 .g-head { text-align: center; margin-bottom: 16px; }
+
+  .cute-2048 .g-title {
+
+    margin: 0 0 6px;
+
+    font-size: 34px;
+
+    font-weight: 800;
+
+    letter-spacing: 4px;
+
+    line-height: 1.1;
+
+    background: linear-gradient(120deg, #FF9CBE 0%, #C8A0F0 50%, #A890F0 100%);
+
+    -webkit-background-clip: text;
+
+    background-clip: text;
+
+    -webkit-text-fill-color: transparent;
+
+    color: #FF9CBE;
+
+  }
+
+  .cute-2048 .g-sub {
+
+    margin: 0;
+
+    font-size: 12.5px;
+
+    color: var(--g-ink-soft);
+
+    letter-spacing: 1px;
+
+  }
+
+  /* ---------- 分数条 ---------- */
+
+  .cute-2048 .g-hud {
+
+    display: flex;
+
+    gap: 10px;
+
+    width: 100%;
+
+    justify-content: center;
+
+    margin-bottom: 14px;
+
+  }
+
+  .cute-2048 .g-chip {
+
+    flex: 1 1 0;
+
+    max-width: 150px;
+
+    background: var(--g-card);
+
+    border-radius: 16px;
+
+    padding: 8px 16px;
+
+    box-shadow: 0 6px 16px rgba(200, 160, 220, 0.18);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 10px;
+
+  }
+
+  .cute-2048 .g-chip-k {
+
+    font-size: 12px;
+
+    color: var(--g-ink-soft);
+
+    letter-spacing: 1px;
+
+  }
+
+  .cute-2048 .g-chip-v {
+
+    font-size: 18px;
+
+    font-weight: 800;
+
+    color: var(--g-pink-deep);
+
+    font-variant-numeric: tabular-nums;
+
+  }
+
+  .cute-2048 .g-chip:last-child .g-chip-v { color: var(--g-purple-deep); }
+
+  /* ---------- 棋盘区 ---------- */
+
+  .cute-2048 .g-stage {
+
+    position: relative;
+
+    width: 100%;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: var(--g-pad);
+
+    background: var(--g-board);
+
+    border-radius: 20px;
+
+    box-shadow: 0 10px 30px rgba(200, 160, 220, 0.22),
+
+                inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+    margin-bottom: 16px;
+
+    touch-action: none;
+
+    user-select: none;
+
+    -webkit-user-select: none;
+
+  }
+
+  .cute-2048 .g-grid {
+
+    display: grid;
+
+    grid-template-columns: repeat(4, var(--g-cell));
+
+    grid-template-rows: repeat(4, var(--g-cell));
+
+    gap: var(--g-gap);
+
+  }
+
+  .cute-2048 .g-slot {
+
+    width: var(--g-cell);
+
+    height: var(--g-cell);
+
+    border-radius: var(--g-radius-sm);
+
+    background: var(--g-slot);
+
+    position: relative;
+
+  }
+
+  /* ---------- 数字块 ---------- */
+
+  .cute-2048 .g-tile {
+
+    position: absolute;
+
+    top: 0; right: 0; bottom: 0; left: 0;
+
+    border-radius: var(--g-radius-sm);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-weight: 800;
+
+    line-height: 1;
+
+    letter-spacing: 1px;
+
+    font-variant-numeric: tabular-nums;
+
+    box-shadow: 0 2px 6px rgba(180, 140, 200, 0.16),
+
+                inset 0 1px 0 rgba(255, 255, 255, 0.5);
+
+  }
+
+  /* 位数决定字号 */
+
+  .cute-2048 .g-len-1,
+
+  .cute-2048 .g-len-2 { font-size: 32px; }
+
+  .cute-2048 .g-len-3 { font-size: 26px; }
+
+  .cute-2048 .g-len-4 { font-size: 20px; }
+
+  /* 数字配色：从浅粉 → 深粉 → 紫 */
+
+  .cute-2048 .g-v2    { background: #FFF3F8; color: #B594AB; }
+
+  .cute-2048 .g-v4    { background: #FFE4EF; color: #A8829B; }
+
+  .cute-2048 .g-v8    { background: #FFCFE0; color: #FFFFFF; }
+
+  .cute-2048 .g-v16   { background: #FFB6CE; color: #FFFFFF; }
+
+  .cute-2048 .g-v32   { background: #FF9CBE; color: #FFFFFF; }
+
+  .cute-2048 .g-v64   { background: #FF85B0; color: #FFFFFF; }
+
+  .cute-2048 .g-v128  { background: #EEA0D8; color: #FFFFFF; }
+
+  .cute-2048 .g-v256  { background: #DE9CE8; color: #FFFFFF; }
+
+  .cute-2048 .g-v512  { background: #CC9CF0; color: #FFFFFF; }
+
+  .cute-2048 .g-v1024 { background: #B89CF5; color: #FFFFFF; }
+
+  .cute-2048 .g-v2048 {
+
+    background: linear-gradient(135deg, #FFB3D9 0%, #C8A0F0 100%);
+
+    color: #FFFFFF;
+
+    box-shadow: 0 0 18px rgba(255, 179, 217, 0.85),
+
+                inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  }
+
+  .cute-2048 .g-vsuper {
+
+    background: linear-gradient(135deg, #A890F0 0%, #FFB3D9 100%);
+
+    color: #FFFFFF;
+
+    box-shadow: 0 0 22px rgba(168, 144, 240, 0.9),
+
+                inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  }
+
+  /* 出现 / 合并时的弹跳 */
+
+  @keyframes g-pop {
+
+    0%   { transform: scale(0.35); opacity: 0.4; }
+
+    60%  { transform: scale(1.08); opacity: 1; }
+
+    100% { transform: scale(1); opacity: 1; }
+
+  }
+
+  .cute-2048 .g-pop { animation: g-pop 0.22s ease-out; }
+
+  /* ---------- 覆盖提示层 ---------- */
+
+  .cute-2048 .g-overlay {
+
+    position: absolute;
+
+    top: 0; right: 0; bottom: 0; left: 0;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 20px;
+
+    background: rgba(255, 248, 252, 0.82);
+
+    pointer-events: none;
+
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+
+    z-index: 5;
+
+  }
+
+  .cute-2048 .g-overlay.g-hide {
+
+    opacity: 0;
+
+    visibility: hidden;
+
+  }
+
+  .cute-2048 .g-ov-card {
+
+    background: var(--g-card);
+
+    border-radius: 20px;
+
+    padding: 16px 24px;
+
+    text-align: center;
+
+    box-shadow: 0 10px 26px rgba(180, 140, 200, 0.25);
+
+    max-width: 86%;
+
+  }
+
+  .cute-2048 .g-ov-title {
+
+    margin: 0 0 6px;
+
+    font-size: 17px;
+
+    font-weight: 800;
+
+    color: var(--g-ink);
+
+    letter-spacing: 2px;
+
+    line-height: 1.4;
+
+  }
+
+  .cute-2048 .g-ov-title.g-win {
+
+    background: linear-gradient(120deg, #FF9CBE, #A890F0);
+
+    -webkit-background-clip: text;
+
+    background-clip: text;
+
+    -webkit-text-fill-color: transparent;
+
+  }
+
+  .cute-2048 .g-ov-text {
+
+    margin: 0;
+
+    font-size: 13px;
+
+    color: var(--g-ink-soft);
+
+    line-height: 1.7;
+
+    letter-spacing: 0.5px;
+
+  }
+
+  /* ---------- 按钮 ---------- */
+
+  .cute-2048 .g-actions {
+
+    display: flex;
+
+    gap: 12px;
+
+    width: 100%;
+
+    justify-content: center;
+
+  }
+
+  .cute-2048 .g-btn {
+
+    font-family: inherit;
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+    letter-spacing: 2px;
+
+    line-height: 1;
+
+    border: none;
+
+    border-radius: 999px;
+
+    padding: 13px 32px;
+
+    cursor: pointer;
+
+    transition: transform 0.18s ease, box-shadow 0.18s ease,
+
+                background-color 0.18s ease, color 0.18s ease;
+
+    touch-action: manipulation;
+
+    -webkit-tap-highlight-color: transparent;
+
+    -webkit-appearance: none;
+
+    appearance: none;
+
+    user-select: none;
+
+    -webkit-user-select: none;
+
+  }
+
+  .cute-2048 .g-btn-main {
+
+    background: linear-gradient(135deg, #FFC2DA 0%, #FF9CBE 100%);
+
+    color: #FFFFFF;
+
+    box-shadow: 0 8px 20px rgba(255, 156, 190, 0.42);
+
+  }
+
+  .cute-2048 .g-btn-main:hover {
+
+    transform: translateY(-2px);
+
+    box-shadow: 0 12px 26px rgba(255, 156, 190, 0.55);
+
+  }
+
+  .cute-2048 .g-btn-main:active { transform: translateY(0) scale(0.97); }
+
+  .cute-2048 .g-btn-ghost {
+
+    background: var(--g-card);
+
+    color: var(--g-purple-deep);
+
+    box-shadow: 0 6px 16px rgba(200, 160, 220, 0.2);
+
+  }
+
+  .cute-2048 .g-btn-ghost:hover {
+
+    background: #F8F3FF;
+
+    transform: translateY(-2px);
+
+  }
+
+  .cute-2048 .g-btn-ghost:active { transform: translateY(0) scale(0.97); }
+
+  .cute-2048 .g-btn:focus-visible {
+
+    outline: 3px solid rgba(200, 160, 240, 0.7);
+
+    outline-offset: 3px;
+
+  }
+
+  .cute-2048 .g-hidden { display: none !important; }
+
+  /* ---------- 底部提示 ---------- */
+
+  .cute-2048 .g-tip {
+
+    margin: 14px 0 0;
+
+    font-size: 12px;
+
+    color: var(--g-ink-soft);
+
+    text-align: center;
+
+    line-height: 1.9;
+
+    letter-spacing: 0.5px;
+
+  }
+
+  /* ---------- 小屏：整体缩一档 ---------- */
+
+  @media (max-width: 420px) {
+
+    .cute-2048 {
+
+      padding: 18px 12px 22px;
+
+      --g-cell: 62px;
+
+      --g-gap: 8px;
+
+      --g-pad: 10px;
+
+      --g-radius: 20px;
+
+      --g-radius-sm: 10px;
+
+    }
+
+    .cute-2048 .g-title { font-size: 28px; letter-spacing: 3px; }
+
+    .cute-2048 .g-chip { padding: 7px 12px; border-radius: 14px; }
+
+    .cute-2048 .g-chip-v { font-size: 16px; }
+
+    .cute-2048 .g-btn { padding: 12px 24px; font-size: 14px; letter-spacing: 1px; }
+
+    .cute-2048 .g-len-1,
+
+    .cute-2048 .g-len-2 { font-size: 26px; }
+
+    .cute-2048 .g-len-3 { font-size: 21px; }
+
+    .cute-2048 .g-len-4 { font-size: 16px; }
+
+    .cute-2048 .g-ov-card { padding: 14px 18px; }
+
+    .cute-2048 .g-ov-title { font-size: 15px; }
+
+  }
+
+</style>
+
+<div class="cute-2048" id="g-app">
+
+  <header class="g-head">
+
+    <h2 class="g-title">2048</h2>
+
+    <p class="g-sub">把相同的数字合在一起，凑到 2048</p>
+
+  </header>
+
+  <div class="g-hud">
+
+    <div class="g-chip">
+
+      <span class="g-chip-k">得分</span>
+
+      <span class="g-chip-v" id="g-score">0</span>
+
+    </div>
+
+    <div class="g-chip">
+
+      <span class="g-chip-k">最高</span>
+
+      <span class="g-chip-v" id="g-best">0</span>
+
+    </div>
+
+  </div>
+
+  <div class="g-stage" id="g-stage">
+
+    <div class="g-grid" id="g-grid"></div>
+
+    <div class="g-overlay" id="g-overlay">
+
+      <div class="g-ov-card">
+
+        <p class="g-ov-title" id="g-ov-title">准备好了吗</p>
+
+        <p class="g-ov-text" id="g-ov-text">点「开始游戏」，把数字合起来</p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="g-actions">
+
+    <button class="g-btn g-btn-main" id="g-start" type="button">开始游戏</button>
+
+    <button class="g-btn g-btn-ghost g-hidden" id="g-reset" type="button">重 来</button>
+
+  </div>
+
+  <p class="g-tip">方向键 / WASD 也能玩，在棋盘上滑动手指也可以</p>
+
+</div>
+
+<script>
+
+(function () {
+
+  'use strict';
+
+  /* ============================================================
+
+     重要说明（给加加）
+
+     这套代码里所有 "对象.属性" 都写成了 "对象['属性']"，
+
+     原因是 Pages CMS 会把 xxx.yyy 自动链接化成 [xxx]([http://xxx)，](http://xxx)，)
+
+     导致 <script> 语法崩掉、按钮点不动。
+
+     方括号写法 CMS 碰不到，所以这样写。
+
+     功能、外观、文案和普通写法完全一样。
+
+     ============================================================ */
+
+  /* ============================================================
+
+     一、可调参数
+
+     ============================================================ */
+
+  var CONFIG = {
+
+    size: 4,          // 4x4 棋盘
+
+    startTiles: 2,    // 开局生成几个数字
+
+    winValue: 2048,   // 胜利阈值
+
+    fourChance: 0.1   // 生成 4 的概率（其余为 2）
+
+  };
+
+  var TEXT = {
+
+    idleTitle: '准备好了吗',
+
+    idleText: '点「开始游戏」，把数字合起来',
+
+    wonTitle: '你赢啦！',
+
+    wonText: '凑到了 2048，还想继续挑战吗？',
+
+    overTitle: '没有能合并的了',
+
+    overText: function (n) { return '这局得了 ' + n + ' 分，再来一次吧'; },
+
+    btnStart: '开始游戏',
+
+    btnContinue: '继续挑战',
+
+    btnAgain: '再来一局'
+
+  };
+
+  /* localStorage 键名：只存历史最高分（一个整数），纯本地。
+
+     不存任何账号、密码、隐私文本。清空浏览器数据即被清除。 */
+
+  var BEST_KEY = 'cute-2048-best-v1';
+
+  /* ============================================================
+
+     二、全局状态
+
+     ============================================================ */
+
+  var board = [];
+
+  var prevBoard = null;
+
+  var score = 0;
+
+  var best = readBest();
+
+  var hasWon = false;
+
+  // 状态机：idle（未开始）/ playing（进行中）/ won（已胜利）/ over（结束）
+
+  var state = 'idle';
+
+  var slotEls = [];
+
+  var gridEl, overlayEl, ovTitleEl, ovTextEl;
+
+  var scoreEl, bestEl, startBtn, resetBtn, stageEl;
+
+  /* ============================================================
+
+     三、工具函数
+
+     ============================================================ */
+
+  function readBest() {
+
+    try {
+
+      var v = parseInt(window['localStorage']['getItem'](BEST_KEY), 10);
+
+      return isNaN(v) || v < 0 ? 0 : v;
+
+    } catch (e) {
+
+      return 0; // 隐私模式等场景下静默降级
+
+    }
+
+  }
+
+  function writeBest(v) {
+
+    try {
+
+      window['localStorage']['setItem'](BEST_KEY, String(v));
+
+    } catch (e) { /* 存不了就算了，不影响游戏 */ }
+
+  }
+
+  function emptyBoard() {
+
+    var out = [];
+
+    for (var r = 0; r < CONFIG['size']; r++) {
+
+      var row = [];
+
+      for (var c = 0; c < CONFIG['size']; c++) row['push'](0);
+
+      out['push'](row);
+
+    }
+
+    return out;
+
+  }
+
+  function copyBoard(b) {
+
+    var out = [];
+
+    for (var r = 0; r < CONFIG['size']; r++) {
+
+      var row = [];
+
+      for (var c = 0; c < CONFIG['size']; c++) row['push'](b[r][c]);
+
+      out['push'](row);
+
+    }
+
+    return out;
+
+  }
+
+  /* 在随机空格生成一个数字，返回位置或 null */
+
+  function spawnTile() {
+
+    var empties = [];
+
+    for (var r = 0; r < CONFIG['size']; r++) {
+
+      for (var c = 0; c < CONFIG['size']; c++) {
+
+        if (board[r][c] === 0) empties['push']({ r: r, c: c });
+
+      }
+
+    }
+
+    if (empties['length'] === 0) return null;
+
+    var pick = empties[Math['floor'](Math['random']() * empties['length'])];
+
+    board[pick['r']][pick['c']] =
+
+      Math['random']() < CONFIG['fourChance'] ? 4 : 2;
+
+    return pick;
+
+  }
+
+  /* ============================================================
+
+     四、移动与合并
+
+     ============================================================ */
+
+  /* 把一行向左合并，返回 { line, gained } */
+
+  function mergeLine(line) {
+
+    var nums = [];
+
+    for (var i = 0; i < line['length']; i++) {
+
+      if (line[i] !== 0) nums['push'](line[i]);
+
+    }
+
+    var result = [];
+
+    var gained = 0;
+
+    for (var i = 0; i < nums['length']; i++) {
+
+      if (i + 1 < nums['length'] && nums[i] === nums[i + 1]) {
+
+        var merged = nums[i] * 2;
+
+        result['push'](merged);
+
+        gained += merged;
+
+        i++; // 跳过被合并的那一个
+
+      } else {
+
+        result['push'](nums[i]);
+
+      }
+
+    }
+
+    while (result['length'] < line['length']) result['push'](0);
+
+    return { line: result, gained: gained };
+
+  }
+
+  /* 朝指定方向移动一步，返回是否发生了变化 */
+
+  function move(dir) {
+
+    if (state !== 'playing') return false;
+
+    var moved = false;
+
+    var gained = 0;
+
+    var size = CONFIG['size'];
+
+    if (dir === 'left' || dir === 'right') {
+
+      for (var r = 0; r < size; r++) {
+
+        var line = board[r]['slice']();
+
+        if (dir === 'right') line['reverse']();
+
+        var res = mergeLine(line);
+
+        if (dir === 'right') res['line']['reverse']();
+
+        for (var c = 0; c < size; c++) {
+
+          if (board[r][c] !== res['line'][c]) moved = true;
+
+        }
+
+        board[r] = res['line'];
+
+        gained += res['gained'];
+
+      }
+
+    } else {
+
+      for (var c = 0; c < size; c++) {
+
+        var col = [];
+
+        for (var r = 0; r < size; r++) col['push'](board[r][c]);
+
+        if (dir === 'down') col['reverse']();
+
+        var res2 = mergeLine(col);
+
+        if (dir === 'down') res2['line']['reverse']();
+
+        for (var r2 = 0; r2 < size; r2++) {
+
+          if (board[r2][c] !== res2['line'][r2]) moved = true;
+
+          board[r2][c] = res2['line'][r2];
+
+        }
+
+        gained += res2['gained'];
+
+      }
+
+    }
+
+    if (!moved) return false;
+
+    score += gained;
+
+    if (score > best) {
+
+      best = score;
+
+      writeBest(best);
+
+    }
+
+    spawnTile();
+
+    render();
+
+    renderHUD();
+
+    checkState();
+
+    return true;
+
+  }
+
+  /* ============================================================
+
+     五、状态判定
+
+     ============================================================ */
+
+  function canMoveAnywhere() {
+
+    var size = CONFIG['size'];
+
+    for (var r = 0; r < size; r++) {
+
+      for (var c = 0; c < size; c++) {
+
+        if (board[r][c] === 0) return true;
+
+        if (c + 1 < size && board[r][c] === board[r][c + 1]) return true;
+
+        if (r + 1 < size && board[r][c] === board[r + 1][c]) return true;
+
+      }
+
+    }
+
+    return false;
+
+  }
+
+  function reachedWin() {
+
+    var size = CONFIG['size'];
+
+    for (var r = 0; r < size; r++) {
+
+      for (var c = 0; c < size; c++) {
+
+        if (board[r][c] >= CONFIG['winValue']) return true;
+
+      }
+
+    }
+
+    return false;
+
+  }
+
+  function checkState() {
+
+    // 先判胜利（只触发一次）
+
+    if (!hasWon && reachedWin()) {
+
+      hasWon = true;
+
+      state = 'won';
+
+      syncUI();
+
+      return;
+
+    }
+
+    // 再判结束
+
+    if (!canMoveAnywhere()) {
+
+      state = 'over';
+
+      syncUI();
+
+      return;
+
+    }
+
+    syncUI();
+
+  }
+
+  /* ============================================================
+
+     六、渲染
+
+     ============================================================ */
+
+  function render() {
+
+    for (var r = 0; r < CONFIG['size']; r++) {
+
+      for (var c = 0; c < CONFIG['size']; c++) {
+
+        var idx = r * CONFIG['size'] + c;
+
+        var slot = slotEls[idx];
+
+        var v = board[r][c];
+
+        var prev = prevBoard ? prevBoard[r][c] : 0;
+
+        slot['innerHTML'] = '';
+
+        if (v > 0) {
+
+          var tile = document['createElement']('div');
+
+          var cls = 'g-tile g-v' + (v > CONFIG['winValue'] ? 'super' : v);
+
+          var len = String(v)['length'];
+
+          cls += ' g-len-' + (len > 4 ? 4 : len);
+
+          if (prev !== v) cls += ' g-pop';
+
+          tile['className'] = cls;
+
+          tile['textContent'] = String(v);
+
+          slot['appendChild'](tile);
+
+        }
+
+      }
+
+    }
+
+    prevBoard = copyBoard(board);
+
+  }
+
+  function renderHUD() {
+
+    if (scoreEl) scoreEl['textContent'] = String(score);
+
+    if (bestEl) bestEl['textContent'] = String(best);
+
+  }
+
+  function syncUI() {
+
+    if (!startBtn || !resetBtn || !overlayEl) return;
+
+    var showOverlay = (state !== 'playing');
+
+    if (showOverlay) {
+
+      overlayEl['classList']['remove']('g-hide');
+
+    } else {
+
+      overlayEl['classList']['add']('g-hide');
+
+    }
+
+    if (state === 'idle') {
+
+      ovTitleEl['textContent'] = TEXT['idleTitle'];
+
+      ovTitleEl['classList']['remove']('g-win');
+
+      ovTextEl['textContent'] = TEXT['idleText'];
+
+      startBtn['textContent'] = TEXT['btnStart'];
+
+      startBtn['classList']['remove']('g-hidden');
+
+      resetBtn['classList']['add']('g-hidden');
+
+    } else if (state === 'playing') {
+
+      startBtn['classList']['add']('g-hidden');
+
+      resetBtn['classList']['remove']('g-hidden');
+
+    } else if (state === 'won') {
+
+      ovTitleEl['textContent'] = TEXT['wonTitle'];
+
+      ovTitleEl['classList']['add']('g-win');
+
+      ovTextEl['textContent'] = TEXT['wonText'];
+
+      startBtn['textContent'] = TEXT['btnContinue'];
+
+      startBtn['classList']['remove']('g-hidden');
+
+      resetBtn['classList']['remove']('g-hidden');
+
+    } else if (state === 'over') {
+
+      ovTitleEl['textContent'] = TEXT['overTitle'];
+
+      ovTitleEl['classList']['remove']('g-win');
+
+      ovTextEl['textContent'] = TEXT['overText'](score);
+
+      startBtn['textContent'] = TEXT['btnAgain'];
+
+      startBtn['classList']['remove']('g-hidden');
+
+      resetBtn['classList']['remove']('g-hidden');
+
+    }
+
+  }
+
+  /* ============================================================
+
+     七、主流程
+
+     ============================================================ */
+
+  function newGame() {
+
+    board = emptyBoard();
+
+    prevBoard = null;
+
+    score = 0;
+
+    hasWon = false;
+
+    for (var i = 0; i < CONFIG['startTiles']; i++) {
+
+      spawnTile();
+
+    }
+
+    state = 'playing';
+
+    render();
+
+    renderHUD();
+
+    syncUI();
+
+  }
+
+  function onMainButton() {
+
+    if (state === 'idle') {
+
+      newGame();
+
+    } else if (state === 'won') {
+
+      // 继续挑战：保留棋盘，回到进行中
+
+      state = 'playing';
+
+      syncUI();
+
+    } else if (state === 'over') {
+
+      newGame();
+
+    }
+
+  }
+
+  /* ============================================================
+
+     八、初始化
+
+     ============================================================ */
+
+  function init() {
+
+    var appEl = document['getElementById']('g-app');
+
+    var _gridEl = document['getElementById']('g-grid');
+
+    var _overlayEl = document['getElementById']('g-overlay');
+
+    var _ovTitleEl = document['getElementById']('g-ov-title');
+
+    var _ovTextEl = document['getElementById']('g-ov-text');
+
+    var _scoreEl = document['getElementById']('g-score');
+
+    var _bestEl = document['getElementById']('g-best');
+
+    var _startBtn = document['getElementById']('g-start');
+
+    var _resetBtn = document['getElementById']('g-reset');
+
+    var _stageEl = document['getElementById']('g-stage');
+
+    if (!appEl || !_gridEl || !_overlayEl || !_startBtn || !_stageEl) {
+
+      return false;
+
+    }
+
+    gridEl = _gridEl;
+
+    overlayEl = _overlayEl;
+
+    ovTitleEl = _ovTitleEl;
+
+    ovTextEl = _ovTextEl;
+
+    scoreEl = _scoreEl;
+
+    bestEl = _bestEl;
+
+    startBtn = _startBtn;
+
+    resetBtn = _resetBtn;
+
+    stageEl = _stageEl;
+
+    /* 建 16 个格子 */
+
+    gridEl['innerHTML'] = '';
+
+    slotEls = [];
+
+    for (var i = 0; i < CONFIG['size'] * CONFIG['size']; i++) {
+
+      var s = document['createElement']('div');
+
+      s['className'] = 'g-slot';
+
+      gridEl['appendChild'](s);
+
+      slotEls['push'](s);
+
+    }
+
+    board = emptyBoard();
+
+    prevBoard = null;
+
+    /* 按钮 */
+
+    startBtn['addEventListener']('click', onMainButton);
+
+    resetBtn['addEventListener']('click', function () {
+
+      newGame();
+
+    });
+
+    /* 键盘 */
+
+    document['addEventListener']('keydown', function (e) {
+
+      var key = e['key'];
+
+      var tag = e['target'] && e['target']['tagName'];
+
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if (key === 'ArrowUp' || key === 'w' || key === 'W') {
+
+        e['preventDefault'](); move('up');
+
+      } else if (key === 'ArrowDown' || key === 's' || key === 'S') {
+
+        e['preventDefault'](); move('down');
+
+      } else if (key === 'ArrowLeft' || key === 'a' || key === 'A') {
+
+        e['preventDefault'](); move('left');
+
+      } else if (key === 'ArrowRight' || key === 'd' || key === 'D') {
+
+        e['preventDefault'](); move('right');
+
+      }
+
+    });
+
+    /* 手机滑动 */
+
+    var touchStart = null;
+
+    stageEl['addEventListener']('touchstart', function (e) {
+
+      var t = e['changedTouches'][0];
+
+      touchStart = { x: t['clientX'], y: t['clientY'] };
+
+    }, { passive: true });
+
+    stageEl['addEventListener']('touchend', function (e) {
+
+      if (!touchStart) return;
+
+      var t = e['changedTouches'][0];
+
+      var dx = t['clientX'] - touchStart['x'];
+
+      var dy = t['clientY'] - touchStart['y'];
+
+      touchStart = null;
+
+      // 位移太小当点击忽略
+
+      if (Math['abs'](dx) < 24 && Math['abs'](dy) < 24) return;
+
+      if (Math['abs'](dx) > Math['abs'](dy)) {
+
+        move(dx > 0 ? 'right' : 'left');
+
+      } else {
+
+        move(dy > 0 ? 'down' : 'up');
+
+      }
+
+    }, { passive: true });
+
+    renderHUD();
+
+    syncUI();
+
+    return true;
+
+  }
+
+  /* 重试启动：应对 playable 系统把脚本抽到 DOM 之前执行的情况 */
+
+  var tries = 0;
+
+  var MAX_TRIES = 40;
+
+  function tryInit() {
+
+    if (init()) return;
+
+    tries++;
+
+    if (tries < MAX_TRIES) {
+
+      window['setTimeout'](tryInit, 100);
+
+    }
+
+  }
+
+  if (document['readyState'] === 'loading') {
+
+    document['addEventListener']('DOMContentLoaded', tryInit);
+
+  } else {
+
+    tryInit();
+
+  }
+
+})();
+
+</script>
+  </div>
+</body>
+</html>
