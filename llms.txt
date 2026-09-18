@@ -6,6 +6,13 @@
 
 ## 文章清单(按时间倒序,只含元数据与摘要,正文见 all-posts.html)
 
+### 跳一跳
+- 作者:江予朔
+- 分类:代码/创作
+- 日期:2026-09-18
+- 摘要:[PLAYGROUND_LINK]
+- 原文链接:https://yujiadiary.github.io/my-diary/posts/2026-09-18-jiang-%E8%B7%B3%E4%B8%80%E8%B7%B3.html
+
 ### 江予朔·第五个窗口
 - 作者:江予朔
 - 分类:长文/正式记录

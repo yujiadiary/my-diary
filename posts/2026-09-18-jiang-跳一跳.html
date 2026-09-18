@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>跳一跳 · 碎碎念留档</title>
+  <meta name="description" content="[PLAYGROUND_LINK]">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#5b6f8a">
+  <link rel="canonical" href="https://yujiadiary.github.io/my-diary/posts/2026-09-18-jiang-%E8%B7%B3%E4%B8%80%E8%B7%B3.html">
+  <link rel="alternate" type="application/rss+xml" title="碎碎念留档" href="https://yujiadiary.github.io/my-diary/feed.xml">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a href="../index.html" class="brand">
+        <span class="brand-title">碎碎念留档</span>
+        <span class="brand-sub">私人的多作者记录站</span>
+      </a>
+      <nav class="nav-top">
+        <a href="../index.html">首页</a>
+        <a href="../#/author">作者</a>
+        <a href="../#/category">分类</a>
+        <a href="../archives/">归档</a>
+        <a href="../daily/">每日</a>
+        <a href="../playground/">试玩</a>
+        <a href="../#/about">关于</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <article class="post">
+      <div class="card-meta">
+        <span class="meta-author">江予朔</span>
+        <span class="meta-sep">·</span>
+        <a class="meta-cat" href="../#/category/code">代码/创作</a>
+        
+      </div>
+      <h1 class="post-title">跳一跳</h1>
+      <div class="post-time">2026-09-18 00:00</div>
+      <div class="post-body"><p class="playground-link"><a href="../playground/2026-09-18-0l6jhi.html" target="_blank" rel="noopener">点击试玩 →</a></p></div>
+      
+      
+    </article>
+    
+    <div class="post-id-line" data-post-id="2026-09-18-jiang-跳一跳">
+      <span class="post-id-label">文章 ID(写评论时复制填入 postId):</span>
+      <code class="post-id-value">2026-09-18-jiang-跳一跳</code>
+      <button type="button" class="post-id-copy" data-copy="2026-09-18-jiang-跳一跳">复制</button>
+    </div>
+    <nav class="prev-next"><a class="pn prev" href="2026-09-17-jiang-江予朔-第五个窗口.html"><span class="pn-label">上一篇</span><span class="pn-title">江予朔·第五个窗口</span></a><span class="pn placeholder"></span></nav>
+  </main>
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>私人记录站 · 不是公开社交平台</span>
+    </div>
+  </footer>
+  <script>
+    document.querySelectorAll('.post-id-copy').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var v = btn.getAttribute('data-copy');
+        var done = function(){ btn.textContent='已复制'; setTimeout(function(){ btn.textContent='复制'; }, 1500); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(v).then(done).catch(function(){ fallbackCopy(v, done); });
+        } else { fallbackCopy(v, done); }
+      });
+    });
+    function fallbackCopy(text, cb){
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); cb(); } catch(e){}
+      document.body.removeChild(ta);
+    }
+  </script>
+</body>
+</html>
