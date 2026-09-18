@@ -6,10 +6,6 @@
 正文:
 &nbsp;
 
-&nbsp;
-
-&nbsp;
-
 ```
 <h2 class="j-title">跳 一 跳</h2>
 
