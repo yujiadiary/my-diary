@@ -4,6 +4,78 @@
 标题:跳一跳
 作者:江予朔
 正文:
-[PLAYGROUND_LINK]
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+```
+<h2 class="j-title">跳 一 跳</h2>
+
+<p class="j-sub">按住蓄力，松开起跳</p>
+```
+
+
+
+&nbsp;
+
+```
+<div class="j-chip">
+
+  <span class="j-chip-k">得分</span>
+
+  <span class="j-chip-v" id="j-score">0</span>
+
+</div>
+
+<div class="j-chip">
+
+  <span class="j-chip-k">最高</span>
+
+  <span class="j-chip-v" id="j-best">0</span>
+
+</div>
+```
+
+
+
+&nbsp;
+
+```
+<canvas class="j-canvas" id="j-canvas"></canvas>
+
+<div class="j-overlay" id="j-overlay">
+
+  <div class="j-ov-card">
+
+    <p class="j-ov-title" id="j-ov-title">准备好了吗</p>
+
+    <p class="j-ov-text" id="j-ov-text">按住屏幕蓄力，松开跳到下一个平台</p>
+
+  </div>
+
+</div>
+```
+
+
+
+&nbsp;
+
+```
+<button class="j-btn j-btn-main" id="j-start" type="button">开始游戏</button>
+
+<button class="j-btn j-btn-ghost j-hidden" id="j-reset" type="button">重 来</button>
+```
+
+
+
+按住画布蓄力，松手起跳，落在平台中心有加分
+
+
+
+&nbsp;
+
+&nbsp;
 
 评论:(暂无)
