@@ -896,17 +896,71 @@ function safePlaygroundName(slug, title) {
   return `${dateStr}-${hash}`;
 }
 
+// 检测 playable 内容里裸露的 JS 代码(Pages CMS 吞掉了 <script> 标签)
+// 特征: 有明显 JS 标志但没有完整的 <script>...</script> 标签对
+function detectBareScript(content) {
+  // 用完整的标签对检测: 必须有 <script...> 和对应的 </script>
+  const hasScriptTagPair = /<script[^>]*>[\s\S]*<\/script>/i.test(content);
+  if (hasScriptTagPair) return null; // 已有完整 script 标签对,不用处理
+  // 找 IIFE 开头 (function() { ... })() 或 !function(){}
+  const iifeRe = /(?:^|\n)\s*(\(?function\s*\([^)]*\)\s*\{[\s\S]*?\}\s*\)\s*\(\)\s*;?)/;
+  const iife = content.match(iifeRe);
+  if (iife && iife[1].length > 50) return iife[1].trim();
+  // 找以 var / let / const CONFIG 开头,且包含 Pages CMS 规避写法的
+  if (/var\s+\w+\s*=\s*\{[\s\S]{100,}document\['|window\['|Math\['|setTimeout/.test(content)) {
+    // 从第一个 (function 或 var 开始到末尾
+    const startRe = /(?:\(function\s*\(|var\s+\w+\s*=\s*\{|function\s+\w+\s*\()/;
+    const idx = content.search(startRe);
+    if (idx > 0) return content.slice(idx).trim();
+  }
+  return null;
+}
+
+// 包装裸露的 JS → 加 <script> 标签; 包装裸露的 CSS → 加 <style> 标签
+// 同时自动补 buildPlaygroundPage 的容器内联样式(保证 playable 在 playground 页正常显示)
+function wrapBareTags(content) {
+  let result = content;
+  let changed = false;
+  // 自动包裹 JS
+  const bareJs = detectBareScript(result);
+  if (bareJs) {
+    result = result.replace(bareJs, '<script>\n' + bareJs + '\n</script>');
+    changed = true;
+  }
+  // 自动包裹 CSS: 检测到明显的 CSS 规则块但没有完整 <style> 标签对
+  const hasStyleTagPair = /<style[^>]*>[\s\S]*<\/style>/i.test(result);
+  if (!hasStyleTagPair && /[.#][\w-]+\s*\{[^}]{10,}\}/.test(result)) {
+    // 找第一个 CSS 规则的位置
+    const cssRe = /([.#][\w-]+\s*\{[\s\S]*?\})/;
+    const idx = result.search(cssRe);
+    if (idx >= 0) {
+      // 从 idx 之前截取到合适位置(换行),把 CSS 部分包进 <style>
+      const before = result.slice(0, idx).replace(/\s+$/, '');
+      const after = result.slice(idx);
+      result = before + '\n\n<style>\n' + after + '\n</style>';
+      changed = true;
+    }
+  }
+  return changed ? result : content;
+}
+
 // 从文章正文提取 playable 内容,返回 { content, bodyWithoutBlock }
 // 优先取正文 <!-- playable -->...<!-- /playable --> 标记;
-// 其次取 frontmatter playable_html 字段
+// 其次取 frontmatter playable_html 字段;
+// 兜底: 如果标记被 Pages CMS 吃掉了,尝试从分散的 ``` 代码块里重组 playable 内容
 function extractPlayable(body, fm) {
   const markerRe = /<!--\s*playable\s*-->([\s\S]*?)<!--\s*\/playable\s*-->/;
   const m = body.match(markerRe);
   if (m) {
+    let content = m[1].trim();
+    // Pages CMS 可能吞掉了 <script> / <style> 标签,尝试自动补
+    const fixed = wrapBareTags(content);
+    const needsRepair = fixed !== content;
     return {
-      content: m[1].trim(),
+      content: fixed,
       // 把标记块替换成一行占位,后面 renderMarkdown 会渲染成 <p>
-      body: body.replace(markerRe, '\n\n[PLAYGROUND_LINK]\n\n')
+      body: body.replace(markerRe, '\n\n[PLAYGROUND_LINK]\n\n'),
+      needsRepair
     };
   }
   if (fm && fm.playable_html) {
@@ -914,6 +968,33 @@ function extractPlayable(body, fm) {
       content: String(fm.playable_html).trim(),
       body: body + '\n\n[PLAYGROUND_LINK]\n\n'
     };
+  }
+  // 兜底: 检测 Pages CMS 吃掉标记后留下的碎片代码块
+  // 条件: 文章包含 <script 或 <style 标签(说明原本是 playable)
+  const hasScript = /<script[\s>]/i.test(body);
+  const hasStyle = /<style[\s>]/i.test(body);
+  if (hasScript || hasStyle) {
+    // 把所有 ``` 代码块内容拼接起来,过滤掉纯文字说明
+    const codeBlockRe = /```(?:html|css|js|javascript)?\s*\n([\s\S]*?)```/g;
+    const parts = [];
+    let cm;
+    while ((cm = codeBlockRe.exec(body)) !== null) {
+      const chunk = cm[1].trim();
+      // 只收集包含 HTML/CSS/JS 特征的代码块
+      if (/<(script|style|div|canvas|button|h[1-6]|span|p|svg)[\s>]/i.test(chunk) ||
+          /function\s+\w+|document\.|getElementById|addEventListener/i.test(chunk)) {
+        parts.push(chunk);
+      }
+    }
+    if (parts.length > 0) {
+      const content = parts.join('\n\n').trim();
+      return {
+        content,
+        // 把所有代码块替换成占位
+        body: body.replace(codeBlockRe, '\n').replace(/\n{3,}/g, '\n\n') + '\n\n[PLAYGROUND_LINK]\n\n',
+        needsRepair: true  // 告诉上层 md 文件需要写回修复
+      };
+    }
   }
   return null;
 }
@@ -1076,6 +1157,21 @@ function build() {
     if (play) {
       contentBody = play.body;
       playgroundFile = safePlaygroundName(slug, fm.title || slug);
+      // Pages CMS 吃掉了 playable 标记,自动修复 md 文件
+      if (play.needsRepair) {
+        // 从原始 raw 里提取 frontmatter 块(---...---)
+        const fmMatch = raw.match(/^---\r?\n[\s\S]*?\r?\n---/);
+        const fmBlock = fmMatch ? fmMatch[0] : '---\ntitle: ' + (fm.title || slug) + '\n---';
+        // 重建 md: frontmatter + 修复后的 body(把碎片代码块包回 playable 标记)
+        const repairedBody = play.body.replace(
+          /\[PLAYGROUND_LINK\]/g,
+          '<!-- playable -->\n\n' + play.content + '\n\n<!-- /playable -->'
+        );
+        const repaired = fmBlock + '\n\n' + repairedBody.trim() + '\n';
+        const fp = path.join(POSTS_DIR, file);
+        fs.writeFileSync(fp, repaired, 'utf8');
+        console.log(`[auto-fix] 修复 ${fp}: 恢复 playable 标记`);
+      }
     }
     // 摘要从 contentBody 取(已移除 playable 块),避免泄漏原始 HTML/CSS/JS
     const excerptBody = contentBody.replace(/\[PLAYGROUND_LINK\]/g, '');

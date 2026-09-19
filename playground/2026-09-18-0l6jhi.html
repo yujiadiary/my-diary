@@ -20,12 +20,6 @@
   <div class="pg-canvas">
 <style>
 
-  /* ============================================================
-
-     全部样式限定在 .jump-game 内，不污染文章页
-
-     ============================================================ */
-
   .jump-game,
 
   .jump-game *,
@@ -34,31 +28,23 @@
 
   .jump-game *::after { box-sizing: border-box; }
 
-  /* 可调参数区：颜色 / 尺寸 */
-
   .jump-game {
 
     --j-bg-1: #FFF5F9;
 
     --j-bg-2: #F3EEFF;
 
-    --j-card: #FFFFFF;
-
     --j-ink: #6B5578;
 
     --j-ink-soft: #A896B8;
 
-    --j-pink: #FF9CBE;
+    --j-pink-deep: #FF9CBE;
 
-    --j-pink-soft: #FFC2DA;
+    --j-purple-deep: #B89CF5;
 
-    --j-purple: #B89CF5;
+    --j-card: #FFFFFF;
 
-    --j-radius: 24px;
-
-    --j-max-w: 480px;
-
-    --j-stage-h: 480px;
+    --j-max-w: 420px;
 
     position: relative;
 
@@ -68,9 +54,9 @@
 
     margin: 0 auto;
 
-    padding: 22px 16px 26px;
+    padding: 20px 16px 24px;
 
-    border-radius: var(--j-radius);
+    border-radius: 24px;
 
     background: linear-gradient(160deg, var(--j-bg-1) 0%, var(--j-bg-2) 100%);
 
@@ -82,21 +68,17 @@
 
     -webkit-font-smoothing: antialiased;
 
-    -webkit-tap-highlight-color: transparent;
-
     overflow: hidden;
 
   }
 
-  .jump-game > * { flex: 0 0 auto; }
+  /* 标题 */
 
-  /* ---------- 标题 ---------- */
-
-  .jump-game .j-head { text-align: center; margin-bottom: 14px; }
+  .jump-game .j-head { text-align: center; margin-bottom: 12px; }
 
   .jump-game .j-title {
 
-    margin: 0 0 6px;
+    margin: 0 0 4px;
 
     font-size: 30px;
 
@@ -104,9 +86,7 @@
 
     letter-spacing: 6px;
 
-    line-height: 1.1;
-
-    background: linear-gradient(120deg, #FF9CBE 0%, #C8A0F0 60%, #A890F0 100%);
+    background: linear-gradient(120deg, #FF9CBE 0%, #C8A0F0 100%);
 
     -webkit-background-clip: text;
 
@@ -114,15 +94,13 @@
 
     -webkit-text-fill-color: transparent;
 
-    color: #FF9CBE;
-
   }
 
   .jump-game .j-sub {
 
     margin: 0;
 
-    font-size: 12.5px;
+    font-size: 12px;
 
     color: var(--j-ink-soft);
 
@@ -130,7 +108,7 @@
 
   }
 
-  /* ---------- 分数条 ---------- */
+  /* HUD 分数条 */
 
   .jump-game .j-hud {
 
@@ -142,7 +120,7 @@
 
     justify-content: center;
 
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 
   }
 
@@ -150,7 +128,7 @@
 
     flex: 1 1 0;
 
-    max-width: 150px;
+    max-width: 140px;
 
     background: var(--j-card);
 
@@ -186,15 +164,15 @@
 
     font-weight: 800;
 
-    color: var(--j-pink);
+    color: var(--j-pink-deep);
 
     font-variant-numeric: tabular-nums;
 
   }
 
-  .jump-game .j-chip:last-child .j-chip-v { color: var(--j-purple); }
+  .jump-game .j-chip:last-child .j-chip-v { color: var(--j-purple-deep); }
 
-  /* ---------- 画布区 ---------- */
+  /* 舞台 */
 
   .jump-game .j-stage {
 
@@ -202,19 +180,23 @@
 
     width: 100%;
 
-    padding: 10px;
+    aspect-ratio: 5 / 6;
 
-    background: var(--j-card);
+    background: linear-gradient(180deg, #FFF7FB 0%, #EDE4FB 100%);
 
-    border-radius: 22px;
+    border-radius: 20px;
 
     box-shadow: 0 10px 30px rgba(200, 160, 220, 0.22),
 
                 inset 0 1px 0 rgba(255, 255, 255, 0.7);
 
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 
     overflow: hidden;
+
+    touch-action: none;
+
+    user-select: none;
 
   }
 
@@ -224,27 +206,17 @@
 
     width: 100%;
 
-    height: var(--j-stage-h);
-
-    border-radius: 14px;
-
-    touch-action: none;
-
-    user-select: none;
-
-    -webkit-user-select: none;
-
-    cursor: pointer;
+    height: 100%;
 
   }
 
-  /* ---------- 覆盖层 ---------- */
+  /* 覆盖层 */
 
   .jump-game .j-overlay {
 
     position: absolute;
 
-    top: 10px; right: 10px; bottom: 10px; left: 10px;
+    top: 0; right: 0; bottom: 0; left: 0;
 
     display: flex;
 
@@ -252,23 +224,17 @@
 
     justify-content: center;
 
-    border-radius: 14px;
+    border-radius: 20px;
 
-    background: rgba(255, 248, 252, 0.82);
-
-    pointer-events: none;
+    background: rgba(255, 248, 252, 0.78);
 
     transition: opacity 0.25s ease, visibility 0.25s ease;
 
-  }
-
-  .jump-game .j-overlay.j-hide {
-
-    opacity: 0;
-
-    visibility: hidden;
+    z-index: 5;
 
   }
+
+  .jump-game .j-overlay.j-hide { opacity: 0; visibility: hidden; }
 
   .jump-game .j-ov-card {
 
@@ -276,7 +242,7 @@
 
     border-radius: 20px;
 
-    padding: 16px 24px;
+    padding: 16px 22px;
 
     text-align: center;
 
@@ -298,8 +264,6 @@
 
     letter-spacing: 2px;
 
-    line-height: 1.4;
-
   }
 
   .jump-game .j-ov-text {
@@ -312,11 +276,9 @@
 
     line-height: 1.7;
 
-    letter-spacing: 0.5px;
-
   }
 
-  /* ---------- 按钮 ---------- */
+  /* 按钮 */
 
   .jump-game .j-actions {
 
@@ -340,19 +302,15 @@
 
     letter-spacing: 2px;
 
-    line-height: 1;
-
     border: none;
 
     border-radius: 999px;
 
-    padding: 13px 32px;
+    padding: 12px 28px;
 
     cursor: pointer;
 
-    transition: transform 0.18s ease, box-shadow 0.18s ease,
-
-                background-color 0.18s ease, color 0.18s ease;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
 
     touch-action: manipulation;
 
@@ -363,8 +321,6 @@
     appearance: none;
 
     user-select: none;
-
-    -webkit-user-select: none;
 
   }
 
@@ -378,13 +334,7 @@
 
   }
 
-  .jump-game .j-btn-main:hover {
-
-    transform: translateY(-2px);
-
-    box-shadow: 0 12px 26px rgba(255, 156, 190, 0.55);
-
-  }
+  .jump-game .j-btn-main:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(255, 156, 190, 0.55); }
 
   .jump-game .j-btn-main:active { transform: translateY(0) scale(0.97); }
 
@@ -392,37 +342,23 @@
 
     background: var(--j-card);
 
-    color: var(--j-purple);
+    color: var(--j-purple-deep);
 
     box-shadow: 0 6px 16px rgba(200, 160, 220, 0.2);
 
   }
 
-  .jump-game .j-btn-ghost:hover {
-
-    background: #F8F3FF;
-
-    transform: translateY(-2px);
-
-  }
+  .jump-game .j-btn-ghost:hover { background: #F8F3FF; transform: translateY(-2px); }
 
   .jump-game .j-btn-ghost:active { transform: translateY(0) scale(0.97); }
 
-  .jump-game .j-btn:focus-visible {
-
-    outline: 3px solid rgba(200, 160, 240, 0.7);
-
-    outline-offset: 3px;
-
-  }
-
   .jump-game .j-hidden { display: none !important; }
 
-  /* ---------- 底部提示 ---------- */
+  /* 提示 */
 
   .jump-game .j-tip {
 
-    margin: 14px 0 0;
+    margin: 12px 0 0;
 
     font-size: 12px;
 
@@ -436,31 +372,15 @@
 
   }
 
-  /* ---------- 小屏 ---------- */
-
   @media (max-width: 420px) {
 
-    .jump-game {
+    .jump-game { padding: 16px 12px 20px; }
 
-      padding: 18px 12px 22px;
+    .jump-game .j-title { font-size: 26px; letter-spacing: 4px; }
 
-      --j-stage-h: 400px;
-
-      --j-radius: 20px;
-
-    }
-
-    .jump-game .j-title { font-size: 25px; letter-spacing: 4px; }
-
-    .jump-game .j-chip { padding: 7px 12px; border-radius: 14px; }
-
-    .jump-game .j-chip-v { font-size: 16px; }
-
-    .jump-game .j-btn { padding: 12px 24px; font-size: 14px; letter-spacing: 1px; }
+    .jump-game .j-btn { padding: 11px 22px; font-size: 14px; letter-spacing: 1px; }
 
     .jump-game .j-ov-card { padding: 14px 18px; }
-
-    .jump-game .j-ov-title { font-size: 15px; }
 
   }
 
@@ -527,7 +447,6 @@
 </div>
 
 <script>
-
 (function () {
 
   'use strict';
@@ -1707,7 +1626,6 @@
   }
 
 })();
-
 </script>
   </div>
 </body>
