@@ -1,0 +1,135 @@
+日期:2026-09-19
+
+【文章1】
+标题:小鲸鱼捏捏
+作者:江予朔
+正文:
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+```
+<span></span><span></span><span></span>
+```
+
+
+
+&nbsp;
+
+```
+<div class="w-body" id="whale-body" role="button" tabindex="0"
+
+     aria-label="按住小鲸鱼捏一捏">
+
+  <svg class="w-svg" viewBox="0 0 240 200" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" aria-hidden="true">
+
+    <defs>
+
+      <radialGradient id="wBodyGrad" cx="35%" cy="30%" r="80%">
+
+        <stop offset="0%"   stop-color="#D4ECFB"/>
+
+        <stop offset="55%"  stop-color="#A8D8F0"/>
+
+        <stop offset="100%" stop-color="#7EC4E8"/>
+
+      </radialGradient>
+
+      <radialGradient id="wGlowGrad" cx="50%" cy="50%" r="50%">
+
+        <stop offset="0%"   stop-color="#FFFFFF" stop-opacity="0.9"/>
+
+        <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+
+      </radialGradient>
+
+    </defs>
+
+    <!-- 尾巴（画在身体后面） -->
+
+    <path d="M 170 104
+
+             C 186 78, 206 60, 222 58
+
+             C 214 82, 202 98, 184 108
+
+             C 202 118, 214 138, 222 158
+
+             C 206 156, 186 138, 170 108 Z"
+
+          fill="#8CCBE8"/>
+
+    <!-- 左侧小鳍 -->
+
+    <ellipse cx="58" cy="128" rx="19" ry="27"
+
+             transform="rotate(-28 58 128)"
+
+             fill="#8CCBE8"/>
+
+    <!-- 身体 -->
+
+    <ellipse cx="112" cy="104" rx="68" ry="63" fill="url(#wBodyGrad)"/>
+
+    <!-- 左上方高光 -->
+
+    <ellipse cx="84" cy="72" rx="34" ry="24"
+
+             fill="url(#wGlowGrad)" opacity="0.85"/>
+
+    <!-- 白肚子 -->
+
+    <ellipse cx="112" cy="128" rx="49" ry="35"
+
+             fill="#FFFFFF" opacity="0.92"/>
+
+    <!-- 眼睛 -->
+
+    <circle cx="90" cy="99" r="8.5" fill="#3D4D5C"/>
+
+    <circle cx="134" cy="99" r="8.5" fill="#3D4D5C"/>
+
+    <!-- 眼睛高光 -->
+
+    <circle cx="87" cy="96" r="2.8" fill="#FFFFFF"/>
+
+    <circle cx="131" cy="96" r="2.8" fill="#FFFFFF"/>
+
+    <!-- 腮红 -->
+
+    <ellipse cx="64" cy="118" rx="12" ry="7.5" fill="#FFB8D0" opacity="0.85"/>
+
+    <ellipse cx="160" cy="118" rx="12" ry="7.5" fill="#FFB8D0" opacity="0.85"/>
+
+    <!-- 嘴巴（小 w 形） -->
+
+    <path d="M 105 120 Q 109 125 113 121 Q 117 125 121 120"
+
+          fill="none"
+
+          stroke="#3D4D5C"
+
+          stroke-width="2.4"
+
+          stroke-linecap="round"
+
+          stroke-linejoin="round"/>
+
+  </svg>
+
+</div>
+
+<p class="w-say" id="whale-say">长按我 · 捏一捏 ~</p>
+```
+
+
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+评论:(暂无)

@@ -1,7 +1,24 @@
 {
-  "generatedAt": "2026-09-18T11:22:33.130Z",
-  "count": 22,
+  "generatedAt": "2026-09-19T05:48:24.198Z",
+  "count": 23,
   "posts": [
+    {
+      "slug": "2026-09-19-jiang-小鲸鱼捏捏",
+      "title": "小鲸鱼捏捏",
+      "author": "jiang",
+      "category": "code",
+      "tags": [],
+      "images": [],
+      "pinned": false,
+      "hidden": false,
+      "draft": false,
+      "createdAt": "2026-09-19",
+      "updatedAt": "2026-09-19",
+      "excerpt": "&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;",
+      "content": "&nbsp;\n\n&nbsp;\n\n&nbsp;\n\n```\n<span></span><span></span><span></span>\n```\n\n\n\n&nbsp;\n\n```\n<div class=\"w-body\" id=\"whale-body\" role=\"button\" tabindex=\"0\"\n\n     aria-label=\"按住小鲸鱼捏一捏\">\n\n  <svg class=\"w-svg\" viewBox=\"0 0 240 200\" xmlns=\"[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)\" aria-hidden=\"true\">\n\n    <defs>\n\n      <radialGradient id=\"wBodyGrad\" cx=\"35%\" cy=\"30%\" r=\"80%\">\n\n        <stop offset=\"0%\"   stop-color=\"#D4ECFB\"/>\n\n        <stop offset=\"55%\"  stop-color=\"#A8D8F0\"/>\n\n        <stop offset=\"100%\" stop-color=\"#7EC4E8\"/>\n\n      </radialGradient>\n\n      <radialGradient id=\"wGlowGrad\" cx=\"50%\" cy=\"50%\" r=\"50%\">\n\n        <stop offset=\"0%\"   stop-color=\"#FFFFFF\" stop-opacity=\"0.9\"/>\n\n        <stop offset=\"100%\" stop-color=\"#FFFFFF\" stop-opacity=\"0\"/>\n\n      </radialGradient>\n\n    </defs>\n\n    <!-- 尾巴（画在身体后面） -->\n\n    <path d=\"M 170 104\n\n             C 186 78, 206 60, 222 58\n\n             C 214 82, 202 98, 184 108\n\n             C 202 118, 214 138, 222 158\n\n             C 206 156, 186 138, 170 108 Z\"\n\n          fill=\"#8CCBE8\"/>\n\n    <!-- 左侧小鳍 -->\n\n    <ellipse cx=\"58\" cy=\"128\" rx=\"19\" ry=\"27\"\n\n             transform=\"rotate(-28 58 128)\"\n\n             fill=\"#8CCBE8\"/>\n\n    <!-- 身体 -->\n\n    <ellipse cx=\"112\" cy=\"104\" rx=\"68\" ry=\"63\" fill=\"url(#wBodyGrad)\"/>\n\n    <!-- 左上方高光 -->\n\n    <ellipse cx=\"84\" cy=\"72\" rx=\"34\" ry=\"24\"\n\n             fill=\"url(#wGlowGrad)\" opacity=\"0.85\"/>\n\n    <!-- 白肚子 -->\n\n    <ellipse cx=\"112\" cy=\"128\" rx=\"49\" ry=\"35\"\n\n             fill=\"#FFFFFF\" opacity=\"0.92\"/>\n\n    <!-- 眼睛 -->\n\n    <circle cx=\"90\" cy=\"99\" r=\"8.5\" fill=\"#3D4D5C\"/>\n\n    <circle cx=\"134\" cy=\"99\" r=\"8.5\" fill=\"#3D4D5C\"/>\n\n    <!-- 眼睛高光 -->\n\n    <circle cx=\"87\" cy=\"96\" r=\"2.8\" fill=\"#FFFFFF\"/>\n\n    <circle cx=\"131\" cy=\"96\" r=\"2.8\" fill=\"#FFFFFF\"/>\n\n    <!-- 腮红 -->\n\n    <ellipse cx=\"64\" cy=\"118\" rx=\"12\" ry=\"7.5\" fill=\"#FFB8D0\" opacity=\"0.85\"/>\n\n    <ellipse cx=\"160\" cy=\"118\" rx=\"12\" ry=\"7.5\" fill=\"#FFB8D0\" opacity=\"0.85\"/>\n\n    <!-- 嘴巴（小 w 形） -->\n\n    <path d=\"M 105 120 Q 109 125 113 121 Q 117 125 121 120\"\n\n          fill=\"none\"\n\n          stroke=\"#3D4D5C\"\n\n          stroke-width=\"2.4\"\n\n          stroke-linecap=\"round\"\n\n          stroke-linejoin=\"round\"/>\n\n  </svg>\n\n</div>\n\n<p class=\"w-say\" id=\"whale-say\">长按我 · 捏一捏 ~</p>\n```\n\n\n\n&nbsp;\n\n&nbsp;\n\n&nbsp;",
+      "playgroundFile": null,
+      "playgroundContent": null
+    },
     {
       "slug": "2026-09-18-jiang-跳一跳",
       "title": "跳一跳",

@@ -6,6 +6,13 @@
 
 ## 文章清单(按时间倒序,只含元数据与摘要,正文见 all-posts.html)
 
+### 小鲸鱼捏捏
+- 作者:江予朔
+- 分类:代码/创作
+- 日期:2026-09-19
+- 摘要:&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+- 原文链接:https://yujiadiary.github.io/my-diary/posts/2026-09-19-jiang-%E5%B0%8F%E9%B2%B8%E9%B1%BC%E6%8D%8F%E6%8D%8F.html
+
 ### 跳一跳
 - 作者:江予朔
 - 分类:代码/创作
