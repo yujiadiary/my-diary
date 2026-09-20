@@ -642,7 +642,13 @@ function callAi(userText) {
     return;
   }
   var url = cfg['baseUrl']['replace'](/\/+$/, '') + '/chat/completions';
-  var sysPrompt = (state['currentContact'] && state['currentContact']['sys']) || cfg['sysPrompt'];
+  /* 系统提示词优先级：用户自定义 > 联系人预设 > 默认 */
+  var sysPrompt;
+  if (cfg['sysPrompt'] && cfg['sysPrompt'] !== CONFIG['defaultSysPrompt']) {
+    sysPrompt = cfg['sysPrompt'];
+  } else {
+    sysPrompt = (state['currentContact'] && state['currentContact']['sys']) || CONFIG['defaultSysPrompt'];
+  }
   var recent = state['history']['slice'](-CONFIG['maxHistory']);
   var messages = [{ role: 'system', content: sysPrompt }];
   for (var i = 0; i < recent['length']; i++) messages['push'](recent[i]);
