@@ -37,10 +37,7 @@
 .read-app-status{margin-top:10px;font-size:13px;color:var(--ra-muted);min-height:18px}
 .read-app-reader{flex:1;padding:12px 20px 8px;overflow:hidden;position:relative;touch-action:none;display:flex;flex-direction:column;justify-content:center}
 .read-app-page-wrap{position:relative;flex:1;display:flex;align-items:center;justify-content:center;max-height:100%}
-.read-app-page-wrap.flipping-next{animation:raFlipNext .25s ease forwards}
-.read-app-page-wrap.flipping-prev{animation:raFlipPrev .25s ease forwards}
-@keyframes raFlipNext{from{transform:translateY(40px);opacity:.3}to{transform:translateY(0);opacity:1}}
-@keyframes raFlipPrev{from{transform:translateY(-40px);opacity:.3}to{transform:translateY(0);opacity:1}}
+
 .read-app-page{font-size:17px;line-height:2;color:var(--ra-text);text-align:justify;text-indent:2em;white-space:pre-wrap;word-break:break-word;user-select:text;-webkit-user-select:text}
 .read-app-page:empty::before{content:'导入一本书开始阅读吧 ✦';color:var(--ra-muted);text-indent:0;text-align:center;display:block;padding:60px 0;font-size:15px}
 .read-app-pagebar{position:fixed;top:calc(var(--ra-safe-top)+54px);left:50%;transform:translateX(-50%);background:rgba(44,42,38,.7);color:#fff;font-size:12px;padding:3px 12px;border-radius:12px;z-index:90;pointer-events:none;opacity:0;transition:opacity .3s}
@@ -398,19 +395,20 @@ function clearChat() { state['chatMsgs'] = []; saveChat(); renderChat(); }
 
 function esc(s) { if (!s) return ''; var d = document['createElement']('div'); d['textContent'] = s; return d['innerHTML']; }
 
-function renderPage(dir) { var el = $('raContent'); var wrap = $('raPageWrap'); if (state['pages']['length'] === 0) el['textContent'] = ''; else el['textContent'] = state['pages'][state['pageIdx']]; if (wrap && dir) { wrap['classList']['remove']('flipping-next', 'flipping-prev'); void wrap['offsetWidth']; wrap['classList']['add'](dir); setTimeout(function () { if (wrap) wrap['classList']['remove'](dir); }, 260); } $('raPageCount')['textContent'] = (state['pageIdx'] + 1) + ' / ' + state['pages']['length']; var bar = $('raPageBar'); bar['textContent'] = (state['pageIdx'] + 1) + ' / ' + state['pages']['length']; bar['classList']['add']('show'); clearTimeout(renderPage['_t']); renderPage['_t'] = setTimeout(function () { bar['classList']['remove']('show'); }, 1500); $('raPrev')['disabled'] = state['pageIdx'] <= 0; $('raNext')['disabled'] = state['pageIdx'] >= state['pages']['length'] - 1; renderAnn(); updateAnnCount(); renderMemory(); updateMemCount(); }
+function renderPage() { var el = $('raContent'); var wrap = $('raPageWrap'); if (state['pages']['length'] === 0) el['textContent'] = ''; else el['textContent'] = state['pages'][0]; /* 全文 */ updateScrollProgress(); renderAnn(); updateAnnCount(); renderMemory(); updateMemCount(); }
+function updateScrollProgress() { var r = document['querySelector']('.read-app-reader'); if (!r) return; var total = r['scrollHeight'] - r['clientHeight']; var pct = total > 0 ? Math['round'](r['scrollTop'] / total * 100) : 0; $('raPageCount')['textContent'] = pct + '%'; $('raPageBar')['textContent'] = pct + '%'; $('raPageBar')['classList']['add']('show'); clearTimeout(updateScrollProgress['_t']); updateScrollProgress['_t'] = setTimeout(function () { $('raPageBar')['classList']['remove']('show'); }, 1200); }
 
 function paginate(text) { var size = CONFIG['pageSize']; var out = []; if (!text) { out['push'](''); return out; } for (var i = 0; i < text['length']; i += size) out['push'](text['slice'](i, i + size)); if (out['length'] === 0) out['push'](''); return out; }
 
 function makeBookId(title, text) { var base = title || (text ? text['slice'](0, 80) : 'default'); var h = 0; for (var i = 0; i < base['length']; i++) h = (h * 31 + base['charCodeAt'](i)) | 0; return 'b' + (h >>> 0)['toString'](36); }
-function loadBook(title, text) { state['title'] = title; state['text'] = text; state['bookId'] = makeBookId(title, text); state['pages'] = paginate(text); state['pageIdx'] = 0; state['chatMsgs'] = []; $('raBookName')['textContent'] = title || '未命名'; loadChat(); renderPage(); }
+function loadBook(title, text) { state['title'] = title; state['text'] = text; state['bookId'] = makeBookId(title, text); state['pages'] = [text]; state['pageIdx'] = 0; state['chatMsgs'] = []; $('raBookName')['textContent'] = title || '未命名'; loadChat(); renderPage(); var r = document['querySelector']('.read-app-reader'); if (r) r['scrollTop'] = 0; }
 
 function toggleBottom() { var el = document['querySelector']('.read-app-bottom'); var fab = $('raBottomFab'); var collapsed = el['classList']['toggle']('collapsed'); fab['textContent'] = collapsed ? '▴' : '▾'; try { localStorage['setItem']('readApp.bottomCollapsed', collapsed ? '1' : '0'); } catch (e) {} }
 var raFontSize = CONFIG['defaultFontSize'];
 function applyFontSize() { var el = $('raContent'); el['style']['fontSize'] = raFontSize + 'px'; $('raFontSizeVal')['textContent'] = raFontSize + 'px'; try { localStorage['setItem']('readApp.fontSize', String(raFontSize)); } catch (e) {} }
 function loadFontSize() { try { var v = parseInt(localStorage['getItem']('readApp.fontSize')); if (v >= 12 && v <= 28) raFontSize = v; } catch (e) {} applyFontSize(); }
-function prevPage() { if (state['pageIdx'] > 0) { state['pageIdx']--; renderPage('flipping-prev'); } }
-function nextPage() { if (state['pageIdx'] < state['pages']['length'] - 1) { state['pageIdx']++; renderPage('flipping-next'); } }
+function prevPage() { var r = document['querySelector']('.read-app-reader'); if (r) r['scrollBy']({ top: -r['clientHeight'] * 0.85, behavior: 'smooth' }); }
+function nextPage() { var r = document['querySelector']('.read-app-reader'); if (r) r['scrollBy']({ top: r['clientHeight'] * 0.85, behavior: 'smooth' }); }
 
 function handleTextImport() { var t = $('raPaste')['value']; if (!t || !t['trim']()) { $('raStatus')['textContent'] = '请先粘贴内容'; return; } $('raStatus')['textContent'] = '已载入粘贴文本'; loadBook('粘贴文本', t); $('raImport')['style']['display'] = 'none'; }
 function handleFileImport(e) { var f = e['target']['files'] && e['target']['files'][0]; if (!f) return; var name = f['name'] || ''; var dot = name['lastIndexOf']('.'); var ext = dot !== -1 ? name['slice'](dot + 1)['toLowerCase']() : ''; if (ext === 'txt') { $('raStatus')['textContent'] = '正在读取…'; f['text']()['then'](function (t) { $('raStatus')['textContent'] = '已载入：' + name; loadBook(name, t); $('raImport')['style']['display'] = 'none'; })['catch'](function (err) { $('raStatus')['textContent'] = '读取失败：' + err['message']; }); } else if (ext === 'epub') { if (typeof DecompressionStream === 'undefined') { $('raStatus')['textContent'] = '当前浏览器不支持 DecompressionStream，TXT 仍可用'; return; } $('raStatus')['textContent'] = '正在解析 EPUB…'; var lp = ''; EpubParser['parse'](f, function (stage, cur, total) { var txt = stage + (total > 1 ? ' ' + cur + '/' + total : ''); if (txt !== lp) { lp = txt; $('raStatus')['textContent'] = txt + ' …'; } })['then'](function (res) { $('raStatus')['textContent'] = '已载入 EPUB：' + (res['title'] || name); loadBook(res['title'] || name, res['text']); $('raImport')['style']['display'] = 'none'; })['catch'](function (err) { $('raStatus')['textContent'] = 'EPUB 解析失败：' + err['message']; }); } else { $('raStatus')['textContent'] = '仅支持 .txt 与 .epub'; } e['target']['value'] = ''; }
@@ -470,28 +468,12 @@ function boot(retry) {
     $('raChatInput')['addEventListener']('keydown', function (e) { if (e['key'] === 'Enter' && !e['shiftKey']) { e['preventDefault'](); $('raChatSend')['click'](); } });
     $('raChatClear')['addEventListener']('click', clearChat);
     $('raBottomFab')['addEventListener']('click', toggleBottom);
+    /* 滚动监听更新进度 */
+    document['querySelector']('.read-app-reader')['addEventListener']('scroll', updateScrollProgress, { passive: true });
     $('raFontMinus')['addEventListener']('click', function () { if (raFontSize > 12) { raFontSize -= 1; applyFontSize(); } });
     $('raFontPlus')['addEventListener']('click', function () { if (raFontSize < 28) { raFontSize += 1; applyFontSize(); } });
     loadFontSize();
-    /* 手势翻页（仅左右，touchend 时判定，更流畅） */
-    var raContentEl = $('raContent');
-    var touchStartX = 0, touchStartY = 0, touching = false;
-    raContentEl['addEventListener']('touchstart', function (e) {
-      touchStartX = e['touches'][0]['clientX'];
-      touchStartY = e['touches'][0]['clientY'];
-      touching = true;
-    }, { passive: true });
-    raContentEl['addEventListener']('touchend', function (e) {
-      if (!touching) return; touching = false;
-      var endX = e['changedTouches'][0]['clientX'];
-      var endY = e['changedTouches'][0]['clientY'];
-      var dx = endX - touchStartX;
-      var dy = endY - touchStartY;
-      /* 只处理水平滑动：水平距离 > 50px 且 > 垂直距离的 1.5 倍 */
-      if (Math['abs'](dx) > 50 && Math['abs'](dx) > Math['abs'](dy) * 1.5) {
-        if (dx < 0) nextPage(); else prevPage();
-      }
-    }, { passive: true });
+
     /* 恢复底部栏折叠状态 */
     try { if (localStorage['getItem']('readApp.bottomCollapsed') === '1') toggleBottom(); } catch (e) {}
     renderChat(); renderPage(); updateAnnCount(); updateMemCount();
