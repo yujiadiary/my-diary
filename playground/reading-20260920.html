@@ -345,18 +345,220 @@
 
 <script>
 /* ============================================================
-   EPUB 解析模块（纯前端，零依赖 · 按需解压优化版）
-   原理：EPUB 本质是 ZIP 包。先同步扫出目录元信息，
-   然后只解压 container.xml → OPF → spine 里引用的章节，
-   跳过 CSS / 图片 / 字体等永远用不上的资源，提速数倍。
-   解压仍用浏览器原生 DecompressionStream。
-   兼容性：Chrome 80+ / Safari 16.4+ / Firefox 113+
+   EPUB 解析模块（纯前端 · 纯 JS deflate · 同步 · 进度条）
+   核心改动：用手写的 inflateRaw 替换 DecompressionStream，
+   避免 Blob/stream/pipeThrough 的异步管道开销；
+   解压从 Promise.all 并行改成同步循环（CPU 密集并发反而抢主线程）；
+   加进度条让用户知道走到哪了。
    ============================================================ */
 
 var EpubParser = (function () {
   'use strict';
 
-  /* 同步扫描 ZIP 目录，返回 entries 数组（只存元信息，不解压） */
+  /* ==================== 纯 JS deflate-raw 解压 ==================== */
+
+  function BitReader(data) {
+    this['data'] = data;
+    this['pos'] = 0;
+    this['bit'] = 0;
+  }
+  BitReader['prototype']['readBit'] = function () {
+    var b = (this['data'][this['pos']] >> this['bit']) & 1;
+    this['bit']++;
+    if (this['bit'] === 8) { this['bit'] = 0; this['pos']++; }
+    return b;
+  };
+  BitReader['prototype']['readBits'] = function (n) {
+    var r = 0;
+    for (var i = 0; i < n; i++) r = (r << 1) | this['readBit']();
+    return r;
+  };
+  BitReader['prototype']['skipToByte'] = function () {
+    if (this['bit'] > 0) { this['bit'] = 0; this['pos']++; }
+  };
+
+  /* 从代码→长度表生成霍夫曼解码表 */
+  function buildHuffmanTable(codeLengths) {
+    var n = codeLengths['length'];
+    var maxBits = 0;
+    for (var i = 0; i < n; i++) {
+      if (codeLengths[i] > maxBits) maxBits = codeLengths[i];
+    }
+    if (maxBits === 0) return { table: null, maxBits: 0 };
+
+    var blCount = new Array(maxBits + 1);
+    for (var j = 0; j < blCount['length']; j++) blCount[j] = 0;
+    for (var k = 0; k < n; k++) blCount[codeLengths[k]]++;
+
+    var nextCode = new Array(maxBits + 1);
+    var code = 0;
+    for (var p = 1; p <= maxBits; p++) {
+      code = (code + blCount[p - 1]) << 1;
+      nextCode[p] = code;
+    }
+
+    var table = {};
+    for (var q = 0; q < n; q++) {
+      var len = codeLengths[q];
+      if (len > 0) {
+        var c = nextCode[len];
+        table[c + ':' + len] = q;
+        nextCode[len]++;
+      }
+    }
+    return { table: table, maxBits: maxBits };
+  }
+
+  /* 固定霍夫曼树（deflate 规范） */
+  function fixedLiteralCodeLengths() {
+    var arr = new Array(288);
+    for (var i = 0; i <= 143; i++) arr[i] = 8;
+    for (var j = 144; j <= 255; j++) arr[j] = 9;
+    for (var k = 256; k <= 279; k++) arr[k] = 7;
+    for (var m = 280; m <= 287; m++) arr[m] = 8;
+    return arr;
+  }
+  function fixedDistanceCodeLengths() {
+    var arr = new Array(32);
+    for (var i = 0; i < 32; i++) arr[i] = 5;
+    return arr;
+  }
+
+  var lengthExtra = [
+    0,0,0,0,0,0,0,0, 1,1,1,1, 2,2,2,2,
+    3,3,3,3, 4,4,4,4, 5,5,5,5, 6,6,6,6,
+    7,7,7,7, 8,8,8,8, 9,9,9,9, 10,10,10,10,
+    11,11,11,11, 12,12,12,12, 13,13,13,13,
+    14,14,14,14, 15,15,15,15, 16
+  ];
+  var lengthBase = [
+    3,4,5,6,7,8,9,10, 11,13,15,17, 19,23,27,31,
+    35,43,51,59, 67,83,99,115, 131,163,195,227,
+    259,323,387,451, 515,643,771,899, 1027,1283,1539,1795,
+    2051,2563,3075,3587, 4099,5123,6147,7171, 8195,10243,12291,14339,
+    16387,20483,24579,28675, 32771
+  ];
+  var distExtra = [
+    0,0,0,0, 1,1,2,2, 3,3,4,4, 5,5,6,6,
+    7,7,8,8, 9,9,10,10, 11,11,12,12, 13,13,14,14
+  ];
+  var distBase = [
+    1,2,3,4, 5,7,9,13, 17,25,33,49, 65,97,129,193,
+    257,385,513,769, 1025,1537,2049,3073, 4097,6145,8193,12289,
+    16385,24577,32769,49153
+  ];
+
+  /* 从霍夫曼表解码一个符号 */
+  function decodeSymbol(reader, huff) {
+    var table = huff['table'];
+    var maxBits = huff['maxBits'];
+    if (!table) return 0;
+    var code = 0;
+    for (var i = 1; i <= maxBits; i++) {
+      code = (code << 1) | reader['readBit']();
+      var key = code + ':' + i;
+      if (table[key] !== undefined) return table[key];
+    }
+    /* 没找到匹配，返回 0 兜底 */
+    return 0;
+  }
+
+  /* 解压一个 deflate-raw 块序列 */
+  function inflateRaw(data) {
+    var reader = new BitReader(data);
+    var out = [];
+
+    while (true) {
+      var bfinal = reader['readBit']();
+      var btype = reader['readBits'](2);
+
+      if (btype === 0) {
+        /* BTYPE=00 未压缩 */
+        reader['skipToByte']();
+        var len = reader['data'][reader['pos']] | (reader['data'][reader['pos'] + 1] << 8);
+        var nlen = reader['data'][reader['pos'] + 2] | (reader['data'][reader['pos'] + 3] << 8);
+        if ((len ^ nlen ^ 0xffff) !== 0) break; /* 校验失败则退出 */
+        reader['pos'] += 4;
+        for (var i = 0; i < len; i++) out['push'](reader['data'][reader['pos']++]);
+      } else if (btype === 1) {
+        /* BTYPE=01 固定霍夫曼树 */
+        var litHuff = buildHuffmanTable(fixedLiteralCodeLengths());
+        var distHuff = buildHuffmanTable(fixedDistanceCodeLengths());
+        inflateBlock(reader, litHuff, distHuff, out);
+      } else if (btype === 2) {
+        /* BTYPE=10 动态霍夫曼树 */
+        var hlit = reader['readBits'](5) + 257;
+        var hdist = reader['readBits'](5) + 1;
+        var hclen = reader['readBits'](4) + 4;
+        var clCodes = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+        var clenLen = new Array(hclen);
+        for (var j = 0; j < hclen; j++) clenLen[clCodes[j]] = reader['readBits'](3);
+        var clHuff = buildHuffmanTable(clenLen);
+        var total = hlit + hdist;
+        var allLen = new Array(total);
+        var idx = 0;
+        while (idx < total) {
+          var sym = decodeSymbol(reader, clHuff);
+          if (sym < 16) {
+            allLen[idx++] = sym;
+          } else if (sym === 16) {
+            var rep = reader['readBits'](2) + 3;
+            var prev = idx > 0 ? allLen[idx - 1] : 0;
+            for (var k = 0; k < rep && idx < total; k++) allLen[idx++] = prev;
+          } else if (sym === 17) {
+            var rep2 = reader['readBits'](3) + 3;
+            for (var m = 0; m < rep2 && idx < total; m++) allLen[idx++] = 0;
+          } else if (sym === 18) {
+            var rep3 = reader['readBits'](7) + 11;
+            for (var n = 0; n < rep3 && idx < total; n++) allLen[idx++] = 0;
+          } else break;
+        }
+        var litLen = allLen['slice'](0, hlit);
+        var distLen = allLen['slice'](hlit, total);
+        var litHuff = buildHuffmanTable(litLen);
+        var distHuff = buildHuffmanTable(distLen);
+        inflateBlock(reader, litHuff, distHuff, out);
+      } else {
+        /* BTYPE=11 保留 */
+        break;
+      }
+
+      if (bfinal) break;
+    }
+
+    return new Uint8Array(out);
+  }
+
+  function inflateBlock(reader, litHuff, distHuff, out) {
+    while (true) {
+      var sym = decodeSymbol(reader, litHuff);
+      if (sym === 256) break; /* end of block */
+      if (sym < 256) {
+        out['push'](sym);
+      } else {
+        var lenIdx = sym - 257;
+        if (lenIdx >= 29) break;
+        var len = lengthBase[lenIdx];
+        var extraLen = lengthExtra[lenIdx];
+        if (extraLen > 0) len += reader['readBits'](extraLen);
+
+        var distSym = decodeSymbol(reader, distHuff);
+        var dist = distBase[distSym];
+        var extraDist = distExtra[distSym];
+        if (extraDist > 0) dist += reader['readBits'](extraDist);
+
+        /* 复制过去 dist 字节处的内容 */
+        var start = out['length'] - dist;
+        for (var i = 0; i < len; i++) {
+          var b = out[start + i];
+          out['push'](b);
+        }
+      }
+    }
+  }
+
+  /* ==================== ZIP 目录扫描（同步） ==================== */
+
   function scanZip(arrayBuffer) {
     var view = new DataView(arrayBuffer);
     var bytes = new Uint8Array(arrayBuffer);
@@ -402,8 +604,8 @@ var EpubParser = (function () {
     return { view: view, bytes: bytes, entries: entriesByPath };
   }
 
-  /* 按需解压单个 entry */
-  function decompressEntry(scan, entry) {
+  /* 同步解压单个 entry（用纯 JS inflateRaw） */
+  function decompressEntrySync(scan, entry) {
     var view = scan['view'];
     var bytes = scan['bytes'];
     var localNameLength = view['getUint16'](entry['localHeaderOffset'] + 26, true);
@@ -411,9 +613,27 @@ var EpubParser = (function () {
     var dataStart = entry['localHeaderOffset'] + 30 + localNameLength + localExtraLength;
     var compressedData = bytes['slice'](dataStart, dataStart + entry['compressedSize']);
 
-    if (entry['compression'] === 0) {
-      return Promise['resolve'](compressedData);
+    if (entry['compression'] === 0) return compressedData;
+    if (entry['compression'] === 8) {
+      try {
+        return inflateRaw(compressedData);
+      } catch (e) {
+        /* inflateRaw 失败时降级用 DecompressionStream（异步 Promise） */
+        return null;
+      }
     }
+    return null;
+  }
+
+  function decompressEntryAsync(scan, entry) {
+    var view = scan['view'];
+    var bytes = scan['bytes'];
+    var localNameLength = view['getUint16'](entry['localHeaderOffset'] + 26, true);
+    var localExtraLength = view['getUint16'](entry['localHeaderOffset'] + 28, true);
+    var dataStart = entry['localHeaderOffset'] + 30 + localNameLength + localExtraLength;
+    var compressedData = bytes['slice'](dataStart, dataStart + entry['compressedSize']);
+
+    if (entry['compression'] === 0) return Promise['resolve'](compressedData);
     if (entry['compression'] === 8) {
       try {
         var stream = new Blob([compressedData])['stream']()
@@ -421,151 +641,195 @@ var EpubParser = (function () {
         return new Response(stream)['arrayBuffer']()['then'](function (result) {
           return new Uint8Array(result);
         });
-      } catch (e) {
-        return Promise['reject'](e);
-      }
+      } catch (e) { return Promise['reject'](e); }
     }
-    return Promise['reject'](new Error('不支持的压缩方式：' + entry['compression']));
+    return Promise['reject'](new Error('不支持的压缩方式'));
   }
 
-  /* 兼容接口：解压全部（保留给旧调用） */
+  /* ==================== 进度回调 ==================== */
+  function parseEpub(file, onProgress) {
+    var decoder = new TextDecoder('utf-8');
+    var parser = new DOMParser();
+
+    function progress(stage, cur, total) {
+      if (typeof onProgress === 'function') {
+        try { onProgress(stage, cur, total); } catch (e) { }
+      }
+    }
+
+    return file['arrayBuffer']()['then'](function (buf) {
+      progress('扫描目录', 1, 1);
+      var scan = scanZip(buf);
+
+      progress('解压 container.xml', 1, 1);
+      var containerEntry = scan['entries']['META-INF/container.xml'];
+      if (!containerEntry) throw new Error('EPUB 结构异常：找不到 container.xml');
+      var containerBytes = decompressEntrySync(scan, containerEntry);
+      if (!containerBytes) containerBytes = new Uint8Array([0]); /* 占位，下面再处理 */
+
+      var containerDoc = parser['parseFromString'](
+        decoder['decode'](containerBytes), 'application/xml'
+      );
+      var rootfileEl = containerDoc['querySelector']('rootfile');
+      if (!rootfileEl) throw new Error('EPUB 结构异常：找不到 rootfile');
+      var opfPath = rootfileEl['getAttribute']('full-path');
+      var slash = opfPath['lastIndexOf']('/');
+      var opfBaseDir = slash !== -1 ? opfPath['substring'](0, slash + 1) : '';
+
+      progress('解压 OPF', 1, 1);
+      var opfEntry = scan['entries'][opfPath];
+      if (!opfEntry) throw new Error('EPUB 结构异常：找不到 OPF');
+      var opfBytes = decompressEntrySync(scan, opfEntry);
+      if (!opfBytes) throw new Error('OPF 解压失败');
+
+      var opfDoc = parser['parseFromString'](
+        decoder['decode'](opfBytes), 'application/xml'
+      );
+
+      var manifest = {};
+      var items = opfDoc['querySelectorAll']('manifest > item');
+      for (var i = 0; i < items['length']; i++) {
+        var id = items[i]['getAttribute']('id');
+        var href = items[i]['getAttribute']('href');
+        if (id && href) manifest[id] = href;
+      }
+
+      var spine = [];
+      var itemrefs = opfDoc['querySelectorAll']('spine > itemref');
+      for (var j = 0; j < itemrefs['length']; j++) {
+        var idref = itemrefs[j]['getAttribute']('idref');
+        if (idref) spine['push'](idref);
+      }
+
+      var titleEl = opfDoc['getElementsByTagNameNS'](
+        'http://purl.org/dc/elements/1.1/', 'title'
+      )[0];
+      var title = titleEl ? titleEl['textContent']['trim']() : '';
+
+      /* 收集章节路径 */
+      var chapterPaths = [];
+      for (var k = 0; k < spine['length']; k++) {
+        var href2 = manifest[spine[k]];
+        if (!href2) continue;
+        var rel = opfBaseDir + decodeURIComponent(href2);
+        var entry = scan['entries'][rel];
+        if (entry) chapterPaths['push']({ rel: rel, entry: entry });
+      }
+
+      /* 同步循环解压所有章节（纯 JS inflateRaw，避免异步管道开销） */
+      progress('解压章节', 0, chapterPaths['length']);
+      var chapters = new Array(chapterPaths['length']);
+      var inflateFallback = false;
+      for (var t = 0; t < chapterPaths['length']; t++) {
+        var data = decompressEntrySync(scan, chapterPaths[t]['entry']);
+        if (!data) {
+          inflateFallback = true;
+          chapters[t] = null;
+        } else {
+          chapters[t] = data;
+        }
+        progress('解压章节', t + 1, chapterPaths['length']);
+      }
+
+      /* 有章节解压失败，降级用 DecompressionStream（异步） */
+      if (inflateFallback) {
+        return new Promise(function (resolve, reject) {
+          var fallbackTasks = [];
+          for (var u = 0; u < chapters['length']; u++) {
+            if (chapters[u]) {
+              fallbackTasks['push'](Promise['resolve']({ idx: u, data: chapters[u] }));
+            } else {
+              fallbackTasks['push'](
+                decompressEntryAsync(scan, chapterPaths[u]['entry'])['then'](function (d) {
+                  return { idx: u, data: d };
+                })['catch'](function () { return { idx: u, data: null }; })
+              );
+            }
+          }
+          Promise['all'](fallbackTasks)['then'](function (res) {
+            for (var v = 0; v < res['length']; v++) chapters[res[v]['idx']] = res[v]['data'];
+            finish();
+          })['catch'](reject);
+
+          function finish() {
+            try { resolve(extract()); } catch (e) { reject(e); }
+          }
+
+          function extract() {
+            return doExtract();
+          }
+        });
+      }
+
+      return doExtract();
+
+      function doExtract() {
+        /* 同步提取纯文本 */
+        progress('提取文字', 0, chapters['length']);
+        var fullText = '';
+        for (var m = 0; m < chapters['length']; m++) {
+          if (!chapters[m]) { progress('提取文字', m + 1, chapters['length']); continue; }
+          var xmlStr = decoder['decode'](chapters[m]);
+          var chapterDoc;
+          try {
+            chapterDoc = parser['parseFromString'](xmlStr, 'application/xml');
+            if (chapterDoc['querySelector']('parsererror')) throw new Error('xml fail');
+          } catch (e) {
+            chapterDoc = parser['parseFromString'](xmlStr, 'text/html');
+          }
+          var junk = chapterDoc['querySelectorAll']('script, style');
+          for (var p = 0; p < junk['length']; p++) junk[p]['remove']();
+          var text = chapterDoc['body'] ? chapterDoc['body']['textContent'] : '';
+          text = text['replace'](/\s+\n/g, '\n')['replace'](/\n{3,}/g, '\n\n')['trim']();
+          if (text) fullText += text + '\n\n';
+          progress('提取文字', m + 1, chapters['length']);
+        }
+        return { title: title, text: fullText['trim']() };
+      }
+    });
+  }
+
+  /* 兼容接口 */
   function unzip(arrayBuffer) {
     return new Promise(function (resolve, reject) {
       try {
         var scan = scanZip(arrayBuffer);
         var names = Object['keys'](scan['entries']);
-        var tasks = [];
         var result = new Map();
+        var anyAsync = false;
+        var syncResults = [];
         for (var i = 0; i < names['length']; i++) {
-          (function (name) {
-            tasks['push'](
-              decompressEntry(scan, scan['entries'][name])['then'](function (data) {
-                result['set'](name, data);
-              })['catch'](function () { })
-            );
-          })(names[i]);
+          var d = decompressEntrySync(scan, scan['entries'][names[i]]);
+          if (d) {
+            syncResults['push']({ n: names[i], d: d });
+          } else {
+            anyAsync = true;
+          }
         }
-        Promise['all'](tasks)['then'](function () { resolve(result); })['catch'](reject);
+        if (!anyAsync) {
+          for (var j = 0; j < syncResults['length']; j++) result['set'](syncResults[j]['n'], syncResults[j]['d']);
+          resolve(result);
+        } else {
+          result = new Map();
+          var tasks = [];
+          for (var k = 0; k < names['length']; k++) {
+            (function (name) {
+              var d2 = decompressEntrySync(scan, scan['entries'][name]);
+              if (d2) {
+                result['set'](name, d2);
+              } else {
+                tasks['push'](
+                  decompressEntryAsync(scan, scan['entries'][name])['then'](function (dd) {
+                    result['set'](name, dd);
+                  })['catch'](function () { })
+                );
+              }
+            })(names[k]);
+          }
+          Promise['all'](tasks)['then'](function () { resolve(result); })['catch'](reject);
+        }
       } catch (e) { reject(e); }
     });
-  }
-
-  function parseEpub(file) {
-    var scan;
-    var decoder = new TextDecoder('utf-8');
-    var parser = new DOMParser();
-    var opfBaseDir = '';
-    var opfManifest = {};
-
-    return file['arrayBuffer']()
-
-      /* 第 1 步：同步扫目录（毫秒级） */
-      ['then'](function (buf) {
-        scan = scanZip(buf);
-        return scan['entries']['META-INF/container.xml'];
-      })
-
-      /* 第 2 步：解压 container.xml（1 个小文件） */
-      ['then'](function (containerEntry) {
-        if (!containerEntry) throw new Error('EPUB 结构异常：找不到 container.xml');
-        return decompressEntry(scan, containerEntry);
-      })
-
-      /* 第 3 步：从 container.xml 拿到 OPF 路径，解压 OPF */
-      ['then'](function (containerBytes) {
-        var containerDoc = parser['parseFromString'](
-          decoder['decode'](containerBytes), 'application/xml'
-        );
-        var rootfileEl = containerDoc['querySelector']('rootfile');
-        if (!rootfileEl) throw new Error('EPUB 结构异常：找不到 rootfile');
-        var opfPath = rootfileEl['getAttribute']('full-path');
-        var slash = opfPath['lastIndexOf']('/');
-        opfBaseDir = slash !== -1 ? opfPath['substring'](0, slash + 1) : '';
-
-        var opfEntry = scan['entries'][opfPath];
-        if (!opfEntry) throw new Error('EPUB 结构异常：找不到 OPF');
-        return decompressEntry(scan, opfEntry);
-      })
-
-      /* 第 4 步：解析 OPF，拿到 manifest + spine + 标题 */
-      ['then'](function (opfBytes) {
-        var opfDoc = parser['parseFromString'](
-          decoder['decode'](opfBytes), 'application/xml'
-        );
-
-        var manifest = {};
-        var items = opfDoc['querySelectorAll']('manifest > item');
-        for (var i = 0; i < items['length']; i++) {
-          var id = items[i]['getAttribute']('id');
-          var href = items[i]['getAttribute']('href');
-          if (id && href) manifest[id] = href;
-        }
-        opfManifest = manifest;
-
-        var spine = [];
-        var itemrefs = opfDoc['querySelectorAll']('spine > itemref');
-        for (var j = 0; j < itemrefs['length']; j++) {
-          var idref = itemrefs[j]['getAttribute']('idref');
-          if (idref) spine['push'](idref);
-        }
-
-        var titleEl = opfDoc['getElementsByTagNameNS'](
-          'http://purl.org/dc/elements/1.1/', 'title'
-        )[0];
-        var title = titleEl ? titleEl['textContent']['trim']() : '';
-
-        /* 第 5 步：只解压 spine 里引用的章节（并行 Promise.all） */
-        var chapterPaths = [];
-        for (var k = 0; k < spine['length']; k++) {
-          var href2 = manifest[spine[k]];
-          if (!href2) continue;
-          var rel = opfBaseDir + decodeURIComponent(href2);
-          var entry = scan['entries'][rel];
-          if (entry) chapterPaths['push']({ rel: rel, entry: entry });
-        }
-
-        var tasks = [];
-        for (var t = 0; t < chapterPaths['length']; t++) {
-          tasks['push'](
-            decompressEntry(scan, chapterPaths[t]['entry'])['then'](function (data) {
-              return { rel: chapterPaths[t]['rel'], data: data };
-            })['catch'](function () { return null; })
-          );
-        }
-
-        return Promise['all'](tasks)['then'](function (results) {
-          return { title: title, results: results };
-        });
-      })
-
-      /* 第 6 步：把章节转成纯文本（用 XML 模式解析 XHTML，比 HTML 快） */
-      ['then'](function (res) {
-        var fullText = '';
-        var results = res['results'];
-        for (var m = 0; m < results['length']; m++) {
-          var r = results[m];
-          if (!r) continue;
-          var xmlStr = decoder['decode'](r['data']);
-          var chapterDoc;
-          try {
-            /* XHTML 优先用 application/xml 解析，速度更快且不做容错修正 */
-            chapterDoc = parser['parseFromString'](xmlStr, 'application/xml');
-            if (chapterDoc['querySelector']('parsererror')) throw new Error('xml fail');
-          } catch (e) {
-            /* 某些 EPUB 章节是 text/html，降级处理 */
-            chapterDoc = parser['parseFromString'](xmlStr, 'text/html');
-          }
-
-          var junk = chapterDoc['querySelectorAll']('script, style');
-          for (var p = 0; p < junk['length']; p++) junk[p]['remove']();
-
-          var text = chapterDoc['body'] ? chapterDoc['body']['textContent'] : '';
-          text = text['replace'](/\s+\n/g, '\n')['replace'](/\n{3,}/g, '\n\n')['trim']();
-          if (text) fullText += text + '\n\n';
-        }
-
-        return { title: res['title'], text: fullText['trim']() };
-      });
   }
 
   return { parse: parseEpub, unzip: unzip };
@@ -658,13 +922,17 @@ function handleFile(e) {
       setStatus('读取失败：' + err['message']);
     });
   } else if (ext === 'epub') {
-    if (typeof DecompressionStream === 'undefined') {
-      setStatus('当前浏览器不支持 EPUB 解析（需 Chrome80+/Safari16.4+/Firefox113+）');
-      return;
-    }
     setStatus('正在解析 EPUB …');
-    EpubParser['parse'](file)['then'](function (res) {
-      setStatus('已载入 EPUB');
+    var lastProgress = '';
+    EpubParser['parse'](file, function (stage, cur, total) {
+      /* 进度回调：每步刷新状态条（节流避免刷屏） */
+      var text = stage + (total > 1 ? ' ' + cur + '/' + total : '');
+      if (text !== lastProgress) {
+        lastProgress = text;
+        setStatus(text + ' …');
+      }
+    })['then'](function (res) {
+      setStatus('已载入 EPUB：' + (res['title'] || name));
       loadBook(res['title'] || name, res['text']);
     })['catch'](function (err) {
       setStatus('EPUB 解析失败：' + err['message']);
@@ -993,11 +1261,6 @@ function init() {
 
   // 初始化批注列表提示
   renderAnnotations();
-
-  // 浏览器兼容性提示
-  if (typeof DecompressionStream === 'undefined') {
-    setStatus('提示：当前浏览器不支持 EPUB 解析，TXT 仍可正常使用。');
-  }
 }
 
 function boot(retry) {
