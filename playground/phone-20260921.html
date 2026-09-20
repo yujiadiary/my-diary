@@ -252,16 +252,20 @@
       <div class="phone-app-settings-row">
         <label style="display:flex;align-items:center;gap:8px">
           <input type="checkbox" id="paUseCloudTts" style="width:auto" />
-          <span>使用云端 TTS（否则用浏览器朗读）</span>
+          <span>使用云端 TTS（MiniMax，否则用浏览器朗读）</span>
         </label>
       </div>
       <div class="phone-app-settings-row">
-        <label>云端 TTS 接口地址（OpenAI TTS 格式）</label>
-        <input type="text" id="paTtsUrl" placeholder="https://token.sensenova.cn/v1/audio/speech" />
+        <label>TTS 接口地址（MiniMax T2A V2）</label>
+        <input type="text" id="paTtsUrl" placeholder="https://api.minimaxi.com/v1/t2a_v2" />
       </div>
       <div class="phone-app-settings-row">
-        <label>TTS 音色名</label>
-        <input type="text" id="paTtsVoice" placeholder="例如 alloy" />
+        <label>MiniMax Group ID</label>
+        <input type="text" id="paTtsGroupId" placeholder="例如 210158230773437642" />
+      </div>
+      <div class="phone-app-settings-row">
+        <label>MiniMax Voice ID（音色）</label>
+        <input type="text" id="paTtsVoiceId" placeholder="例如 male-qn-qingse" />
       </div>
       <div class="phone-app-settings-row">
         <label style="display:flex;align-items:center;gap:8px">
@@ -283,11 +287,15 @@
 
 /* ============================================================
    核心配置（都在这里改）
-   localStorage 键名：phone_app_config，存 { baseUrl, apiKey, model, sysPrompt, useCloudTts, ttsUrl, ttsVoice, autoTrans }
+   localStorage 键名：phone_app_config，存 { baseUrl, apiKey, model, sysPrompt, useCloudTts, ttsUrl, ttsGroupId, ttsVoiceId, autoTrans }
    ============================================================ */
 var CONFIG = {
   defaultBaseUrl: 'https://token.sensenova.cn/v1',
   defaultSysPrompt: '你是电话那头的人，用口语化的方式简短回复，像真实通话一样，每次不超过50字。',
+  defaultTtsUrl: 'https://api.minimaxi.com/v1/t2a_v2', /* MiniMax T2A V2 接口 */
+  defaultTtsGroupId: '210158230773437642',              /* MiniMax Group ID */
+  defaultTtsVoiceId: 'male-qn-qingse',                  /* MiniMax 音色 ID */
+  ttsModel: 'speech-2.8-hd',                            /* MiniMax TTS 模型 */
   maxHistory: 8,          /* 发给 AI 的最近对话轮数 */
   callWaitMs: 1500,       /* 呼出后多少毫秒自动接听 */
   contacts: [             /* 预设联系人（真实备注名+电话） */
@@ -345,12 +353,18 @@ function loadConfig() {
       baseUrl: CONFIG['defaultBaseUrl'],
       apiKey: '', model: '',
       sysPrompt: CONFIG['defaultSysPrompt'],
-      useCloudTts: false, ttsUrl: '', ttsVoice: '',
+      useCloudTts: false,
+      ttsUrl: CONFIG['defaultTtsUrl'],
+      ttsGroupId: CONFIG['defaultTtsGroupId'],
+      ttsVoiceId: CONFIG['defaultTtsVoiceId'],
       autoTrans: true
     };
   }
   state['config']['baseUrl'] = state['config']['baseUrl'] || CONFIG['defaultBaseUrl'];
   state['config']['sysPrompt'] = state['config']['sysPrompt'] || CONFIG['defaultSysPrompt'];
+  state['config']['ttsUrl'] = state['config']['ttsUrl'] || CONFIG['defaultTtsUrl'];
+  state['config']['ttsGroupId'] = state['config']['ttsGroupId'] || CONFIG['defaultTtsGroupId'];
+  state['config']['ttsVoiceId'] = state['config']['ttsVoiceId'] || CONFIG['defaultTtsVoiceId'];
   if (typeof state['config']['useCloudTts'] !== 'boolean') state['config']['useCloudTts'] = false;
   if (typeof state['config']['autoTrans'] !== 'boolean') state['config']['autoTrans'] = true;
 }
@@ -703,24 +717,57 @@ function speakBrowser(text) {
   } catch (e) {}
 }
 
-/* 云端 TTS，失败时自动降级到浏览器朗读 */
+/* 云端 TTS（MiniMax T2A V2），失败时自动降级到浏览器朗读 */
 function speakCloud(text) {
   var cfg = state['config'];
-  fetch(cfg['ttsUrl'], {
+  var url = cfg['ttsUrl'] + '?GroupId=' + encodeURIComponent(cfg['ttsGroupId']);
+  fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg['apiKey'] },
-    body: JSON['stringify']({ model: cfg['model'], voice: cfg['ttsVoice'] || 'alloy', input: text })
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + cfg['apiKey']
+    },
+    body: JSON['stringify']({
+      model: CONFIG['ttsModel'],
+      text: text,
+      stream: false,
+      voice_setting: {
+        voice_id: cfg['ttsVoiceId'],
+        speed: 1,
+        vol: 1,
+        pitch: 0
+      },
+      audio_setting: {
+        sample_rate: 32000,
+        bitrate: 128000,
+        format: 'mp3',
+        channel: 1
+      }
+    })
   })['then'](function (resp) {
     if (!resp['ok']) throw new Error('TTS HTTP ' + resp['status']);
-    return resp['blob']();
-  })['then'](function (blob) {
+    return resp['json']();
+  })['then'](function (data) {
+    /* MiniMax 返回 hex 编码的音频，需转成 Blob 播放 */
+    var hex = data && data['data'] && data['data']['audio'];
+    if (!hex) throw new Error('未返回音频数据');
+    var blob = hexToBlob(hex, 'audio/mpeg');
     var audio = new window['Audio']();
     audio['src'] = URL['createObjectURL'](blob);
     audio['play']();
   })['catch'](function (e) {
-    toast('云端 TTS 不可用，改用浏览器朗读');
+    toast('MiniMax TTS 失败，改用浏览器朗读');
     speakBrowser(text); /* 自动降级 */
   });
+}
+
+/* hex 字符串转 Blob */
+function hexToBlob(hex, mimeType) {
+  var bytes = new Uint8Array(hex['length'] / 2);
+  for (var i = 0; i < hex['length']; i += 2) {
+    bytes[i / 2] = parseInt(hex['substr'](i, 2), 16);
+  }
+  return new Blob([bytes], { type: mimeType });
 }
 
 function stopSpeaking() {
@@ -755,7 +802,8 @@ function openSettings() {
   $('paSysPrompt')['value'] = cfg['sysPrompt'];
   $('paUseCloudTts')['checked'] = cfg['useCloudTts'];
   $('paTtsUrl')['value'] = cfg['ttsUrl'];
-  $('paTtsVoice')['value'] = cfg['ttsVoice'];
+  $('paTtsGroupId')['value'] = cfg['ttsGroupId'];
+  $('paTtsVoiceId')['value'] = cfg['ttsVoiceId'];
   $('paAutoTrans')['checked'] = cfg['autoTrans'];
   $('paSettingsMask')['classList']['remove']('phone-app-hidden');
 }
@@ -769,7 +817,8 @@ function saveSettings() {
   state['config']['sysPrompt'] = $('paSysPrompt')['value']['trim']() || CONFIG['defaultSysPrompt'];
   state['config']['useCloudTts'] = $('paUseCloudTts')['checked'];
   state['config']['ttsUrl'] = $('paTtsUrl')['value']['trim']();
-  state['config']['ttsVoice'] = $('paTtsVoice')['value']['trim']();
+  state['config']['ttsGroupId'] = $('paTtsGroupId')['value']['trim']();
+  state['config']['ttsVoiceId'] = $('paTtsVoiceId')['value']['trim']();
   state['config']['autoTrans'] = $('paAutoTrans')['checked'];
   saveConfig();
   toast('已保存');
