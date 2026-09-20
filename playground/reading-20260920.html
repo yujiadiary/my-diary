@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>一起看书</title>
+<style>
+/* ===== 核心参数：颜色 / 尺寸 / 圆角（CSS 变量，便于修改） ===== */
+.read-app {
+  --ra-bg: #f5f1e6;
+  --ra-card: #fffdf6;
+  --ra-text: #2c2a26;
+  --ra-muted: #9a9286;
+  --ra-primary: #6d4aff;
+  --ra-primary-d: #5230c9;
+  --ra-border: #e7dcc6;
+  --ra-radius: 12px;
+  --ra-font-size: 16px;
+  --ra-shadow: 0 2px 12px rgba(60, 50, 20, 0.06);
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: var(--ra-font-size);
+  color: var(--ra-text);
+  background: var(--ra-bg);
+  line-height: 1.75;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 18px 14px 60px;
+}
+/* 统一盒模型（避免使用 * 全局选择器，逐元素声明） */
+.read-app,
+.read-app input,
+.read-app button,
+.read-app textarea,
+.read-app div,
+.read-app p,
+.read-app span,
+.read-app section,
+.read-app label {
+  box-sizing: border-box;
+}
+
+.read-app-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 6px 0 14px;
+  text-align: center;
+  letter-spacing: 2px;
+}
+
+.read-app-card {
+  background: var(--ra-card);
+  border: 1px solid var(--ra-border);
+  border-radius: var(--ra-radius);
+  box-shadow: var(--ra-shadow);
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.read-app-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.read-app-row label {
+  width: 92px;
+  flex-shrink: 0;
+  color: var(--ra-muted);
+  font-size: 14px;
+}
+.read-app input[type="text"],
+.read-app input[type="password"],
+.read-app textarea {
+  flex: 1;
+  width: 100%;
+  border: 1px solid var(--ra-border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 15px;
+  color: var(--ra-text);
+  background: #fff;
+  outline: none;
+}
+.read-app input:focus,
+.read-app textarea:focus {
+  border-color: var(--ra-primary);
+}
+
+.read-app textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.7;
+}
+
+.read-app-btn {
+  touch-action: manipulation;
+  border: none;
+  border-radius: 8px;
+  background: var(--ra-primary);
+  color: #fff;
+  padding: 9px 16px;
+  font-size: 15px;
+  cursor: pointer;
+  user-select: none;
+}
+.read-app-btn:active {
+  background: var(--ra-primary-d);
+}
+.read-app-btn-soft {
+  touch-action: manipulation;
+  border: 1px solid var(--ra-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ra-text);
+  padding: 9px 16px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.read-app-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+.read-app-filelabel {
+  touch-action: manipulation;
+  display: inline-block;
+  border: 1px solid var(--ra-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ra-text);
+  padding: 9px 16px;
+  font-size: 15px;
+  cursor: pointer;
+}
+.read-app-filelabel input[type="file"] {
+  display: none;
+}
+
+.read-app-tip {
+  margin-left: 10px;
+  color: var(--ra-primary);
+  font-size: 13px;
+}
+.read-app-status {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ra-muted);
+  min-height: 18px;
+}
+
+.read-app-booktitle {
+  font-size: 15px;
+  color: var(--ra-muted);
+  margin-bottom: 10px;
+  border-bottom: 1px dashed var(--ra-border);
+  padding-bottom: 8px;
+}
+.read-app-content {
+  min-height: 240px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+  font-size: var(--ra-font-size);
+  line-height: 1.85;
+  color: var(--ra-text);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.read-app-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  gap: 10px;
+}
+.read-app-indicator {
+  color: var(--ra-muted);
+  font-size: 14px;
+}
+
+.read-app-subhead {
+  font-size: 14px;
+  color: var(--ra-muted);
+  margin-bottom: 10px;
+}
+.read-app-annlist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.read-app-ann {
+  border: 1px solid var(--ra-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fbf7ee;
+}
+.read-app-ann-quote {
+  color: var(--ra-primary-d);
+  font-size: 13px;
+  margin-bottom: 6px;
+  border-left: 3px solid var(--ra-primary);
+  padding-left: 8px;
+  white-space: pre-wrap;
+}
+.read-app-ann-note {
+  white-space: pre-wrap;
+  font-size: 15px;
+}
+.read-app-ann-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ra-muted);
+}
+.read-app-anndel {
+  touch-action: manipulation;
+  border: none;
+  background: transparent;
+  color: var(--ra-muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+.read-app-anndel:active {
+  color: #d44;
+}
+.read-app-empty {
+  color: var(--ra-muted);
+  font-size: 14px;
+}
+
+.read-app-aipanel {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  font-size: 15px;
+  min-height: 40px;
+}
+.read-app-aipanel.read-app-loading {
+  color: var(--ra-muted);
+}
+.read-app-aipanel.read-app-error {
+  color: #c0392b;
+}
+
+/* 选中文字后的悬浮菜单 */
+.read-app-menu {
+  position: fixed;
+  display: none;
+  gap: 6px;
+  transform: translate(-50%, -100%);
+  z-index: 9999;
+  background: var(--ra-primary);
+  border-radius: 8px;
+  padding: 5px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.read-app-menubtn {
+  touch-action: manipulation;
+  border: none;
+  background: transparent;
+  color: #fff;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.read-app-menubtn:active {
+  background: var(--ra-primary-d);
+}
+</style>
+</head>
+<body>
+
+<div class="read-app" id="readRoot">
+  <h1 class="read-app-title">一起看书</h1>
+
+  <!-- ===== API 配置 ===== -->
+  <section class="read-app-card">
+    <div class="read-app-row">
+      <label>API Key</label>
+      <input id="raApiKey" type="password" placeholder="sk-..." autocomplete="off" />
+    </div>
+    <div class="read-app-row">
+      <label>API Base URL</label>
+      <input id="raBaseUrl" type="text" placeholder="https://token.sensenova.cn/v1" autocomplete="off" />
+    </div>
+    <div class="read-app-row">
+      <label>模型名称</label>
+      <input id="raModel" type="text" placeholder="SenseChat-5" autocomplete="off" />
+    </div>
+    <div class="read-app-actions">
+      <button id="raSave" class="read-app-btn">保存配置</button>
+      <span id="raCfgTip" class="read-app-tip"></span>
+    </div>
+  </section>
+
+  <!-- ===== 内容导入 ===== -->
+  <section class="read-app-card">
+    <textarea id="raPaste" placeholder="把文本粘贴到这里…"></textarea>
+    <div class="read-app-actions">
+      <button id="raLoadText" class="read-app-btn">载入粘贴文本</button>
+      <label class="read-app-filelabel">
+        上传 TXT / EPUB
+        <input id="raFile" type="file" accept=".txt,.epub" />
+      </label>
+    </div>
+    <div id="raStatus" class="read-app-status"></div>
+  </section>
+
+  <!-- ===== 阅读区 ===== -->
+  <section class="read-app-card">
+    <div id="raBookTitle" class="read-app-booktitle">未载入内容</div>
+    <div id="raContent" class="read-app-content">先在上方导入内容，或粘贴一段文字后点「载入粘贴文本」。</div>
+    <div class="read-app-pager">
+      <button id="raPrev" class="read-app-btn-soft">上一页</button>
+      <span id="raIndicator" class="read-app-indicator">0 / 0</span>
+      <button id="raNext" class="read-app-btn-soft">下一页</button>
+    </div>
+  </section>
+
+  <!-- ===== 本页批注 ===== -->
+  <section class="read-app-card">
+    <div class="read-app-subhead">本页批注</div>
+    <div id="raAnnList" class="read-app-annlist"></div>
+  </section>
+
+  <!-- ===== AI 回答面板 ===== -->
+  <section class="read-app-card">
+    <div class="read-app-subhead">AI 回答</div>
+    <div id="raAiPanel" class="read-app-aipanel">在正文中选中文字后，点「问 AI」即可获得解释。</div>
+  </section>
+
+  <!-- ===== 选中悬浮菜单 ===== -->
+  <div id="raMenu" class="read-app-menu">
+    <button id="raAskAi" class="read-app-menubtn">问 AI</button>
+    <button id="raWriteNote" class="read-app-menubtn">写批注</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   EPUB 解析模块（纯前端，零依赖）
+   原理：EPUB 本质是 ZIP 包，用浏览器原生的 DecompressionStream
+   解压，再按 OPF 结构把章节文字抽出来。
+   兼容性：Chrome 80+ / Safari 16.4+ / Firefox 113+
+   ============================================================ */
+var EpubParser = (function () {
+  'use strict';
+
+  function unzip(arrayBuffer) {
+    return new Promise(function (resolve, reject) {
+      try {
+        var view = new DataView(arrayBuffer);
+        var bytes = new Uint8Array(arrayBuffer);
+        var files = new Map();
+
+        var eocdOffset = -1;
+        var minSearch = Math['max'](0, arrayBuffer['byteLength'] - 65557);
+        for (var i = arrayBuffer['byteLength'] - 22; i >= minSearch; i--) {
+          if (view['getUint32'](i, true) === 0x06054b50) {
+            eocdOffset = i;
+            break;
+          }
+        }
+        if (eocdOffset === -1) {
+          reject(new Error('不是有效的 EPUB 文件'));
+          return;
+        }
+
+        var cdOffset = view['getUint32'](eocdOffset + 16, true);
+        var cdCount = view['getUint16'](eocdOffset + 10, true);
+
+        var entries = [];
+        var offset = cdOffset;
+        for (var n = 0; n < cdCount; n++) {
+          if (view['getUint32'](offset, true) !== 0x02014b50) break;
+
+          var compression = view['getUint16'](offset + 10, true);
+          var compressedSize = view['getUint32'](offset + 20, true);
+          var fileNameLength = view['getUint16'](offset + 28, true);
+          var extraLength = view['getUint16'](offset + 30, true);
+          var commentLength = view['getUint16'](offset + 32, true);
+          var localHeaderOffset = view['getUint32'](offset + 42, true);
+
+          var nameBytes = bytes['slice'](offset + 46, offset + 46 + fileNameLength);
+          var name = new TextDecoder('utf-8')['decode'](nameBytes);
+
+          entries['push']({
+            name: name,
+            compression: compression,
+            compressedSize: compressedSize,
+            localHeaderOffset: localHeaderOffset
+          });
+
+          offset += 46 + fileNameLength + extraLength + commentLength;
+        }
+
+        var tasks = [];
+        for (var t = 0; t < entries['length']; t++) {
+          (function (entry) {
+            var localNameLength = view['getUint16'](entry['localHeaderOffset'] + 26, true);
+            var localExtraLength = view['getUint16'](entry['localHeaderOffset'] + 28, true);
+            var dataStart = entry['localHeaderOffset'] + 30 + localNameLength + localExtraLength;
+            var compressedData = bytes['slice'](dataStart, dataStart + entry['compressedSize']);
+
+            if (entry['compression'] === 0) {
+              files['set'](entry['name'], compressedData);
+              return;
+            }
+
+            if (entry['compression'] === 8) {
+              try {
+                var stream = new Blob([compressedData])['stream']()
+                  ['pipeThrough'](new DecompressionStream('deflate-raw'));
+                tasks['push'](
+                  new Response(stream)['arrayBuffer']()['then'](function (result) {
+                    files['set'](entry['name'], new Uint8Array(result));
+                  })['catch'](function () { })
+                );
+              } catch (e) { }
+            }
+          })(entries[t]);
+        }
+
+        Promise['all'](tasks)['then'](function () {
+          resolve(files);
+        })['catch'](reject);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  function parseEpub(file) {
+    return file['arrayBuffer']()['then'](function (buf) {
+      return unzip(buf);
+    })['then'](function (files) {
+      var decoder = new TextDecoder('utf-8');
+      var parser = new DOMParser();
+
+      var containerBytes = files['get']('META-INF/container.xml');
+      if (!containerBytes) throw new Error('EPUB 结构异常：找不到 container.xml');
+
+      var containerDoc = parser['parseFromString'](
+        decoder['decode'](containerBytes), 'application/xml'
+      );
+      var rootfileEl = containerDoc['querySelector']('rootfile');
+      if (!rootfileEl) throw new Error('EPUB 结构异常：找不到 rootfile');
+
+      var opfPath = rootfileEl['getAttribute']('full-path');
+
+      var opfBytes = files['get'](opfPath);
+      if (!opfBytes) throw new Error('EPUB 结构异常：找不到 OPF');
+
+      var opfDoc = parser['parseFromString'](
+        decoder['decode'](opfBytes), 'application/xml'
+      );
+
+      var manifest = {};
+      var items = opfDoc['querySelectorAll']('manifest > item');
+      for (var i = 0; i < items['length']; i++) {
+        var id = items[i]['getAttribute']('id');
+        var href = items[i]['getAttribute']('href');
+        if (id && href) manifest[id] = href;
+      }
+
+      var spine = [];
+      var itemrefs = opfDoc['querySelectorAll']('spine > itemref');
+      for (var j = 0; j < itemrefs['length']; j++) {
+        var idref = itemrefs[j]['getAttribute']('idref');
+        if (idref) spine['push'](idref);
+      }
+
+      var titleEl = opfDoc['getElementsByTagNameNS'](
+        'http://purl.org/dc/elements/1.1/', 'title'
+      )[0];
+      var title = titleEl ? titleEl['textContent']['trim']() : '';
+
+      var baseDir = '';
+      var lastSlash = opfPath['lastIndexOf']('/');
+      if (lastSlash !== -1) baseDir = opfPath['substring'](0, lastSlash + 1);
+
+      var fullText = '';
+      for (var k = 0; k < spine['length']; k++) {
+        var href2 = manifest[spine[k]];
+        if (!href2) continue;
+
+        var path = baseDir + decodeURIComponent(href2);
+        var chapterBytes = files['get'](path);
+        if (!chapterBytes) continue;
+
+        var chapterDoc = parser['parseFromString'](
+          decoder['decode'](chapterBytes), 'text/html'
+        );
+
+        var junk = chapterDoc['querySelectorAll']('script, style');
+        for (var m = 0; m < junk['length']; m++) junk[m]['remove']();
+
+        var text = chapterDoc['body'] ? chapterDoc['body']['textContent'] : '';
+        text = text['replace'](/\s+\n/g, '\n')['replace'](/\n{3,}/g, '\n\n')['trim']();
+        if (text) fullText += text + '\n\n';
+      }
+
+      return { title: title, text: fullText['trim']() };
+    });
+  }
+
+  return { parse: parseEpub, unzip: unzip };
+})();
+
+/* ============================================================
+   一起看书 主程序
+   ============================================================ */
+
+/* ===== 核心参数（JS 对象，便于修改） ===== */
+var CONFIG = {
+  pageSize: 500,                                    // 每页字数
+  defaultBaseUrl: 'https://token.sensenova.cn/v1', // 默认 API 地址
+  defaultModel: '',                                  // 默认模型名（留空，由用户填）
+  storageConfig: 'readApp.config',                   // 配置存储键
+  storageAnnotations: 'readApp.annotations'          // 批注存储键
+};
+
+/* ===== 运行时状态 ===== */
+var apiKeyInput, baseUrlInput, modelInput, pasteEl, contentEl, menuEl,
+    aiPanelEl, annListEl, indicatorEl, statusEl, cfgTipEl, bookTitleEl;
+
+var currentTitle = '';
+var currentText = '';
+var currentBookId = '';
+var pages = [];
+var pageIndex = 0;
+
+var currentSelection = '';   // 最近一次选中的文字
+var lastAI = '';             // 最近一次 AI 回答
+var lastSelection = '';      // 最近一次问 AI 时选中的文字
+
+/* ===== 读取 / 保存配置 ===== */
+function loadConfig() {
+  var raw = localStorage['getItem'](CONFIG['storageConfig']);
+  if (raw) {
+    try {
+      var obj = JSON['parse'](raw);
+      if (obj && typeof obj === 'object') return obj;
+    } catch (e) { }
+  }
+  return { apiKey: '', baseUrl: CONFIG['defaultBaseUrl'], model: CONFIG['defaultModel'] };
+}
+
+function saveConfig() {
+  var cfg = {
+    apiKey: apiKeyInput['value']['trim'](),
+    baseUrl: baseUrlInput['value']['trim']() || CONFIG['defaultBaseUrl'],
+    model: modelInput['value']['trim']()
+  };
+  localStorage['setItem'](CONFIG['storageConfig'], JSON['stringify'](cfg));
+  showCfgTip('配置已保存');
+}
+
+function showCfgTip(msg) {
+  cfgTipEl['textContent'] = msg;
+  setTimeout(function () { cfgTipEl['textContent'] = ''; }, 2500);
+}
+
+function setStatus(msg) {
+  statusEl['textContent'] = msg;
+}
+
+/* ===== 导入：粘贴文本 ===== */
+function loadPastedText() {
+  var t = pasteEl['value'];
+  if (!t || !t['trim']()) {
+    setStatus('请先在文本框里粘贴一些内容');
+    return;
+  }
+  setStatus('已载入粘贴文本');
+  loadBook('粘贴文本', t);
+}
+
+/* ===== 导入：文件（按扩展名分流） ===== */
+function handleFile(e) {
+  var file = e['target']['files'] && e['target']['files'][0];
+  if (!file) return;
+  var name = file['name'] || '';
+  var ext = '';
+  var dot = name['lastIndexOf']('.');
+  if (dot !== -1) ext = name['slice'](dot + 1)['toLowerCase']();
+
+  if (ext === 'txt') {
+    setStatus('正在读取 ' + name + ' …');
+    file['text']()['then'](function (t) {
+      setStatus('已载入：' + name);
+      loadBook(name, t);
+    })['catch'](function (err) {
+      setStatus('读取失败：' + err['message']);
+    });
+  } else if (ext === 'epub') {
+    if (typeof DecompressionStream === 'undefined') {
+      setStatus('当前浏览器不支持 EPUB 解析（需 Chrome80+/Safari16.4+/Firefox113+）');
+      return;
+    }
+    setStatus('正在解析 EPUB …');
+    EpubParser['parse'](file)['then'](function (res) {
+      setStatus('已载入 EPUB');
+      loadBook(res['title'] || name, res['text']);
+    })['catch'](function (err) {
+      setStatus('EPUB 解析失败：' + err['message']);
+    });
+  } else {
+    setStatus('仅支持 .txt 与 .epub 文件');
+  }
+  // 清空值，便于重复选择同一个文件
+  e['target']['value'] = '';
+}
+
+/* ===== 载入书籍：分页 + 渲染首页 ===== */
+function makeBookId(title, text) {
+  var base = title || (text ? text['slice'](0, 50) : 'default');
+  var h = 0;
+  for (var i = 0; i < base['length']; i++) {
+    h = (h * 31 + base['charCodeAt'](i)) | 0;
+  }
+  return 'b' + (h >>> 0)['toString'](36);
+}
+
+function loadBook(title, text) {
+  currentTitle = title;
+  currentText = text;
+  currentBookId = makeBookId(title, text);
+  pages = paginate(text);
+  pageIndex = 0;
+  bookTitleEl['textContent'] = title || '未命名内容';
+  renderPage();
+}
+
+function paginate(text) {
+  var size = CONFIG['pageSize'];
+  var out = [];
+  if (!text) {
+    out['push']('');
+    return out;
+  }
+  for (var i = 0; i < text['length']; i += size) {
+    out['push'](text['slice'](i, i + size));
+  }
+  if (out['length'] === 0) out['push']('');
+  return out;
+}
+
+function renderPage() {
+  if (pages['length'] === 0) {
+    contentEl['textContent'] = '';
+    indicatorEl['textContent'] = '0 / 0';
+    renderAnnotations();
+    return;
+  }
+  contentEl['textContent'] = pages[pageIndex];
+  indicatorEl['textContent'] = (pageIndex + 1) + ' / ' + pages['length'];
+  renderAnnotations();
+}
+
+function prevPage() {
+  if (pageIndex > 0) {
+    pageIndex--;
+    renderPage();
+  }
+}
+
+function nextPage() {
+  if (pageIndex < pages['length'] - 1) {
+    pageIndex++;
+    renderPage();
+  }
+}
+
+/* ===== 选中交互 ===== */
+function handleSelection() {
+  var sel = window['getSelection']();
+  var text = sel ? sel['toString']() : '';
+  if (!text || text['length'] < 1) {
+    hideMenu();
+    return;
+  }
+  // 只在正文区内选中才弹菜单
+  var node = sel['anchorNode'];
+  if (!node || !contentEl['contains'](node)) {
+    hideMenu();
+    return;
+  }
+  currentSelection = text;
+  try {
+    var rect = sel['getRangeAt'](0)['getBoundingClientRect']();
+    if (rect && rect['width'] > 0) {
+      showMenu(rect);
+      return;
+    }
+  } catch (err) { }
+  // 兜底：放到正文区顶部
+  var fb = contentEl['getBoundingClientRect']();
+  showMenu({ left: fb['left'] + fb['width'] / 2, top: fb['top'] + 20, width: 0 });
+}
+
+function showMenu(rect) {
+  var top = rect['top'];
+  var left = rect['left'] + rect['width'] / 2;
+  // 边界保护：避免菜单飞出可视区域
+  var menuW = 150;
+  if (left < menuW / 2 + 4) left = menuW / 2 + 4;
+  if (left > window['innerWidth'] - menuW / 2 - 4) {
+    left = window['innerWidth'] - menuW / 2 - 4;
+  }
+  if (top < 8) top = 8; // 选中文字靠近顶部时，保证菜单仍可见
+  menuEl['style']['left'] = left + 'px';
+  menuEl['style']['top'] = top + 'px';
+  menuEl['style']['display'] = 'flex';
+}
+
+function hideMenu() {
+  menuEl['style']['display'] = 'none';
+}
+
+/* ===== AI 对接 ===== */
+function showAIResult(msg, type) {
+  aiPanelEl['textContent'] = msg;
+  aiPanelEl['className'] = 'read-app-aipanel' + (type ? ' read-app-' + type : '');
+}
+
+function askAI() {
+  var selected = currentSelection;
+  if (!selected) {
+    showAIResult('请先在正文中选中文字。', 'muted');
+    hideMenu();
+    return;
+  }
+  var cfg = loadConfig();
+  if (!cfg['apiKey']) {
+    showAIResult('请先在上方填写并保存 API Key。', 'muted');
+    hideMenu();
+    return;
+  }
+  if (!cfg['model']) {
+    showAIResult('请先在上方填写模型名称并保存（如 SenseChat-5）。', 'muted');
+    hideMenu();
+    return;
+  }
+
+  var context = pages['length'] > 0 ? pages[pageIndex] : '';
+  var url = cfg['baseUrl'] + '/chat/completions';
+  var body = JSON['stringify']({
+    model: cfg['model'],
+    messages: [
+      { role: 'system', content: '你是一个贴心的中文阅读助手。读者会选中一段文字，请你结合上下文，用简洁清晰的中文解释含义、背景或答疑。' },
+      { role: 'user', content: '选中文字：\n' + selected + '\n\n所在页上下文：\n' + context }
+    ]
+  });
+
+  lastSelection = selected;
+  lastAI = '';
+  showAIResult('正在思考…', 'loading');
+  hideMenu();
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg['apiKey'] },
+    body: body
+  })['then'](function (res) {
+    if (!res['ok']) {
+      return res['text']()['then'](function (t) {
+        throw new Error('HTTP ' + res['status'] + ' ' + t['slice'](0, 200));
+      });
+    }
+    return res['json']();
+  })['then'](function (data) {
+    var answer = '';
+    try {
+      answer = data['choices'][0]['message']['content'] || '';
+    } catch (err) {
+      answer = '返回格式异常：' + JSON['stringify'](data)['slice'](0, 300);
+    }
+    if (!answer) answer = '（AI 未返回内容）';
+    lastAI = answer;
+    showAIResult(answer);
+  })['catch'](function (err) {
+    showAIResult('请求失败：' + err['message'] + '\n（若为 CORS/网络问题，请检查 API 地址与浏览器控制台）', 'error');
+  });
+}
+
+/* ===== 写批注：把 AI 回答存入 localStorage，翻页回来仍可见 ===== */
+function writeAnnotation() {
+  var quote = currentSelection || lastSelection;
+  if (!quote) {
+    showAIResult('请先在正文中选中文字。', 'muted');
+    hideMenu();
+    return;
+  }
+  if (!lastAI) {
+    showAIResult('请先点「问 AI」获取批注内容，再点「写批注」保存。', 'muted');
+    hideMenu();
+    return;
+  }
+  saveAnnotation(quote, lastAI);
+  showAIResult('已保存为本页批注，翻页回来仍可看到。');
+  hideMenu();
+}
+
+/* ===== 批注存储 ===== */
+function getAllAnnotations() {
+  var raw = localStorage['getItem'](CONFIG['storageAnnotations']);
+  if (raw) {
+    try { return JSON['parse'](raw) || {}; } catch (e) { }
+  }
+  return {};
+}
+
+function annKey() {
+  return currentBookId + '::' + pageIndex;
+}
+
+function saveAnnotation(quote, note) {
+  var all = getAllAnnotations();
+  var k = annKey();
+  if (!all[k]) all[k] = [];
+  all[k]['push']({ quote: quote, note: note, time: Date['now']() });
+  localStorage['setItem'](CONFIG['storageAnnotations'], JSON['stringify'](all));
+  renderAnnotations();
+}
+
+function deleteAnnotation(idx) {
+  var all = getAllAnnotations();
+  var k = annKey();
+  var list = all[k] || [];
+  if (idx >= 0 && idx < list['length']) {
+    list['splice'](idx, 1);
+    if (list['length'] === 0) delete all[k]; else all[k] = list;
+    localStorage['setItem'](CONFIG['storageAnnotations'], JSON['stringify'](all));
+  }
+  renderAnnotations();
+}
+
+function renderAnnotations() {
+  annListEl['innerHTML'] = '';
+  if (!currentBookId) {
+    annListEl['innerHTML'] = '<div class="read-app-empty">先载入内容后，选中文字 → 问 AI → 写批注。</div>';
+    return;
+  }
+  var list = getAllAnnotations()[annKey()] || [];
+  if (list['length'] === 0) {
+    annListEl['innerHTML'] = '<div class="read-app-empty">本页暂无批注。</div>';
+    return;
+  }
+  for (var i = 0; i < list['length']; i++) {
+    (function (ann, idx) {
+      var wrap = document['createElement']('div');
+      wrap['className'] = 'read-app-ann';
+
+      var q = document['createElement']('div');
+      q['className'] = 'read-app-ann-quote';
+      q['textContent'] = '“' + ann['quote'] + '”';
+
+      var n = document['createElement']('div');
+      n['className'] = 'read-app-ann-note';
+      n['textContent'] = ann['note'];
+
+      var meta = document['createElement']('div');
+      meta['className'] = 'read-app-ann-meta';
+
+      var time = document['createElement']('span');
+      time['textContent'] = new Date(ann['time'])['toLocaleString']();
+
+      var del = document['createElement']('button');
+      del['className'] = 'read-app-anndel';
+      del['textContent'] = '删除';
+      del['addEventListener']('click', function () { deleteAnnotation(idx); });
+
+      meta['appendChild'](time);
+      meta['appendChild'](del);
+      wrap['appendChild'](q);
+      wrap['appendChild'](n);
+      wrap['appendChild'](meta);
+      annListEl['appendChild'](wrap);
+    })(list[i], i);
+  }
+}
+
+/* ===== 初始化（带重试机制：防 DOM 未就绪） ===== */
+function init() {
+  // 缓存常用 DOM
+  apiKeyInput = document['getElementById']('raApiKey');
+  baseUrlInput = document['getElementById']('raBaseUrl');
+  modelInput = document['getElementById']('raModel');
+  pasteEl = document['getElementById']('raPaste');
+  contentEl = document['getElementById']('raContent');
+  menuEl = document['getElementById']('raMenu');
+  aiPanelEl = document['getElementById']('raAiPanel');
+  annListEl = document['getElementById']('raAnnList');
+  indicatorEl = document['getElementById']('raIndicator');
+  statusEl = document['getElementById']('raStatus');
+  cfgTipEl = document['getElementById']('raCfgTip');
+  bookTitleEl = document['getElementById']('raBookTitle');
+
+  // 回填配置
+  var cfg = loadConfig();
+  apiKeyInput['value'] = cfg['apiKey'] || '';
+  baseUrlInput['value'] = cfg['baseUrl'] || CONFIG['defaultBaseUrl'];
+  modelInput['value'] = cfg['model'] || '';
+
+  // 绑定事件
+  document['getElementById']('raSave')['addEventListener']('click', saveConfig);
+  document['getElementById']('raLoadText')['addEventListener']('click', loadPastedText);
+  document['getElementById']('raFile')['addEventListener']('change', handleFile);
+  document['getElementById']('raPrev')['addEventListener']('click', prevPage);
+  document['getElementById']('raNext')['addEventListener']('click', nextPage);
+  document['getElementById']('raAskAi')['addEventListener']('click', askAI);
+  document['getElementById']('raWriteNote')['addEventListener']('click', writeAnnotation);
+
+  // 选中文字弹出菜单（鼠标 + 触摸）
+  contentEl['addEventListener']('mouseup', handleSelection);
+  contentEl['addEventListener']('touchend', handleSelection);
+
+  // 点击菜单/正文以外区域时隐藏悬浮菜单
+  document['addEventListener']('mousedown', function (e) {
+    var t = e['target'];
+    if (menuEl['contains'](t) || t === contentEl) return;
+    hideMenu();
+  });
+
+  // 滚动 / 改变窗口大小时隐藏菜单，避免错位
+  window['addEventListener']('scroll', hideMenu, true);
+  window['addEventListener']('resize', hideMenu);
+
+  // 初始化批注列表提示
+  renderAnnotations();
+
+  // 浏览器兼容性提示
+  if (typeof DecompressionStream === 'undefined') {
+    setStatus('提示：当前浏览器不支持 EPUB 解析，TXT 仍可正常使用。');
+  }
+}
+
+function boot(retry) {
+  retry = retry || 0;
+  var root = document['getElementById']('readRoot');
+  if (!root) {
+    // DOM 尚未就绪，间隔 50ms 重试，最多 40 次（约 2 秒）
+    if (retry < 40) {
+      setTimeout(function () { boot(retry + 1); }, 50);
+    }
+    return;
+  }
+  try {
+    init();
+  } catch (e) {
+    // 初始化失败也重试一次，避免偶发时序问题
+    if (retry < 40) {
+      setTimeout(function () { boot(retry + 1); }, 50);
+    }
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
