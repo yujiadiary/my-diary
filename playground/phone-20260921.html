@@ -260,6 +260,10 @@
         <input type="text" id="paTtsUrl" placeholder="https://api.minimaxi.com/v1/t2a_v2" />
       </div>
       <div class="phone-app-settings-row">
+        <label>MiniMax API Key（单独填，和聊天的 Key 不一样）</label>
+        <input type="password" id="paTtsApiKey" placeholder="MiniMax 的 API Key" />
+      </div>
+      <div class="phone-app-settings-row">
         <label>MiniMax Group ID</label>
         <input type="text" id="paTtsGroupId" placeholder="例如 210158230773437642" />
       </div>
@@ -287,7 +291,7 @@
 
 /* ============================================================
    核心配置（都在这里改）
-   localStorage 键名：phone_app_config，存 { baseUrl, apiKey, model, sysPrompt, useCloudTts, ttsUrl, ttsGroupId, ttsVoiceId, autoTrans }
+   localStorage 键名：phone_app_config，存 { baseUrl, apiKey, model, sysPrompt, useCloudTts, ttsApiKey, ttsUrl, ttsGroupId, ttsVoiceId, autoTrans }
    ============================================================ */
 var CONFIG = {
   defaultBaseUrl: 'https://token.sensenova.cn/v1',
@@ -354,6 +358,7 @@ function loadConfig() {
       apiKey: '', model: '',
       sysPrompt: CONFIG['defaultSysPrompt'],
       useCloudTts: false,
+      ttsApiKey: '',
       ttsUrl: CONFIG['defaultTtsUrl'],
       ttsGroupId: CONFIG['defaultTtsGroupId'],
       ttsVoiceId: CONFIG['defaultTtsVoiceId'],
@@ -720,12 +725,14 @@ function speakBrowser(text) {
 /* 云端 TTS（MiniMax T2A V2），失败时自动降级到浏览器朗读 */
 function speakCloud(text) {
   var cfg = state['config'];
+  var key = cfg['ttsApiKey'] || cfg['apiKey']; /* MiniMax key，没填就用聊天的 key */
+  if (!key) { toast('TTS 需要 API Key，请在设置里填写'); speakBrowser(text); return; }
   var url = cfg['ttsUrl'] + '?GroupId=' + encodeURIComponent(cfg['ttsGroupId']);
   fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + cfg['apiKey']
+      'Authorization': 'Bearer ' + key
     },
     body: JSON['stringify']({
       model: CONFIG['ttsModel'],
@@ -745,7 +752,17 @@ function speakCloud(text) {
       }
     })
   })['then'](function (resp) {
-    if (!resp['ok']) throw new Error('TTS HTTP ' + resp['status']);
+    if (!resp['ok']) {
+      /* 解析 MiniMax 返回的错误信息 */
+      return resp['text']()['then'](function (body) {
+        var msg = 'TTS HTTP ' + resp['status'];
+        try {
+          var j = JSON['parse'](body);
+          if (j && j['base_resp']) msg += '：' + (j['base_resp']['status_msg'] || j['base_resp']['status_code']);
+        } catch (e) { msg += '：' + body['slice'](0, 80); }
+        throw new Error(msg);
+      });
+    }
     return resp['json']();
   })['then'](function (data) {
     /* MiniMax 返回 hex 编码的音频，需转成 Blob 播放 */
@@ -756,7 +773,12 @@ function speakCloud(text) {
     audio['src'] = URL['createObjectURL'](blob);
     audio['play']();
   })['catch'](function (e) {
-    toast('MiniMax TTS 失败，改用浏览器朗读');
+    var errMsg = e['message'] || String(e);
+    /* 网络错误/CORS 会是 TypeError */
+    if (errMsg['indexOf']('Failed to fetch') >= 0 || errMsg['indexOf']('NetworkError') >= 0) {
+      errMsg = '网络或跨域(CORS)错误，浏览器无法直连 MiniMax';
+    }
+    toast('MiniMax TTS 失败：' + errMsg);
     speakBrowser(text); /* 自动降级 */
   });
 }
@@ -802,6 +824,7 @@ function openSettings() {
   $('paSysPrompt')['value'] = cfg['sysPrompt'];
   $('paUseCloudTts')['checked'] = cfg['useCloudTts'];
   $('paTtsUrl')['value'] = cfg['ttsUrl'];
+  $('paTtsApiKey')['value'] = cfg['ttsApiKey'] || '';
   $('paTtsGroupId')['value'] = cfg['ttsGroupId'];
   $('paTtsVoiceId')['value'] = cfg['ttsVoiceId'];
   $('paAutoTrans')['checked'] = cfg['autoTrans'];
@@ -817,6 +840,7 @@ function saveSettings() {
   state['config']['sysPrompt'] = $('paSysPrompt')['value']['trim']() || CONFIG['defaultSysPrompt'];
   state['config']['useCloudTts'] = $('paUseCloudTts')['checked'];
   state['config']['ttsUrl'] = $('paTtsUrl')['value']['trim']();
+  state['config']['ttsApiKey'] = $('paTtsApiKey')['value']['trim']();
   state['config']['ttsGroupId'] = $('paTtsGroupId')['value']['trim']();
   state['config']['ttsVoiceId'] = $('paTtsVoiceId')['value']['trim']();
   state['config']['autoTrans'] = $('paAutoTrans')['checked'];
