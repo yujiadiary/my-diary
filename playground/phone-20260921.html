@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>模拟苹果电话</title>
+<style>
+/* ========== 核心参数（颜色/尺寸都在这里改） ========== */
+.phone-app{
+  --pa-bg-top:#1C1C1E;
+  --pa-bg-bottom:#000000;
+  --pa-text:#FFFFFF;
+  --pa-muted:#8E8E93;
+  --pa-key-bg:#333333;
+  --pa-key-press:#4A4A4A;
+  --pa-call-green:#34C759;
+  --pa-hang-red:#FF3B30;
+  --pa-accent:#0A84FF;
+  --pa-panel-bg:#2C2C2E;
+  --pa-border:rgba(255,255,255,0.12);
+  --pa-radius:18px;
+  --pa-key-size:64px;
+  --pa-call-btn-size:72px;
+  font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  color:var(--pa-text);
+  background:linear-gradient(180deg,var(--pa-bg-top),var(--pa-bg-bottom));
+  max-width:420px;
+  margin:0 auto;
+  min-height:100vh;
+  min-height:100dvh;
+  position:relative;
+  overflow:hidden;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.phone-app *{box-sizing:border-box}
+.phone-app button{font-family:inherit;touch-action:manipulation;cursor:pointer;border:none;outline:none}
+.phone-app input,.phone-app textarea{font-family:inherit}
+
+/* ========== 通用 ========== */
+.phone-app-hidden{display:none!important}
+.phone-app-toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.85);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;z-index:9999;pointer-events:none;opacity:0;transition:opacity .25s}
+.phone-app-toast.show{opacity:1}
+
+/* ========== 顶部栏 ========== */
+.phone-app-topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 8px}
+.phone-app-topbar h1{font-size:18px;font-weight:600;margin:0}
+.phone-app-settings-btn{width:36px;height:36px;border-radius:50%;background:transparent;color:var(--pa-muted);font-size:20px;display:flex;align-items:center;justify-content:center}
+.phone-app-settings-btn:active{color:#fff}
+
+/* ========== 拨号页 ========== */
+.phone-app-recent{padding:12px 20px;border-bottom:1px solid var(--pa-border)}
+.phone-app-recent-title{font-size:13px;color:var(--pa-muted);margin-bottom:8px}
+.phone-app-recent-list{display:flex;flex-direction:column;gap:4px}
+.phone-app-contact{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(255,255,255,0.05);border-radius:10px;touch-action:manipulation}
+.phone-app-contact:active{background:rgba(255,255,255,0.12)}
+.phone-app-contact-left{display:flex;align-items:center;gap:10px}
+.phone-app-contact-avatar{width:32px;height:32px;border-radius:50%;background:var(--pa-accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff}
+.phone-app-contact-name{font-size:15px}
+.phone-app-contact-num{font-size:12px;color:var(--pa-muted)}
+
+.phone-app-display{text-align:center;padding:28px 20px 16px;min-height:64px}
+.phone-app-digits{font-size:42px;font-weight:300;letter-spacing:2px;min-height:50px;word-break:break-all}
+
+.phone-app-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 0;padding:10px 40px;justify-items:center}
+.phone-app-key{width:var(--pa-key-size);height:var(--pa-key-size);border-radius:50%;background:var(--pa-key-bg);color:#fff;font-size:24px;font-weight:400;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.phone-app-key:active{background:var(--pa-key-press)}
+.phone-app-key .pa-sub{font-size:10px;color:var(--pa-muted);margin-top:2px;letter-spacing:1px}
+
+.phone-app-call-row{display:flex;justify-content:center;padding:24px 0 16px;gap:0}
+.phone-app-call-btn{width:var(--pa-call-btn-size);height:var(--pa-call-btn-size);border-radius:50%;background:var(--pa-call-green);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(52,199,89,.4)}
+.phone-app-call-btn:active{opacity:.85}
+
+/* ========== 通话页 ========== */
+.phone-app-call-header{text-align:center;padding:48px 20px 20px}
+.phone-app-call-name{font-size:26px;font-weight:500;margin-bottom:6px}
+.phone-app-call-status{font-size:15px;color:var(--pa-muted);min-height:20px}
+.phone-app-call-avatar{width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,#555,#333);margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:300;margin-bottom:24px}
+
+.phone-app-subtitles{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
+.phone-app-sub{padding:10px 14px;border-radius:14px;max-width:85%;font-size:15px;line-height:1.4}
+.phone-app-sub.user{align-self:flex-end;background:var(--pa-accent);color:#fff}
+.phone-app-sub.ai{align-self:flex-start;background:rgba(255,255,255,0.12);color:#fff}
+
+.phone-app-voice-input{padding:12px 20px;display:flex;gap:10px}
+.phone-app-voice-input input{flex:1;background:rgba(255,255,255,0.1);border:1px solid var(--pa-border);border-radius:20px;padding:10px 16px;color:#fff;font-size:14px;outline:none}
+.phone-app-voice-input input::placeholder{color:var(--pa-muted)}
+.phone-app-voice-input button{background:var(--pa-accent);color:#fff;border-radius:20px;padding:0 18px;font-size:14px}
+.phone-app-mic-btn{display:flex;align-items:center;justify-content:center;margin:16px auto 0}
+.phone-app-mic-btn button{background:var(--pa-key-bg);color:#fff;border-radius:28px;padding:12px 28px;font-size:15px;display:flex;align-items:center;gap:8px}
+.phone-app-mic-btn button.active{background:var(--pa-hang-red);animation:pa-pulse 1s infinite}
+@keyframes pa-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,59,48,.5)}50%{box-shadow:0 0 0 12px rgba(255,59,48,0)}}
+
+.phone-app-call-controls{display:flex;justify-content:space-around;padding:24px 30px 16px}
+.phone-app-ctrl-btn{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--pa-muted)}
+.phone-app-ctrl-btn .pa-ico{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center}
+.phone-app-ctrl-btn .pa-label{font-size:11px}
+.phone-app-ctrl-btn.active .pa-ico{background:#fff;color:#000}
+.phone-app-ctrl-btn.active .pa-label{color:#fff}
+
+.phone-app-hangup-row{display:flex;justify-content:center;padding:20px 0 30px}
+.phone-app-hangup-btn{width:var(--pa-call-btn-size);height:var(--pa-call-btn-size);border-radius:50%;background:var(--pa-hang-red);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(255,59,48,.4)}
+.phone-app-hangup-btn:active{opacity:.85}
+
+/* ========== 设置面板 ========== */
+.phone-app-settings-mask{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.phone-app-settings{background:var(--pa-panel-bg);width:100%;max-width:420px;border-radius:var(--pa-radius) var(--pa-radius) 0 0;padding:20px;max-height:85vh;overflow-y:auto}
+.phone-app-settings h2{margin:0 0 16px;font-size:18px}
+.phone-app-settings-row{margin-bottom:14px}
+.phone-app-settings-row label{display:block;font-size:13px;color:var(--pa-muted);margin-bottom:6px}
+.phone-app-settings-row input,.phone-app-settings-row textarea{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--pa-border);border-radius:10px;padding:10px 12px;color:#fff;font-size:14px;outline:none}
+.phone-app-settings-row textarea{min-height:60px;resize:vertical}
+.phone-app-settings-row input:focus,.phone-app-settings-row textarea:focus{border-color:var(--pa-accent)}
+.phone-app-settings-save{width:100%;background:var(--pa-accent);color:#fff;border-radius:12px;padding:14px;font-size:16px;font-weight:500;margin-top:8px}
+.phone-app-settings-save:active{opacity:.8}
+.phone-app-close-settings{position:absolute;top:16px;right:20px;color:var(--pa-muted);font-size:22px;background:none}
+
+/* ========== 通话页容器（flex 撑满） ========== */
+.phone-app-call{display:flex;flex-direction:column;height:100vh;height:100dvh}
+</style>
+</head>
+<body>
+<div class="phone-app" id="paRoot">
+
+  <!-- ===== 拨号页 ===== -->
+  <div class="phone-app-dial" id="paDialView">
+    <div class="phone-app-topbar">
+      <h1>新通话</h1>
+      <button class="phone-app-settings-btn" id="paSettingsBtn" title="设置">⚙</button>
+    </div>
+
+    <div class="phone-app-recent">
+      <div class="phone-app-recent-title">最近通话</div>
+      <div class="phone-app-recent-list" id="paRecentList"></div>
+    </div>
+
+    <div class="phone-app-display">
+      <div class="phone-app-digits" id="paDigits"></div>
+    </div>
+
+    <div class="phone-app-keypad" id="paKeypad">
+      <!-- 12 个数字键，JS 渲染 -->
+    </div>
+
+    <div class="phone-app-call-row">
+      <button class="phone-app-call-btn" id="paCallBtn" title="拨号">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== 通话页 ===== -->
+  <div class="phone-app-call phone-app-hidden" id="paCallView">
+    <div class="phone-app-call-header">
+      <div class="phone-app-call-name" id="paCallName">AI 助手</div>
+      <div class="phone-app-call-status" id="paCallStatus">呼出中...</div>
+    </div>
+    <div class="phone-app-call-avatar" id="paCallAvatar">AI</div>
+
+    <div class="phone-app-subtitles" id="paSubtitles"></div>
+
+    <!-- 语音输入区（降级时显示文本框） -->
+    <div class="phone-app-voice-input phone-app-hidden" id="paTextInputRow">
+      <input type="text" id="paTextInput" placeholder="当前浏览器不支持语音识别，请输入文字..." />
+      <button id="paTextSend">发送</button>
+    </div>
+    <div class="phone-app-mic-btn" id="paMicBtnRow">
+      <button id="paMicBtn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
+        <span id="paMicLabel">开始说话</span>
+      </button>
+    </div>
+
+    <div class="phone-app-call-controls">
+      <button class="phone-app-ctrl-btn" id="paMuteBtn">
+        <span class="pa-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/></svg></span>
+        <span class="pa-label">静音</span>
+      </button>
+      <button class="phone-app-ctrl-btn" id="paSpeakerBtn">
+        <span class="pa-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg></span>
+        <span class="pa-label">免提</span>
+      </button>
+    </div>
+
+    <div class="phone-app-hangup-row">
+      <button class="phone-app-hangup-btn" id="paHangupBtn" title="挂断">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff" style="transform:rotate(135deg)"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== 设置面板 ===== -->
+  <div class="phone-app-settings-mask phone-app-hidden" id="paSettingsMask">
+    <div class="phone-app-settings" id="paSettingsPanel">
+      <button class="phone-app-close-settings" id="paCloseSettings">×</button>
+      <h2>设置</h2>
+      <div class="phone-app-settings-row">
+        <label>API Base URL</label>
+        <input type="text" id="paBaseUrl" value="https://token.sensenova.cn/v1" />
+      </div>
+      <div class="phone-app-settings-row">
+        <label>API Key</label>
+        <input type="password" id="paApiKey" placeholder="sk-..." />
+      </div>
+      <div class="phone-app-settings-row">
+        <label>模型名称</label>
+        <input type="text" id="paModel" placeholder="例如 SenseChat-5" />
+      </div>
+      <div class="phone-app-settings-row">
+        <label>系统提示词</label>
+        <textarea id="paSysPrompt">你是一个温柔的陪伴者，说话简短、真诚，每次回复不超过50字。</textarea>
+      </div>
+      <div class="phone-app-settings-row">
+        <label style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="paUseCloudTts" style="width:auto" />
+          <span>使用云端 TTS（否则用浏览器朗读）</span>
+        </label>
+      </div>
+      <div class="phone-app-settings-row">
+        <label>云端 TTS 接口地址（OpenAI TTS 格式）</label>
+        <input type="text" id="paTtsUrl" placeholder="https://token.sensenova.cn/v1/audio/speech" />
+      </div>
+      <div class="phone-app-settings-row">
+        <label>TTS 音色名</label>
+        <input type="text" id="paTtsVoice" placeholder="例如 alloy" />
+      </div>
+      <button class="phone-app-settings-save" id="paSaveSettings">保存</button>
+    </div>
+  </div>
+
+  <div class="phone-app-toast" id="paToast"></div>
+
+</div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   核心配置（都在这里改）
+   localStorage 键名：phone_app_config，存 { baseUrl, apiKey, model, sysPrompt, useCloudTts, ttsUrl, ttsVoice }
+   ============================================================ */
+var CONFIG = {
+  defaultBaseUrl: 'https://token.sensenova.cn/v1',
+  defaultSysPrompt: '你是一个温柔的陪伴者，说话简短、真诚，每次回复不超过50字。',
+  maxHistory: 8,          /* 发给 AI 的最近对话轮数 */
+  callWaitMs: 1500,       /* 呼出后多少毫秒自动接听 */
+  contacts: [             /* 预设联系人 */
+    { name: 'AI 助手', avatar: 'AI', sys: '你是一个温柔的陪伴者，说话简短、真诚，每次回复不超过50字。' },
+    { name: '心理咨询师', avatar: '心', sys: '你是一位温暖的心理咨询师，耐心倾听，用简短温柔的话语回应。每次回复不超过50字。' },
+    { name: '讲故事的人', avatar: '故', sys: '你是一位擅长讲故事的人，会讲温暖有趣的小故事，每次回复不超过50字。' }
+  ],
+  fallbackReplies: [      /* 没填 API Key 时的固定回复 */
+    '你还没配置 API Key 呢，去设置里填一下吧。',
+    '需要先填 API Key 我才能说话哦。',
+    '设置入口在拨号页右上角的齿轮图标。'
+  ],
+  aiFirstWord: '喂？我是 AI 助手，有什么想聊的吗？'
+};
+
+/* ========== 全局状态 ========== */
+var state = {
+  config: null,            /* 配置对象 */
+  digits: '',              /* 当前拨号盘输入的数字 */
+  view: 'dial',            /* 'dial' 或 'call' */
+  callTimer: null,         /* 通话计时定时器 */
+  callSeconds: 0,          /* 通话秒数 */
+  inCall: false,           /* 是否已接听 */
+  history: [],             /* 对话历史 {role, content} */
+  currentContact: null,    /* 当前通话的联系人对象 */
+  recognizing: false,      /* 是否正在识别语音 */
+  recognition: null,       /* SpeechRecognition 实例 */
+  synthSupport: false,     /* 是否支持 TTS */
+  recogSupport: false,     /* 是否支持语音识别 */
+  fallbackIdx: 0,          /* 没 API Key 时的回复计数器 */
+  listening: false         /* 麦克风是否在听 */
+};
+
+/* ========== 工具函数 ========== */
+function $(id) { return document['getElementById'](id); }
+
+function toast(msg) {
+  var t = $('paToast');
+  t['textContent'] = msg;
+  t['classList']['add']('show');
+  clearTimeout(toast['_t']);
+  toast['_t'] = setTimeout(function () { t['classList']['remove']('show'); }, 2000);
+}
+
+function loadConfig() {
+  try {
+    var raw = localStorage['getItem']('phone_app_config');
+    if (raw) {
+      state['config'] = JSON['parse'](raw);
+    }
+  } catch (e) {}
+  if (!state['config']) {
+    state['config'] = {
+      baseUrl: CONFIG['defaultBaseUrl'],
+      apiKey: '',
+      model: '',
+      sysPrompt: CONFIG['defaultSysPrompt'],
+      useCloudTts: false,
+      ttsUrl: '',
+      ttsVoice: ''
+    };
+  }
+  /* 合并默认值（防止旧配置缺字段） */
+  state['config']['baseUrl'] = state['config']['baseUrl'] || CONFIG['defaultBaseUrl'];
+  state['config']['sysPrompt'] = state['config']['sysPrompt'] || CONFIG['defaultSysPrompt'];
+  if (typeof state['config']['useCloudTts'] !== 'boolean') state['config']['useCloudTts'] = false;
+}
+
+function saveConfig() {
+  try { localStorage['setItem']('phone_app_config', JSON['stringify'](state['config'])); } catch (e) {}
+}
+
+function fmtTime(sec) {
+  var m = Math['floor'](sec / 60);
+  var s = sec % 60;
+  return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+/* ========== 拨号页 ========== */
+function renderKeypad() {
+  var keys = [
+    { n: '1', s: '' }, { n: '2', s: 'ABC' }, { n: '3', s: 'DEF' },
+    { n: '4', s: 'GHI' }, { n: '5', s: 'JKL' }, { n: '6', s: 'MNO' },
+    { n: '7', s: 'PQRS' }, { n: '8', s: 'TUV' }, { n: '9', s: 'WXYZ' },
+    { n: '*', s: '' }, { n: '0', s: '+' }, { n: '#', s: '' }
+  ];
+  var html = '';
+  for (var i = 0; i < keys['length']; i++) {
+    var k = keys[i];
+    html += '<button class="phone-app-key" data-n="' + k['n'] + '"><span>' + k['n'] + '</span>' + (k['s'] ? '<span class="pa-sub">' + k['s'] + '</span>' : '') + '</button>';
+  }
+  $('paKeypad')['innerHTML'] = html;
+  var btns = $('paKeypad')['querySelectorAll']('.phone-app-key');
+  for (var j = 0; j < btns['length']; j++) {
+    (function (btn) {
+      btn['addEventListener']('click', function () {
+        if (state['digits']['length'] < 20) {
+          state['digits'] += btn['getAttribute']('data-n');
+          $('paDigits')['textContent'] = state['digits'];
+        }
+      });
+    })(btns[j]);
+  }
+}
+
+function renderContacts() {
+  var list = $('paRecentList');
+  var html = '';
+  for (var i = 0; i < CONFIG['contacts']['length']; i++) {
+    var c = CONFIG['contacts'][i];
+    html += '<div class="phone-app-contact" data-idx="' + i + '"><div class="phone-app-contact-left"><div class="phone-app-contact-avatar">' + c['avatar'] + '</div><div><div class="phone-app-contact-name">' + c['name'] + '</div><div class="phone-app-contact-num">AI 语音</div></div></div></div>';
+  }
+  list['innerHTML'] = html;
+  var items = list['querySelectorAll']('.phone-app-contact');
+  for (var j = 0; j < items['length']; j++) {
+    (function (item) {
+      item['addEventListener']('click', function () {
+        var idx = parseInt(item['getAttribute']('data-idx'));
+        startCall(CONFIG['contacts'][idx]);
+      });
+    })(items[j]);
+  }
+}
+
+/* ========== 切换页面 ========== */
+function showDial() {
+  $('paDialView')['classList']['remove']('phone-app-hidden');
+  $('paCallView')['classList']['add']('phone-app-hidden');
+  state['view'] = 'dial';
+  state['digits'] = '';
+  $('paDigits')['textContent'] = '';
+}
+
+function showCall() {
+  $('paDialView')['classList']['add']('phone-app-hidden');
+  $('paCallView')['classList']['remove']('phone-app-hidden');
+  state['view'] = 'call';
+}
+
+/* ========== 通话流程 ========== */
+function startCall(contact) {
+  state['currentContact'] = contact;
+  state['history'] = [];
+  state['fallbackIdx'] = 0;
+  $('paCallName')['textContent'] = contact['name'];
+  $('paCallAvatar')['textContent'] = contact['avatar'];
+  $('paSubtitles')['innerHTML'] = '';
+  $('paCallStatus')['textContent'] = '呼出中...';
+  state['callSeconds'] = 0;
+  state['inCall'] = false;
+  showCall();
+  /* 1.5 秒后自动接听 */
+  setTimeout(function () {
+    if (state['view'] !== 'call') return;
+    state['inCall'] = true;
+    $('paCallStatus')['textContent'] = '通话中 00:00';
+    startCallTimer();
+    /* AI 主动说第一句 */
+    var firstWord = CONFIG['aiFirstWord']['replace']('AI 助手', contact['name']);
+    pushSub('ai', firstWord);
+    speak(firstWord);
+  }, CONFIG['callWaitMs']);
+}
+
+function startCallTimer() {
+  state['callTimer'] = setInterval(function () {
+    if (state['inCall']) {
+      state['callSeconds']++;
+      $('paCallStatus')['textContent'] = '通话中 ' + fmtTime(state['callSeconds']);
+    }
+  }, 1000);
+}
+
+function hangup() {
+  state['inCall'] = false;
+  state['listening'] = false;
+  if (state['callTimer']) { clearInterval(state['callTimer']); state['callTimer'] = null; }
+  /* 停止语音识别 */
+  if (state['recognition']) {
+    try { state['recognition']['stop'](); } catch (e) {}
+  }
+  /* 停止 TTS */
+  stopSpeaking();
+  $('paCallStatus')['textContent'] = '已挂断';
+  setTimeout(function () { showDial(); }, 600);
+}
+
+/* ========== 字幕 ========== */
+function pushSub(role, text) {
+  var div = document['createElement']('div');
+  div['className'] = 'phone-app-sub ' + role;
+  div['textContent'] = text;
+  $('paSubtitles')['appendChild'](div);
+  $('paSubtitles')['scrollTop'] = $('paSubtitles')['scrollHeight'];
+}
+
+/* ========== 语音识别 ========== */
+function initRecognition() {
+  var SR = window['SpeechRecognition'] || window['webkitSpeechRecognition'];
+  if (!SR) {
+    state['recogSupport'] = false;
+    $('paMicBtnRow')['classList']['add']('phone-app-hidden');
+    $('paTextInputRow')['classList']['remove']('phone-app-hidden');
+    return;
+  }
+  state['recogSupport'] = true;
+  var rec = new SR();
+  rec['lang'] = 'zh-CN';
+  rec['interimResults'] = false;
+  rec['maxAlternatives'] = 1;
+  rec['onresult'] = function (e) {
+    var text = e['results'][0][0]['transcript'];
+    if (text && text['trim']()) handleUserText(text['trim']());
+  };
+  rec['onend'] = function () {
+    state['listening'] = false;
+    updateMicBtn();
+  };
+  rec['onerror'] = function (e) {
+    state['listening'] = false;
+    updateMicBtn();
+    if (e['error'] === 'not-allowed') toast('需要麦克风权限才能说话哦');
+  };
+  state['recognition'] = rec;
+}
+
+function toggleMic() {
+  if (!state['recogSupport']) return;
+  if (state['listening']) {
+    try { state['recognition']['stop'](); } catch (e) {}
+  } else {
+    stopSpeaking(); /* 说话前先停掉 AI 的朗读 */
+    try { state['recognition']['start'](); state['listening'] = true; updateMicBtn(); }
+    catch (e) { state['listening'] = false; updateMicBtn(); }
+  }
+}
+
+function updateMicBtn() {
+  var btn = $('paMicBtn');
+  var lbl = $('paMicLabel');
+  if (state['listening']) {
+    btn['classList']['add']('active');
+    lbl['textContent'] = '聆听中...';
+  } else {
+    btn['classList']['remove']('active');
+    lbl['textContent'] = '开始说话';
+  }
+}
+
+/* ========== AI 对话 ========== */
+function handleUserText(text) {
+  pushSub('user', text);
+  state['history']['push']({ role: 'user', content: text });
+  var cfg = state['config'];
+  if (!cfg['apiKey']) {
+    /* 没填 Key，用固定回复 */
+    var reply = CONFIG['fallbackReplies'][state['fallbackIdx'] % CONFIG['fallbackReplies']['length']];
+    state['fallbackIdx']++;
+    setTimeout(function () { aiReplied(reply); }, 400);
+    return;
+  }
+  callAi(text);
+}
+
+function callAi(userText) {
+  var cfg = state['config'];
+  var url = cfg['baseUrl']['replace'](/\/+$/, '') + '/chat/completions';
+  var sysPrompt = (state['currentContact'] && state['currentContact']['sys']) || cfg['sysPrompt'];
+  /* 只取最近 maxHistory 轮 */
+  var recent = state['history']['slice'](-CONFIG['maxHistory']);
+  var messages = [{ role: 'system', content: sysPrompt }];
+  for (var i = 0; i < recent['length']; i++) messages['push'](recent[i]);
+
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + cfg['apiKey']
+    },
+    body: JSON['stringify']({ model: cfg['model'], messages: messages })
+  })['then'](function (resp) {
+    if (!resp['ok']) throw new Error('HTTP ' + resp['status']);
+    return resp['json']();
+  })['then'](function (data) {
+    var reply = data && data['choices'] && data['choices'][0] && data['choices'][0]['message'] && data['choices'][0]['message']['content'];
+    aiReplied(reply || '（没收到回复）');
+  })['catch'](function (e) {
+    aiReplied('出错了：' + e['message']);
+  });
+}
+
+function aiReplied(text) {
+  pushSub('ai', text);
+  state['history']['push']({ role: 'assistant', content: text });
+  speak(text);
+}
+
+/* ========== TTS 朗读 ========== */
+function initTts() {
+  state['synthSupport'] = typeof window['speechSynthesis'] !== 'undefined';
+}
+
+function speak(text) {
+  var cfg = state['config'];
+  if (cfg['useCloudTts'] && cfg['ttsUrl']) {
+    speakCloud(text);
+    return;
+  }
+  if (!state['synthSupport']) {
+    toast('当前浏览器不支持语音朗读，已切换为文字模式');
+    return;
+  }
+  try {
+    window['speechSynthesis']['cancel']();
+    var u = new window['SpeechSynthesisUtterance'](text);
+    u['lang'] = 'zh-CN';
+    u['rate'] = 1;
+    u['pitch'] = 1;
+    window['speechSynthesis']['speak'](u);
+  } catch (e) {}
+}
+
+function speakCloud(text) {
+  var cfg = state['config'];
+  fetch(cfg['ttsUrl'], {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + cfg['apiKey']
+    },
+    body: JSON['stringify']({
+      model: cfg['model'],
+      voice: cfg['ttsVoice'] || 'alloy',
+      input: text
+    })
+  })['then'](function (resp) {
+    if (!resp['ok']) throw new Error('TTS HTTP ' + resp['status']);
+    return resp['blob']();
+  })['then'](function (blob) {
+    var audio = new window['Audio']();
+    audio['src'] = URL['createObjectURL'](blob);
+    audio['play']();
+  })['catch'](function (e) {
+    toast('云端 TTS 失败：' + e['message']);
+  });
+}
+
+function stopSpeaking() {
+  if (state['synthSupport']) {
+    try { window['speechSynthesis']['cancel'](); } catch (e) {}
+  }
+}
+
+/* ========== 设置面板 ========== */
+function openSettings() {
+  var cfg = state['config'];
+  $('paBaseUrl')['value'] = cfg['baseUrl'];
+  $('paApiKey')['value'] = cfg['apiKey'];
+  $('paModel')['value'] = cfg['model'];
+  $('paSysPrompt')['value'] = cfg['sysPrompt'];
+  $('paUseCloudTts')['checked'] = cfg['useCloudTts'];
+  $('paTtsUrl')['value'] = cfg['ttsUrl'];
+  $('paTtsVoice')['value'] = cfg['ttsVoice'];
+  $('paSettingsMask')['classList']['remove']('phone-app-hidden');
+}
+
+function closeSettings() {
+  $('paSettingsMask')['classList']['add']('phone-app-hidden');
+}
+
+function saveSettings() {
+  state['config']['baseUrl'] = $('paBaseUrl')['value']['trim']();
+  state['config']['apiKey'] = $('paApiKey')['value']['trim']();
+  state['config']['model'] = $('paModel')['value']['trim']();
+  state['config']['sysPrompt'] = $('paSysPrompt')['value']['trim']() || CONFIG['defaultSysPrompt'];
+  state['config']['useCloudTts'] = $('paUseCloudTts')['checked'];
+  state['config']['ttsUrl'] = $('paTtsUrl')['value']['trim']();
+  state['config']['ttsVoice'] = $('paTtsVoice')['value']['trim']();
+  saveConfig();
+  toast('已保存');
+  closeSettings();
+}
+
+/* ========== 初始化（带重试机制） ========== */
+var bootTries = 0;
+function boot() {
+  bootTries++;
+  if (!$('paRoot')) {
+    if (bootTries < 40) setTimeout(boot, 50); /* DOM 还没就绪，50ms 后重试 */
+    return;
+  }
+  loadConfig();
+  renderKeypad();
+  renderContacts();
+  initRecognition();
+  initTts();
+
+  /* 拨号按钮 */
+  $('paCallBtn')['addEventListener']('click', function () {
+    /* 默认拨第一个联系人 */
+    startCall(CONFIG['contacts'][0]);
+  });
+  /* 挂断 */
+  $('paHangupBtn')['addEventListener']('click', hangup);
+  /* 麦克风 */
+  $('paMicBtn')['addEventListener']('click', toggleMic);
+  /* 文本发送（降级） */
+  $('paTextSend')['addEventListener']('click', function () {
+    var v = $('paTextInput')['value']['trim']();
+    if (v) { $('paTextInput')['value'] = ''; handleUserText(v); }
+  });
+  $('paTextInput')['addEventListener']('keydown', function (e) {
+    if (e['key'] === 'Enter') $('paTextSend')['click']();
+  });
+  /* 静音/免提（视觉开关） */
+  $('paMuteBtn')['addEventListener']('click', function () { $('paMuteBtn')['classList']['toggle']('active'); });
+  $('paSpeakerBtn')['addEventListener']('click', function () { $('paSpeakerBtn')['classList']['toggle']('active'); });
+  /* 设置 */
+  $('paSettingsBtn')['addEventListener']('click', openSettings);
+  $('paCloseSettings')['addEventListener']('click', closeSettings);
+  $('paSaveSettings')['addEventListener']('click', saveSettings);
+  $('paSettingsMask')['addEventListener']('click', function (e) {
+    if (e['target'] === $('paSettingsMask')) closeSettings();
+  });
+}
+
+/* 启动：DOMContentLoaded 后重试 */
+if (document['readyState'] === 'loading') {
+  document['addEventListener']('DOMContentLoaded', boot);
+} else {
+  boot();
+}
+</script>
+</body>
+</html>
