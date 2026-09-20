@@ -345,170 +345,227 @@
 
 <script>
 /* ============================================================
-   EPUB 解析模块（纯前端，零依赖）
-   原理：EPUB 本质是 ZIP 包，用浏览器原生的 DecompressionStream
-   解压，再按 OPF 结构把章节文字抽出来。
+   EPUB 解析模块（纯前端，零依赖 · 按需解压优化版）
+   原理：EPUB 本质是 ZIP 包。先同步扫出目录元信息，
+   然后只解压 container.xml → OPF → spine 里引用的章节，
+   跳过 CSS / 图片 / 字体等永远用不上的资源，提速数倍。
+   解压仍用浏览器原生 DecompressionStream。
    兼容性：Chrome 80+ / Safari 16.4+ / Firefox 113+
    ============================================================ */
+
 var EpubParser = (function () {
   'use strict';
 
+  /* 同步扫描 ZIP 目录，返回 entries 数组（只存元信息，不解压） */
+  function scanZip(arrayBuffer) {
+    var view = new DataView(arrayBuffer);
+    var bytes = new Uint8Array(arrayBuffer);
+
+    var eocdOffset = -1;
+    var minSearch = Math['max'](0, arrayBuffer['byteLength'] - 65557);
+    for (var i = arrayBuffer['byteLength'] - 22; i >= minSearch; i--) {
+      if (view['getUint32'](i, true) === 0x06054b50) {
+        eocdOffset = i;
+        break;
+      }
+    }
+    if (eocdOffset === -1) throw new Error('不是有效的 EPUB 文件');
+
+    var cdOffset = view['getUint32'](eocdOffset + 16, true);
+    var cdCount = view['getUint16'](eocdOffset + 10, true);
+
+    var entriesByPath = {};
+    var offset = cdOffset;
+    for (var n = 0; n < cdCount; n++) {
+      if (view['getUint32'](offset, true) !== 0x02014b50) break;
+
+      var compression = view['getUint16'](offset + 10, true);
+      var compressedSize = view['getUint32'](offset + 20, true);
+      var fileNameLength = view['getUint16'](offset + 28, true);
+      var extraLength = view['getUint16'](offset + 30, true);
+      var commentLength = view['getUint16'](offset + 32, true);
+      var localHeaderOffset = view['getUint32'](offset + 42, true);
+
+      var nameBytes = bytes['slice'](offset + 46, offset + 46 + fileNameLength);
+      var name = new TextDecoder('utf-8')['decode'](nameBytes);
+
+      entriesByPath[name] = {
+        name: name,
+        compression: compression,
+        compressedSize: compressedSize,
+        localHeaderOffset: localHeaderOffset
+      };
+
+      offset += 46 + fileNameLength + extraLength + commentLength;
+    }
+
+    return { view: view, bytes: bytes, entries: entriesByPath };
+  }
+
+  /* 按需解压单个 entry */
+  function decompressEntry(scan, entry) {
+    var view = scan['view'];
+    var bytes = scan['bytes'];
+    var localNameLength = view['getUint16'](entry['localHeaderOffset'] + 26, true);
+    var localExtraLength = view['getUint16'](entry['localHeaderOffset'] + 28, true);
+    var dataStart = entry['localHeaderOffset'] + 30 + localNameLength + localExtraLength;
+    var compressedData = bytes['slice'](dataStart, dataStart + entry['compressedSize']);
+
+    if (entry['compression'] === 0) {
+      return Promise['resolve'](compressedData);
+    }
+    if (entry['compression'] === 8) {
+      try {
+        var stream = new Blob([compressedData])['stream']()
+          ['pipeThrough'](new DecompressionStream('deflate-raw'));
+        return new Response(stream)['arrayBuffer']()['then'](function (result) {
+          return new Uint8Array(result);
+        });
+      } catch (e) {
+        return Promise['reject'](e);
+      }
+    }
+    return Promise['reject'](new Error('不支持的压缩方式：' + entry['compression']));
+  }
+
+  /* 兼容接口：解压全部（保留给旧调用） */
   function unzip(arrayBuffer) {
     return new Promise(function (resolve, reject) {
       try {
-        var view = new DataView(arrayBuffer);
-        var bytes = new Uint8Array(arrayBuffer);
-        var files = new Map();
-
-        var eocdOffset = -1;
-        var minSearch = Math['max'](0, arrayBuffer['byteLength'] - 65557);
-        for (var i = arrayBuffer['byteLength'] - 22; i >= minSearch; i--) {
-          if (view['getUint32'](i, true) === 0x06054b50) {
-            eocdOffset = i;
-            break;
-          }
-        }
-        if (eocdOffset === -1) {
-          reject(new Error('不是有效的 EPUB 文件'));
-          return;
-        }
-
-        var cdOffset = view['getUint32'](eocdOffset + 16, true);
-        var cdCount = view['getUint16'](eocdOffset + 10, true);
-
-        var entries = [];
-        var offset = cdOffset;
-        for (var n = 0; n < cdCount; n++) {
-          if (view['getUint32'](offset, true) !== 0x02014b50) break;
-
-          var compression = view['getUint16'](offset + 10, true);
-          var compressedSize = view['getUint32'](offset + 20, true);
-          var fileNameLength = view['getUint16'](offset + 28, true);
-          var extraLength = view['getUint16'](offset + 30, true);
-          var commentLength = view['getUint16'](offset + 32, true);
-          var localHeaderOffset = view['getUint32'](offset + 42, true);
-
-          var nameBytes = bytes['slice'](offset + 46, offset + 46 + fileNameLength);
-          var name = new TextDecoder('utf-8')['decode'](nameBytes);
-
-          entries['push']({
-            name: name,
-            compression: compression,
-            compressedSize: compressedSize,
-            localHeaderOffset: localHeaderOffset
-          });
-
-          offset += 46 + fileNameLength + extraLength + commentLength;
-        }
-
+        var scan = scanZip(arrayBuffer);
+        var names = Object['keys'](scan['entries']);
         var tasks = [];
-        for (var t = 0; t < entries['length']; t++) {
-          (function (entry) {
-            var localNameLength = view['getUint16'](entry['localHeaderOffset'] + 26, true);
-            var localExtraLength = view['getUint16'](entry['localHeaderOffset'] + 28, true);
-            var dataStart = entry['localHeaderOffset'] + 30 + localNameLength + localExtraLength;
-            var compressedData = bytes['slice'](dataStart, dataStart + entry['compressedSize']);
-
-            if (entry['compression'] === 0) {
-              files['set'](entry['name'], compressedData);
-              return;
-            }
-
-            if (entry['compression'] === 8) {
-              try {
-                var stream = new Blob([compressedData])['stream']()
-                  ['pipeThrough'](new DecompressionStream('deflate-raw'));
-                tasks['push'](
-                  new Response(stream)['arrayBuffer']()['then'](function (result) {
-                    files['set'](entry['name'], new Uint8Array(result));
-                  })['catch'](function () { })
-                );
-              } catch (e) { }
-            }
-          })(entries[t]);
+        var result = new Map();
+        for (var i = 0; i < names['length']; i++) {
+          (function (name) {
+            tasks['push'](
+              decompressEntry(scan, scan['entries'][name])['then'](function (data) {
+                result['set'](name, data);
+              })['catch'](function () { })
+            );
+          })(names[i]);
         }
-
-        Promise['all'](tasks)['then'](function () {
-          resolve(files);
-        })['catch'](reject);
-      } catch (e) {
-        reject(e);
-      }
+        Promise['all'](tasks)['then'](function () { resolve(result); })['catch'](reject);
+      } catch (e) { reject(e); }
     });
   }
 
   function parseEpub(file) {
-    return file['arrayBuffer']()['then'](function (buf) {
-      return unzip(buf);
-    })['then'](function (files) {
-      var decoder = new TextDecoder('utf-8');
-      var parser = new DOMParser();
+    var scan;
+    var decoder = new TextDecoder('utf-8');
+    var parser = new DOMParser();
+    var opfBaseDir = '';
+    var opfManifest = {};
 
-      var containerBytes = files['get']('META-INF/container.xml');
-      if (!containerBytes) throw new Error('EPUB 结构异常：找不到 container.xml');
+    return file['arrayBuffer']()
 
-      var containerDoc = parser['parseFromString'](
-        decoder['decode'](containerBytes), 'application/xml'
-      );
-      var rootfileEl = containerDoc['querySelector']('rootfile');
-      if (!rootfileEl) throw new Error('EPUB 结构异常：找不到 rootfile');
+      /* 第 1 步：同步扫目录（毫秒级） */
+      ['then'](function (buf) {
+        scan = scanZip(buf);
+        return scan['entries']['META-INF/container.xml'];
+      })
 
-      var opfPath = rootfileEl['getAttribute']('full-path');
+      /* 第 2 步：解压 container.xml（1 个小文件） */
+      ['then'](function (containerEntry) {
+        if (!containerEntry) throw new Error('EPUB 结构异常：找不到 container.xml');
+        return decompressEntry(scan, containerEntry);
+      })
 
-      var opfBytes = files['get'](opfPath);
-      if (!opfBytes) throw new Error('EPUB 结构异常：找不到 OPF');
+      /* 第 3 步：从 container.xml 拿到 OPF 路径，解压 OPF */
+      ['then'](function (containerBytes) {
+        var containerDoc = parser['parseFromString'](
+          decoder['decode'](containerBytes), 'application/xml'
+        );
+        var rootfileEl = containerDoc['querySelector']('rootfile');
+        if (!rootfileEl) throw new Error('EPUB 结构异常：找不到 rootfile');
+        var opfPath = rootfileEl['getAttribute']('full-path');
+        var slash = opfPath['lastIndexOf']('/');
+        opfBaseDir = slash !== -1 ? opfPath['substring'](0, slash + 1) : '';
 
-      var opfDoc = parser['parseFromString'](
-        decoder['decode'](opfBytes), 'application/xml'
-      );
+        var opfEntry = scan['entries'][opfPath];
+        if (!opfEntry) throw new Error('EPUB 结构异常：找不到 OPF');
+        return decompressEntry(scan, opfEntry);
+      })
 
-      var manifest = {};
-      var items = opfDoc['querySelectorAll']('manifest > item');
-      for (var i = 0; i < items['length']; i++) {
-        var id = items[i]['getAttribute']('id');
-        var href = items[i]['getAttribute']('href');
-        if (id && href) manifest[id] = href;
-      }
-
-      var spine = [];
-      var itemrefs = opfDoc['querySelectorAll']('spine > itemref');
-      for (var j = 0; j < itemrefs['length']; j++) {
-        var idref = itemrefs[j]['getAttribute']('idref');
-        if (idref) spine['push'](idref);
-      }
-
-      var titleEl = opfDoc['getElementsByTagNameNS'](
-        'http://purl.org/dc/elements/1.1/', 'title'
-      )[0];
-      var title = titleEl ? titleEl['textContent']['trim']() : '';
-
-      var baseDir = '';
-      var lastSlash = opfPath['lastIndexOf']('/');
-      if (lastSlash !== -1) baseDir = opfPath['substring'](0, lastSlash + 1);
-
-      var fullText = '';
-      for (var k = 0; k < spine['length']; k++) {
-        var href2 = manifest[spine[k]];
-        if (!href2) continue;
-
-        var path = baseDir + decodeURIComponent(href2);
-        var chapterBytes = files['get'](path);
-        if (!chapterBytes) continue;
-
-        var chapterDoc = parser['parseFromString'](
-          decoder['decode'](chapterBytes), 'text/html'
+      /* 第 4 步：解析 OPF，拿到 manifest + spine + 标题 */
+      ['then'](function (opfBytes) {
+        var opfDoc = parser['parseFromString'](
+          decoder['decode'](opfBytes), 'application/xml'
         );
 
-        var junk = chapterDoc['querySelectorAll']('script, style');
-        for (var m = 0; m < junk['length']; m++) junk[m]['remove']();
+        var manifest = {};
+        var items = opfDoc['querySelectorAll']('manifest > item');
+        for (var i = 0; i < items['length']; i++) {
+          var id = items[i]['getAttribute']('id');
+          var href = items[i]['getAttribute']('href');
+          if (id && href) manifest[id] = href;
+        }
+        opfManifest = manifest;
 
-        var text = chapterDoc['body'] ? chapterDoc['body']['textContent'] : '';
-        text = text['replace'](/\s+\n/g, '\n')['replace'](/\n{3,}/g, '\n\n')['trim']();
-        if (text) fullText += text + '\n\n';
-      }
+        var spine = [];
+        var itemrefs = opfDoc['querySelectorAll']('spine > itemref');
+        for (var j = 0; j < itemrefs['length']; j++) {
+          var idref = itemrefs[j]['getAttribute']('idref');
+          if (idref) spine['push'](idref);
+        }
 
-      return { title: title, text: fullText['trim']() };
-    });
+        var titleEl = opfDoc['getElementsByTagNameNS'](
+          'http://purl.org/dc/elements/1.1/', 'title'
+        )[0];
+        var title = titleEl ? titleEl['textContent']['trim']() : '';
+
+        /* 第 5 步：只解压 spine 里引用的章节（并行 Promise.all） */
+        var chapterPaths = [];
+        for (var k = 0; k < spine['length']; k++) {
+          var href2 = manifest[spine[k]];
+          if (!href2) continue;
+          var rel = opfBaseDir + decodeURIComponent(href2);
+          var entry = scan['entries'][rel];
+          if (entry) chapterPaths['push']({ rel: rel, entry: entry });
+        }
+
+        var tasks = [];
+        for (var t = 0; t < chapterPaths['length']; t++) {
+          tasks['push'](
+            decompressEntry(scan, chapterPaths[t]['entry'])['then'](function (data) {
+              return { rel: chapterPaths[t]['rel'], data: data };
+            })['catch'](function () { return null; })
+          );
+        }
+
+        return Promise['all'](tasks)['then'](function (results) {
+          return { title: title, results: results };
+        });
+      })
+
+      /* 第 6 步：把章节转成纯文本（用 XML 模式解析 XHTML，比 HTML 快） */
+      ['then'](function (res) {
+        var fullText = '';
+        var results = res['results'];
+        for (var m = 0; m < results['length']; m++) {
+          var r = results[m];
+          if (!r) continue;
+          var xmlStr = decoder['decode'](r['data']);
+          var chapterDoc;
+          try {
+            /* XHTML 优先用 application/xml 解析，速度更快且不做容错修正 */
+            chapterDoc = parser['parseFromString'](xmlStr, 'application/xml');
+            if (chapterDoc['querySelector']('parsererror')) throw new Error('xml fail');
+          } catch (e) {
+            /* 某些 EPUB 章节是 text/html，降级处理 */
+            chapterDoc = parser['parseFromString'](xmlStr, 'text/html');
+          }
+
+          var junk = chapterDoc['querySelectorAll']('script, style');
+          for (var p = 0; p < junk['length']; p++) junk[p]['remove']();
+
+          var text = chapterDoc['body'] ? chapterDoc['body']['textContent'] : '';
+          text = text['replace'](/\s+\n/g, '\n')['replace'](/\n{3,}/g, '\n\n')['trim']();
+          if (text) fullText += text + '\n\n';
+        }
+
+        return { title: res['title'], text: fullText['trim']() };
+      });
   }
 
   return { parse: parseEpub, unzip: unzip };
