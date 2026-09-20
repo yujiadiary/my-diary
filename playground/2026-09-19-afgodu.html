@@ -1,1134 +1,1379 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>一起看书 · 试玩 · 碎碎念留档</title>
-  <meta name="robots" content="noindex, nofollow">
-  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
-  <style>
-    body { margin: 0; padding: 16px 16px 48px; font-family: system-ui, -apple-system, sans-serif; background: #fafafa; color: #333; }
-    .pg-back { display: block; margin-bottom: 8px; font-size: 14px; color: #5b6f8a; text-decoration: none; }
-    .pg-meta { display: block; font-size: 12px; color: #999; margin: 0 0 16px; }
-    .pg-canvas { border: 1px solid #e0e0e0; border-radius: 8px; overflow: auto; }
-    button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-  </style>
-</head>
-<body>
-  <a class="pg-back" href="../posts/2026-09-19-jiang-%E4%B8%80%E8%B5%B7%E7%9C%8B%E4%B9%A6.html">← 返回文章</a>
-  <div class="pg-meta">一起看书 · 江予朔</div>
-  <div class="pg-canvas">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#2c2a26" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>一起看书</title>
 <style>
-  /* ============================================================
-     全部样式限定在 .read-app 内，不污染文章页
-     ============================================================ */
 
-  .read-app,
-  .read-app *,
-  .read-app *::before,
-  .read-app *::after { box-sizing: border-box; }
+/* ===== 核心参数 ===== */
+.read-app {
+  --ra-bg: #f5f1e6;
+  --ra-book-bg: #fffdf6;
+  --ra-text: #2c2a26;
+  --ra-muted: #9a9286;
+  --ra-primary: #6d4aff;
+  --ra-primary-d: #5230c9;
+  --ra-accent: #e85d75;
+  --ra-border: #e7dcc6;
+  --ra-radius: 14px;
+  --ra-shadow: 0 4px 20px rgba(60, 50, 20, 0.12);
+  --ra-safe-top: env(safe-area-inset-top, 0px);
+  --ra-safe-bottom: env(safe-area-inset-bottom, 0px);
 
-  /* ============================================================
-     可调参数区：颜色 / 尺寸
-     ============================================================ */
-  .read-app {
-    --r-bg-1: #F6F2FF;
-    --r-bg-2: #EAF4FF;
-    --r-card: #FFFFFF;
-    --r-ink: #5B5075;
-    --r-ink-soft: #9A93B5;
-    --r-pink: #FF9CBE;
-    --r-pink-soft: #FFC2DA;
-    --r-purple: #B89CF5;
-    --r-purple-soft: #D9CBFB;
-    --r-line: #E6E0F5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  color: var(--ra-text);
+  background: var(--ra-bg);
+  max-width: 720px;
+  margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+.read-app,
+.read-app * {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
 
-    --r-max-w: 620px;
-    --r-radius: 24px;
-    --r-pad: 18px;
+/* ===== 顶部栏 ===== */
+.read-app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--ra-safe-top) + 10px) 16px 10px;
+  background: rgba(245, 241, 230, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--ra-border);
+}
+.read-app-bookname {
+  font-size: 15px;
+  font-weight: 600;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 8px;
+}
+.read-app-topbtns {
+  display: flex;
+  gap: 8px;
+}
+.read-app-topbtn {
+  touch-action: manipulation;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--ra-book-bg);
+  color: var(--ra-text);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ra-border);
+}
+.read-app-topbtn:active {
+  background: var(--ra-border);
+}
 
-    position: relative;
-    width: 100%;
-    max-width: var(--r-max-w);
-    margin: 0 auto;
-    padding: 22px var(--r-pad) 28px;
-    border-radius: var(--r-radius);
-    background: linear-gradient(160deg, var(--r-bg-1) 0%, var(--r-bg-2) 100%);
-    color: var(--r-ink);
-    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
-                 system-ui, -apple-system, "Segoe UI", sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -webkit-tap-highlight-color: transparent;
-    overflow: hidden;
-  }
+/* ===== API 配置面板（折叠） ===== */
+.read-app-config {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, padding 0.35s ease;
+  background: var(--ra-book-bg);
+  border-bottom: 1px solid var(--ra-border);
+}
+.read-app-config.open {
+  max-height: 260px;
+  padding: 14px 16px;
+}
+.read-app-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.read-app-row label {
+  width: 88px;
+  flex-shrink: 0;
+  color: var(--ra-muted);
+  font-size: 13px;
+}
+.read-app-row input {
+  flex: 1;
+  border: 1px solid var(--ra-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  background: #fff;
+  outline: none;
+}
+.read-app-row input:focus { border-color: var(--ra-primary); }
+.read-app-savebtn {
+  touch-action: manipulation;
+  border: none;
+  border-radius: 8px;
+  background: var(--ra-primary);
+  color: #fff;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.read-app-savebtn:active { background: var(--ra-primary-d); }
+.read-app-cfgmsg {
+  font-size: 13px;
+  color: var(--ra-primary);
+  margin-left: 10px;
+}
 
-  .read-app > * { flex: 0 0 auto; }
+/* ===== 内容导入面板 ===== */
+.read-app-import {
+  padding: 14px 16px;
+  background: var(--ra-book-bg);
+  border-bottom: 1px solid var(--ra-border);
+}
+.read-app-import textarea {
+  width: 100%;
+  min-height: 70px;
+  border: 1px solid var(--ra-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  background: #fff;
+}
+.read-app-import textarea:focus { border-color: var(--ra-primary); }
+.read-app-importbtns {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.read-app-importbtns button,
+.read-app-importbtns label {
+  touch-action: manipulation;
+  border: 1px solid var(--ra-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ra-text);
+  padding: 9px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.read-app-importbtns button:active,
+.read-app-importbtns label:active {
+  background: var(--ra-border);
+}
+.read-app-importbtns label input { display: none; }
+.read-app-status {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ra-muted);
+  min-height: 18px;
+}
 
-  /* ---------- 标题 ---------- */
-  .read-app .r-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
+/* ===== 阅读器 ===== */
+.read-app-reader {
+  padding: 16px 22px 100px;
+  min-height: 60vh;
+}
+.read-app-page {
+  font-size: 17px;
+  line-height: 2;
+  color: var(--ra-text);
+  text-align: justify;
+  text-indent: 2em;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.read-app-page:empty::before {
+  content: '导入一本书开始阅读吧 ✦';
+  color: var(--ra-muted);
+  text-indent: 0;
+  text-align: center;
+  display: block;
+  padding: 60px 0;
+  font-size: 15px;
+}
 
-  .read-app .r-title {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 800;
-    letter-spacing: 4px;
-    line-height: 1.1;
-    background: linear-gradient(120deg, #FF9CBE 0%, #C8A0F0 60%, #A890F0 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: #FF9CBE;
-  }
+/* ===== 页码指示器 ===== */
+.read-app-pagebar {
+  position: fixed;
+  top: calc(var(--ra-safe-top) + 54px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(44, 42, 38, 0.7);
+  color: #fff;
+  font-size: 12px;
+  padding: 3px 12px;
+  border-radius: 12px;
+  z-index: 90;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.read-app-pagebar.show { opacity: 1; }
 
-  .read-app .r-sub {
-    margin: 0;
-    font-size: 12px;
-    color: var(--r-ink-soft);
-    letter-spacing: 1px;
-  }
+/* ===== 底部 Tab + 翻页 ===== */
+.read-app-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 720px;
+  margin: 0 auto;
+  z-index: 100;
+  background: var(--ra-book-bg);
+  border-top: 1px solid var(--ra-border);
+  padding-bottom: var(--ra-safe-bottom);
+}
+.read-app-pagerow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--ra-border);
+}
+.read-app-pagebtn {
+  touch-action: manipulation;
+  border: 1px solid var(--ra-border);
+  background: #fff;
+  border-radius: 24px;
+  padding: 8px 22px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--ra-text);
+}
+.read-app-pagebtn:active { background: var(--ra-border); }
+.read-app-pagebtn:disabled { opacity: 0.3; cursor: default; }
+.read-app-pagecount {
+  font-size: 13px;
+  color: var(--ra-muted);
+}
+.read-app-tabs {
+  display: flex;
+}
+.read-app-tab {
+  flex: 1;
+  touch-action: manipulation;
+  border: none;
+  background: transparent;
+  padding: 12px 0;
+  font-size: 14px;
+  color: var(--ra-muted);
+  cursor: pointer;
+  position: relative;
+}
+.read-app-tab.active {
+  color: var(--ra-primary);
+  font-weight: 600;
+}
+.read-app-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ra-primary);
+}
+.read-app-tab-badge {
+  display: inline-block;
+  background: var(--ra-accent);
+  color: #fff;
+  font-size: 10px;
+  border-radius: 10px;
+  padding: 1px 6px;
+  margin-left: 4px;
+  min-width: 16px;
+  text-align: center;
+}
 
-  /* ---------- API 设置条 ---------- */
-  .read-app .r-api {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    width: 100%;
-    margin-bottom: 16px;
-    padding: 10px 12px;
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid var(--r-line);
-    border-radius: 14px;
-  }
+/* ===== 面板（聊天 / 批注） ===== */
+.read-app-panel {
+  display: none;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.read-app-panel.active {
+  display: block;
+  max-height: 55vh;
+  overflow-y: auto;
+  border-top: 1px solid var(--ra-border);
+}
 
-  .read-app .r-api input {
-    flex: 1 1 0;
-    min-width: 0;
-    font-family: inherit;
-    font-size: 13px;
-    color: var(--r-ink);
-    background: transparent;
-    border: none;
-    outline: none;
-    padding: 4px 6px;
-  }
+/* ===== 聊天面板 ===== */
+.read-app-chat {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.read-app-chat-hint {
+  font-size: 13px;
+  color: var(--ra-muted);
+  text-align: center;
+  padding: 8px;
+  background: #f0ebdd;
+  border-radius: 10px;
+  line-height: 1.6;
+}
+.read-app-chat-hint b {
+  color: var(--ra-primary);
+  font-weight: 600;
+}
+.read-app-msg {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 15px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.read-app-msg.user {
+  align-self: flex-end;
+  background: var(--ra-primary);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.read-app-msg.ai {
+  align-self: flex-start;
+  background: #f0ebdd;
+  color: var(--ra-text);
+  border-bottom-left-radius: 4px;
+}
+.read-app-msg.ai .read-app-ref {
+  font-size: 12px;
+  color: var(--ra-muted);
+  border-left: 2px solid var(--ra-primary);
+  padding-left: 6px;
+  margin-top: 6px;
+  display: block;
+}
+.read-app-msg.loading {
+  color: var(--ra-muted);
+  font-style: italic;
+}
+.read-app-msg.error {
+  background: #fde8e8;
+  color: #c0392b;
+}
+.read-app-chat-input {
+  display: flex;
+  gap: 8px;
+  padding: 10px 0 4px;
+  border-top: 1px solid var(--ra-border);
+  margin-top: 6px;
+}
+.read-app-chat-input input {
+  flex: 1;
+  border: 1px solid var(--ra-border);
+  border-radius: 20px;
+  padding: 9px 16px;
+  font-size: 15px;
+  background: #fff;
+  outline: none;
+}
+.read-app-chat-input input:focus { border-color: var(--ra-primary); }
+.read-app-chat-input button {
+  touch-action: manipulation;
+  border: none;
+  border-radius: 20px;
+  background: var(--ra-primary);
+  color: #fff;
+  padding: 9px 18px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.read-app-chat-input button:active { background: var(--ra-primary-d); }
+.read-app-chat-clear {
+  touch-action: manipulation;
+  border: none;
+  background: transparent;
+  color: var(--ra-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
 
-  .read-app .r-api input::placeholder { color: #B8B0CC; }
+/* ===== 批注面板 ===== */
+.read-app-annpanel {
+  padding: 12px 16px 20px;
+}
+.read-app-annempty {
+  text-align: center;
+  color: var(--ra-muted);
+  font-size: 14px;
+  padding: 30px 0;
+}
+.read-app-ann {
+  background: #fbf7ee;
+  border: 1px solid var(--ra-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+.read-app-annquote {
+  border-left: 3px solid var(--ra-primary);
+  padding-left: 8px;
+  font-size: 13px;
+  color: var(--ra-primary-d);
+  margin-bottom: 6px;
+  white-space: pre-wrap;
+}
+.read-app-annnote {
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.read-app-annmeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ra-muted);
+}
+.read-app-anndel {
+  touch-action: manipulation;
+  border: none;
+  background: transparent;
+  color: var(--ra-muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.read-app-anndel:active { color: var(--ra-accent); }
 
-  .read-app .r-api-btn {
-    flex: 0 0 auto;
-    font-family: inherit;
-    font-size: 12.5px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    border: none;
-    border-radius: 999px;
-    padding: 8px 14px;
-    color: #FFFFFF;
-    background: linear-gradient(135deg, #FFC2DA 0%, #FF9CBE 100%);
-    box-shadow: 0 4px 12px rgba(255, 156, 190, 0.35);
-    cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
-    touch-action: manipulation;
-    -webkit-appearance: none;
-    appearance: none;
-  }
+/* ===== 选中悬浮菜单 ===== */
+.read-app-selmenu {
+  position: fixed;
+  display: none;
+  gap: 6px;
+  transform: translate(-50%, -100%);
+  z-index: 9999;
+  background: var(--ra-primary);
+  border-radius: 10px;
+  padding: 5px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.2);
+}
+.read-app-selbtn {
+  touch-action: manipulation;
+  border: none;
+  background: transparent;
+  color: #fff;
+  padding: 7px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+.read-app-selbtn:active { background: var(--ra-primary-d); }
 
-  .read-app .r-api-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(255, 156, 190, 0.5);
-  }
+/* ===== 记忆库面板 ===== */
+.read-app-mempanel {
+  padding: 12px 16px 20px;
+}
+.read-app-memempty {
+  text-align: center;
+  color: var(--ra-muted);
+  font-size: 14px;
+  padding: 30px 0;
+}
+.read-app-memtabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.read-app-memtab {
+  touch-action: manipulation;
+  border: 1px solid var(--ra-border);
+  background: #fff;
+  border-radius: 16px;
+  padding: 4px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--ra-muted);
+}
+.read-app-memtab.active {
+  background: var(--ra-primary);
+  color: #fff;
+  border-color: var(--ra-primary);
+}
+.read-app-mem {
+  background: #f0ebdd;
+  border: 1px solid var(--ra-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+.read-app-memquote {
+  border-left: 3px solid var(--ra-accent);
+  padding-left: 8px;
+  font-size: 12px;
+  color: var(--ra-accent);
+  margin-bottom: 6px;
+  white-space: pre-wrap;
+}
+.read-app-memthought {
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.read-app-memmeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ra-muted);
+}
+.read-app-memmeta .memtag {
+  background: var(--ra-book-bg);
+  border: 1px solid var(--ra-border);
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+}
+.read-app-memdel {
+  touch-action: manipulation;
+  border: none;
+  background: transparent;
+  color: var(--ra-muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.read-app-memdel:active { color: var(--ra-accent); }
 
-  .read-app .r-api-btn:active { transform: translateY(0) scale(0.97); }
-
-  .read-app .r-api-status {
-    font-size: 12px;
-    color: var(--r-ink-soft);
-    white-space: nowrap;
-  }
-
-  /* ---------- 导入区 ---------- */
-  .read-app .r-import {
-    width: 100%;
-    padding: 16px;
-    background: var(--r-card);
-    border-radius: 18px;
-    box-shadow: 0 8px 22px rgba(180, 150, 210, 0.14);
-    margin-bottom: 16px;
-  }
-
-  .read-app .r-import-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--r-ink);
-    letter-spacing: 1px;
-    margin-bottom: 10px;
-  }
-
-  .read-app .r-import textarea {
-    width: 100%;
-    min-height: 120px;
-    resize: vertical;
-    font-family: inherit;
-    font-size: 13.5px;
-    line-height: 1.7;
-    color: var(--r-ink);
-    background: #FAF8FF;
-    border: 1px solid var(--r-line);
-    border-radius: 12px;
-    padding: 12px 14px;
-    outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-
-  .read-app .r-import textarea:focus {
-    border-color: var(--r-pink);
-    box-shadow: 0 0 0 3px rgba(255, 156, 190, 0.15);
-  }
-
-  .read-app .r-import-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 10px;
-  }
-
-  .read-app .r-btn {
-    font-family: inherit;
-    font-size: 13.5px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    border: none;
-    border-radius: 999px;
-    padding: 10px 22px;
-    cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease,
-                background-color 0.18s ease, color 0.18s ease;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-    -webkit-appearance: none;
-    appearance: none;
-    user-select: none;
-    -webkit-user-select: none;
-  }
-
-  .read-app .r-btn-main {
-    color: #FFFFFF;
-    background: linear-gradient(135deg, #FFC2DA 0%, #FF9CBE 100%);
-    box-shadow: 0 6px 16px rgba(255, 156, 190, 0.38);
-  }
-
-  .read-app .r-btn-main:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 22px rgba(255, 156, 190, 0.5);
-  }
-
-  .read-app .r-btn-main:active { transform: translateY(0) scale(0.97); }
-
-  .read-app .r-btn-ghost {
-    background: #F8F3FF;
-    color: var(--r-purple);
-    box-shadow: 0 4px 12px rgba(180, 150, 210, 0.16);
-  }
-
-  .read-app .r-btn-ghost:hover {
-    background: #F1E8FF;
-    transform: translateY(-2px);
-  }
-
-  .read-app .r-btn-ghost:active { transform: translateY(0) scale(0.97); }
-
-  .read-app .r-btn:focus-visible {
-    outline: 3px solid rgba(200, 160, 240, 0.6);
-    outline-offset: 3px;
-  }
-
-  .read-app .r-file-input { display: none; }
-
-  /* ---------- 阅读区 ---------- */
-  .read-app .r-reader { width: 100%; }
-
-  .read-app .r-reader-info {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 10px;
-  }
-
-  .read-app .r-book-name {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--r-ink);
-    letter-spacing: 1px;
-    max-width: 60%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .read-app .r-progress {
-    font-size: 11.5px;
-    color: var(--r-purple);
-    background: rgba(184, 156, 245, 0.12);
-    padding: 3px 10px;
-    border-radius: 999px;
-    white-space: nowrap;
-  }
-
-  .read-app .r-content-card {
-    position: relative;
-    width: 100%;
-    padding: 18px 18px 14px;
-    background: var(--r-card);
-    border-radius: 18px;
-    box-shadow: 0 8px 22px rgba(180, 150, 210, 0.14);
-    margin-bottom: 12px;
-  }
-
-  .read-app .r-content {
-    font-size: 15px;
-    line-height: 1.95;
-    color: var(--r-ink);
-    white-space: pre-wrap;
-    word-break: break-word;
-    min-height: 200px;
-    user-select: text;
-    -webkit-user-select: text;
-  }
-
-  /* 选中文字时的小高亮 */
-  .read-app .r-content::selection,
-  .read-app .r-content *::selection {
-    background: rgba(255, 156, 190, 0.35);
-  }
-
-  .read-app .r-nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-top: 6px;
-  }
-
-  .read-app .r-nav-btn {
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    border: none;
-    border-radius: 999px;
-    padding: 9px 18px;
-    cursor: pointer;
-    color: var(--r-purple);
-    background: #F8F3FF;
-    box-shadow: 0 4px 12px rgba(180, 150, 210, 0.16);
-    transition: transform 0.18s ease, background-color 0.18s ease;
-    touch-action: manipulation;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-
-  .read-app .r-nav-btn:hover {
-    background: #F1E8FF;
-    transform: translateY(-1px);
-  }
-
-  .read-app .r-nav-btn:active { transform: translateY(0) scale(0.97); }
-
-  .read-app .r-page-indicator {
-    font-size: 12.5px;
-    color: var(--r-ink-soft);
-    letter-spacing: 1px;
-  }
-
-  /* ---------- 批注 / AI 面板 ---------- */
-  .read-app .r-panel {
-    width: 100%;
-    padding: 16px 18px;
-    background: rgba(255, 255, 255, 0.75);
-    border: 1px solid var(--r-line);
-    border-radius: 18px;
-    margin-top: 12px;
-    animation: r-fade-up 0.4s ease both;
-  }
-
-  @keyframes r-fade-up {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .read-app .r-panel-title {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: var(--r-pink);
-    margin: 0 0 10px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .read-app .r-panel-body {
-    font-size: 14px;
-    line-height: 1.85;
-    color: var(--r-ink);
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-
-  .read-app .r-panel-loading {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    border: 2px solid var(--r-line);
-    border-top-color: var(--r-pink);
-    border-radius: 50%;
-    animation: r-spin 0.8s linear infinite;
-    vertical-align: -2px;
-    margin-right: 6px;
-  }
-
-  @keyframes r-spin { to { transform: rotate(360deg); } }
-
-  .read-app .r-hidden { display: none !important; }
-
-  /* ---------- 浮动菜单 ---------- */
-  .read-app .r-menu {
-    position: absolute;
-    display: none;
-    gap: 6px;
-    padding: 6px;
-    background: #FFFFFF;
-    border-radius: 12px;
-    box-shadow: 0 8px 22px rgba(140, 110, 180, 0.22);
-    z-index: 30;
-    animation: r-pop 0.15s ease-out;
-  }
-
-  @keyframes r-pop {
-    from { opacity: 0; transform: scale(0.92) translateY(4px); }
-    to   { opacity: 1; transform: scale(1) translateY(0); }
-  }
-
-  .read-app .r-menu.show { display: flex; }
-
-  .read-app .r-menu button {
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    border: none;
-    border-radius: 8px;
-    padding: 7px 12px;
-    cursor: pointer;
-    color: #FFFFFF;
-    background: linear-gradient(135deg, #FFC2DA 0%, #FF9CBE 100%);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    touch-action: manipulation;
-    -webkit-appearance: none;
-    appearance: none;
-    white-space: nowrap;
-  }
-
-  .read-app .r-menu button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 156, 190, 0.45);
-  }
-
-  .read-app .r-menu button:active { transform: scale(0.96); }
-
-  .read-app .r-menu button.r-menu-alt {
-    background: linear-gradient(135deg, #D9CBFB 0%, #B89CF5 100%);
-  }
-
-  /* ---------- 小屏 ---------- */
-  @media (max-width: 420px) {
-    .read-app {
-      padding: 16px 12px 22px;
-      --r-radius: 20px;
-    }
-
-    .read-app .r-title { font-size: 20px; letter-spacing: 3px; }
-    .read-app .r-content { font-size: 14px; line-height: 1.9; }
-    .read-app .r-btn { padding: 9px 18px; font-size: 13px; }
-    .read-app .r-nav-btn { padding: 8px 14px; font-size: 12.5px; }
-  }
 </style>
 
-<div class="read-app" id="read-app">
+</head>
+<body>
+<div class="read-app" id="readRoot">
 
-  <div class="r-head">
-    <div>
-      <h2 class="r-title">一起看书</h2>
-      <p class="r-sub">选中文字，问 AI 或写批注</p>
+  <!-- 顶部栏 -->
+  <div class="read-app-topbar">
+    <div class="read-app-bookname" id="raBookName">未载入内容</div>
+    <div class="read-app-topbtns">
+      <button class="read-app-topbtn" id="raToggleImport" title="导入">＋</button>
+      <button class="read-app-topbtn" id="raToggleCfg" title="设置">⚙</button>
     </div>
   </div>
 
-  <!-- API 设置条：默认接 DeepSeek 的 OpenAI 兼容接口 -->
-  <div class="r-api">
-    <input id="r-api-key" type="password" placeholder="DeepSeek API Key" autocomplete="off">
-    <button class="r-api-btn" id="r-api-save" type="button">保存</button>
-    <span class="r-api-status" id="r-api-status">未配置</span>
-  </div>
-
-  <!-- 导入区 -->
-  <div class="r-import" id="r-import">
-    <div class="r-import-title">粘贴或上传书</div>
-    <textarea id="r-book-text" placeholder="在这里粘贴书的内容……&#10;或上传 .txt / .epub 文件"></textarea>
-    <div class="r-import-actions">
-      <button class="r-btn r-btn-main" id="r-load" type="button">开始阅读</button>
-      <button class="r-btn r-btn-ghost" id="r-upload" type="button">上传文件</button>
-      <input class="r-file-input" id="r-file" type="file" accept=".txt,.epub">
+  <!-- API 配置（可折叠） -->
+  <div class="read-app-config" id="raCfg">
+    <div class="read-app-row">
+      <label>API Key</label>
+      <input id="raApiKey" type="password" placeholder="sk-..." autocomplete="off" />
+    </div>
+    <div class="read-app-row">
+      <label>API Base</label>
+      <input id="raBaseUrl" type="text" placeholder="https://token.sensenova.cn/v1" autocomplete="off" />
+    </div>
+    <div class="read-app-row">
+      <label>模型</label>
+      <input id="raModel" type="text" placeholder="SenseChat-5" autocomplete="off" />
+    </div>
+    <div class="read-app-row">
+      <button class="read-app-savebtn" id="raSaveCfg">保存</button>
+      <span class="read-app-cfgmsg" id="raCfgMsg"></span>
     </div>
   </div>
 
-  <!-- 阅读区 -->
-  <div class="r-reader r-hidden" id="r-reader">
-    <div class="r-reader-info">
-      <span class="r-book-name" id="r-book-name">未命名</span>
-      <span class="r-progress" id="r-progress">0%</span>
+  <!-- 导入面板（可折叠） -->
+  <div class="read-app-import" id="raImport" style="display:none;">
+    <textarea id="raPaste" placeholder="把书的内容粘贴到这里…&#10;或上传 .txt / .epub 文件"></textarea>
+    <div class="read-app-importbtns">
+      <button id="raLoadText">载入粘贴</button>
+      <label>上传文件
+        <input id="raFile" type="file" accept=".txt,.epub" />
+      </label>
+      <button id="raCloseImport" style="margin-left:auto;">收起</button>
+    </div>
+    <div class="read-app-status" id="raStatus"></div>
+  </div>
+
+  <!-- 页码浮标 -->
+  <div class="read-app-pagebar" id="raPageBar">1 / 1</div>
+
+  <!-- 阅读器 -->
+  <div class="read-app-reader">
+    <div class="read-app-page" id="raContent"></div>
+  </div>
+
+  <!-- 底部：翻页 + Tab + 面板 -->
+  <div class="read-app-bottom">
+    <div class="read-app-pagerow">
+      <button class="read-app-pagebtn" id="raPrev">‹ 上一页</button>
+      <span class="read-app-pagecount" id="raPageCount">— / —</span>
+      <button class="read-app-pagebtn" id="raNext">下一页 ›</button>
+    </div>
+    <div class="read-app-tabs">
+      <button class="read-app-tab active" data-tab="chat">AI 陪读<span class="read-app-tab-badge" id="raChatBadge" style="display:none;">0</span></button>
+      <button class="read-app-tab" data-tab="notes">批注 <span id="raAnnCount">0</span></button>
+      <button class="read-app-tab" data-tab="memory">记忆 <span id="raMemCount">0</span></button>
     </div>
 
-    <div class="r-content-card">
-      <div class="r-content" id="r-content"></div>
-      <div class="r-nav">
-        <button class="r-nav-btn" id="r-prev" type="button">上一页</button>
-        <span class="r-page-indicator" id="r-page-indicator">第 1 页</span>
-        <button class="r-nav-btn" id="r-next" type="button">下一页</button>
+    <!-- 聊天面板 -->
+    <div class="read-app-panel active" id="raPanel-chat">
+      <div class="read-app-chat" id="raChat"></div>
+      <div class="read-app-chat-input">
+        <input id="raChatInput" type="text" placeholder="跟 AI 聊聊这页…" />
+        <button id="raChatSend">发送</button>
+      </div>
+      <div style="text-align:right;padding:4px 16px 8px;">
+        <button class="read-app-chat-clear" id="raChatClear">清空对话</button>
       </div>
     </div>
 
-    <div class="r-panel r-hidden" id="r-anno-panel">
-      <p class="r-panel-title">批注</p>
-      <div class="r-panel-body" id="r-anno-body"></div>
+    <!-- 批注面板 -->
+    <div class="read-app-panel" id="raPanel-notes">
+      <div class="read-app-annpanel" id="raAnnList"></div>
     </div>
 
-    <div class="r-panel r-hidden" id="r-ai-panel">
-      <p class="r-panel-title">AI 回答</p>
-      <div class="r-panel-body" id="r-ai-body"></div>
+    <!-- 记忆库面板 -->
+    <div class="read-app-panel" id="raPanel-memory">
+      <div class="read-app-mempanel">
+        <div class="read-app-memtabs">
+          <button class="read-app-memtab active" data-memfilter="book">本书</button>
+          <button class="read-app-memtab" data-memfilter="all">全部</button>
+        </div>
+        <div id="raMemList"></div>
+      </div>
     </div>
   </div>
 
-  <!-- 浮动选中菜单 -->
-  <div class="r-menu" id="r-menu">
-    <button id="r-ask" type="button">问 AI</button>
-    <button id="r-anno" class="r-menu-alt" type="button">写批注</button>
+  <!-- 选中悬浮菜单 -->
+  <div class="read-app-selmenu" id="raSelMenu">
+    <button class="read-app-selbtn" id="raAskAi">问 AI</button>
+    <button class="read-app-selbtn" id="raMakeNote">做批注</button>
+    <button class="read-app-selbtn" id="raSaveMem">存入记忆</button>
   </div>
 
 </div>
 
+
 <script>
-(function () {
-  'use strict';
 
-  /* ============================================================
-     重要说明（给加加）
-     这套代码里所有 "对象.属性" 都写成了 "对象['属性']"，
-     原因是 Pages CMS 会把 xxx.yyy 自动链接化成 [xxx](http://xxx)，
-     导致 <script> 语法崩掉、按钮点不动。
-     方括号写法 CMS 碰不到，所以这样写。
-     功能、外观、文案和普通写法完全一样。
-     ============================================================ */
+/* ============================================================
+   EPUB 解析模块（纯 JS deflate · 按需解压 · 进度回调）
+   ============================================================ */
+var EpubParser = (function () { 'use strict';
 
-  /* ============================================================
-     一、可调参数
-     ============================================================ */
-  var CONFIG = {
-    wordsPerPage: 500,            // 每页字数
-    /* URL 拆开拼接，防止 Pages CMS 把 api.deepseek.com 链接化 */
-    apiBase: 'https:' + '//api' + '.deepseek' + '.com/v1',
-    apiModel: 'deepseek-chat',
-    maxContext: 1500,             // 送给 AI 的正文最多截取多少字
-    maxTokens: 1200               // AI 回答的最大 token
+  function BitReader(data) { this['data'] = data; this['pos'] = 0; this['bit'] = 0; }
+  BitReader['prototype']['readBit'] = function () {
+    var b = (this['data'][this['pos']] >> this['bit']) & 1;
+    this['bit']++;
+    if (this['bit'] === 8) { this['bit'] = 0; this['pos']++; }
+    return b;
+  };
+  BitReader['prototype']['readBits'] = function (n) {
+    var r = 0;
+    for (var i = 0; i < n; i++) r = (r << 1) | this['readBit']();
+    return r;
+  };
+  BitReader['prototype']['skipToByte'] = function () {
+    if (this['bit'] > 0) { this['bit'] = 0; this['pos']++; }
   };
 
-  /* localStorage 键名：
-     - read_app_api_key：只存 DeepSeek API Key，纯本地，用户点「保存」时写入，清空浏览器数据即清除。
-     - read_app_progress：只存阅读进度（书名、分页、当前页、批注），纯本地。
-     不存任何账号、密码、隐私文本。 */
-  var KEY_API = 'read_app_api_key';
-  var KEY_BOOK = 'read_app_progress';
-
-  /* ============================================================
-     二、全局状态
-     ============================================================ */
-  var book = {
-    title: '',
-    pages: [],
-    cur: 0,
-    annos: {}    // { 'p0': '批注内容', ... }
-  };
-
-  var apiKey = '';
-
-  var appEl, apiKeyEl, apiSaveEl, apiStatusEl;
-  var importEl, bookTextEl, loadBtn, uploadBtn, fileInputEl;
-  var readerEl, bookNameEl, progressEl, contentEl, pageIndicatorEl;
-  var prevBtn, nextBtn;
-  var annoPanelEl, annoBodyEl;
-  var aiPanelEl, aiBodyEl;
-  var menuEl, askBtn, annoBtn;
-
-  var selText = '';
-
-  /* ============================================================
-     三、工具函数
-     ============================================================ */
-  function $(id) { return document['getElementById'](id); }
-
-  function show(el) {
-    if (!el) return;
-    el['classList']['remove']('r-hidden');
-  }
-
-  function hide(el) {
-    if (!el) return;
-    el['classList']['add']('r-hidden');
-  }
-
-  function readKey() {
-    try {
-      return window['localStorage']['getItem'](KEY_API) || '';
-    } catch (e) {
-      return '';
+  function buildHuffmanTable(codeLengths) {
+    var n = codeLengths['length'];
+    var maxBits = 0;
+    for (var i = 0; i < n; i++) {
+      if (codeLengths[i] > maxBits) maxBits = codeLengths[i];
     }
-  }
-
-  function writeKey(v) {
-    try {
-      window['localStorage']['setItem'](KEY_API, v);
-    } catch (e) { /* 存不了就算了，不影响阅读 */ }
-  }
-
-  function readBook() {
-    try {
-      var s = window['localStorage']['getItem'](KEY_BOOK);
-      if (!s) return null;
-      return JSON['parse'](s);
-    } catch (e) {
-      return null;
+    if (maxBits === 0) return { table: null, maxBits: 0 };
+    var blCount = new Array(maxBits + 1);
+    for (var j = 0; j < blCount['length']; j++) blCount[j] = 0;
+    for (var k = 0; k < n; k++) blCount[codeLengths[k]]++;
+    var nextCode = new Array(maxBits + 1);
+    var code = 0;
+    for (var p = 1; p <= maxBits; p++) {
+      code = (code + blCount[p - 1]) << 1;
+      nextCode[p] = code;
     }
-  }
-
-  function writeBook() {
-    try {
-      window['localStorage']['setItem'](KEY_BOOK, JSON['stringify'](book));
-    } catch (e) { /* 存不了就算了 */ }
-  }
-
-  /* ============================================================
-     四、EPUB 支持（动态加载 EPUB.js，URL 拆分防 CMS 链接化）
-     ============================================================ */
-  function loadEPUBJS(cb) {
-    if (window['ePub']) { cb(true); return; }
-    if (window['_epubLoading']) {
-      // 有人正在加载，等一等
-      window['_epubReadyList']['push'](cb);
-      return;
-    }
-    window['_epubLoading'] = true;
-    window['_epubReadyList'] = [cb];
-    var s = document['createElement']('script');
-    s['src'] = 'https:' + '//cdn' + '.jsdelivr' + '.net/npm/epubjs/dist/epub.min.js';
-    s['onload'] = function () {
-      window['_epubLoading'] = false;
-      var list = window['_epubReadyList'] || [];
-      for (var i = 0; i < list['length']; i++) list[i](true);
-    };
-    s['onerror'] = function () {
-      window['_epubLoading'] = false;
-      var list2 = window['_epubReadyList'] || [];
-      for (var j = 0; j < list2['length']; j++) list2[j](false);
-    };
-    document['head']['appendChild'](s);
-  }
-
-  /* 把 epub 里所有章节的正文抽出来拼成一个纯文本 */
-  function parseEPUB(file, onDone, onError) {
-    loadEPUBJS(function (ok) {
-      if (!ok) { onError('EPUB 库加载失败，请检查网络'); return; }
-      try {
-        var fr = new FileReader();
-        fr['onload'] = function (e) {
-          var data = e['target']['result'];
-          var epubBook = window['ePub'](data);
-          epubBook['ready']['then'](function () {
-            var spine = epubBook['spine']['items'] || [];
-            var parts = [];
-            var i = 0;
-            var total = spine['length'];
-
-            function next() {
-              if (i >= total) {
-                onDone(parts['join']('\n\n'));
-                return;
-              }
-              var item = spine[i];
-              i++;
-              item['load']()['then'](function (doc) {
-                var body = null;
-                if (doc && doc['querySelector']) {
-                  body = doc['querySelector']('body');
-                }
-                if (!body && typeof doc === 'string') {
-                  var p = new DOMParser();
-                  var d = p['parseFromString'](doc, 'text/html');
-                  body = d['querySelector']('body');
-                }
-                if (body) {
-                  var t = body['textContent']['replace'](/[ \t]+\n/g, '\n')['trim']();
-                  if (t) parts['push'](t);
-                }
-                next();
-              })['catch'](next);
-            }
-            next();
-          })['catch'](function (err) {
-            onError('EPUB 解析失败：' + (err && err['message'] ? err['message'] : err));
-          });
-        };
-        fr['readAsArrayBuffer'](file);
-      } catch (ex) {
-        onError('EPUB 解析异常：' + ex['message']);
+    var table = {};
+    for (var q = 0; q < n; q++) {
+      var len = codeLengths[q];
+      if (len > 0) {
+        var c = nextCode[len];
+        table[c + ':' + len] = q;
+        nextCode[len]++;
       }
-    });
+    }
+    return { table: table, maxBits: maxBits };
   }
 
-  /* ============================================================
-     五、分页
-     ============================================================ */
-  function paginate(text) {
-    var clean = text['replace'](/\r\n/g, '\n')['replace'](/\n{3,}/g, '\n\n');
-    var pages = [];
-    var start = 0;
-
-    while (start < clean['length']) {
-      var end = start + CONFIG['wordsPerPage'];
-      if (end < clean['length']) {
-        // 尽量在段落处断页
-        var br = clean['indexOf']('\n\n', end - 80);
-        if (br !== -1 && br < end + 120) end = br + 2;
-      }
-      pages['push'](clean['slice'](start, end)['trim']());
-      start = end;
-    }
-
-    if (pages['length'] === 0) pages = [''];
-
-    return pages;
+  function fixedLiteralCodeLengths() {
+    var arr = new Array(288);
+    for (var i = 0; i <= 143; i++) arr[i] = 8;
+    for (var j = 144; j <= 255; j++) arr[j] = 9;
+    for (var k = 256; k <= 279; k++) arr[k] = 7;
+    for (var m = 280; m <= 287; m++) arr[m] = 8;
+    return arr;
+  }
+  function fixedDistanceCodeLengths() {
+    var arr = new Array(32);
+    for (var i = 0; i < 32; i++) arr[i] = 5;
+    return arr;
   }
 
-  /* ============================================================
-     五、渲染阅读区
-     ============================================================ */
-  function renderPage() {
-    if (!book['pages']['length']) return;
+  var lengthExtra = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,8,8,8,8,9,9,9,9,10,10,10,10,11,11,11,11,12,12,12,12,13,13,13,13,14,14,14,14,15,15,15,15,16];
+  var lengthBase = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,259,323,387,451,515,643,771,899,1027,1283,1539,1795,2051,2563,3075,3587,4099,5123,6147,7171,8195,10243,12291,14339,16387,20483,24579,28675,32771];
+  var distExtra = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,14,14];
+  var distBase = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577,32769,49153];
 
-    if (book['cur'] < 0) book['cur'] = 0;
-    if (book['cur'] >= book['pages']['length']) {
-      book['cur'] = book['pages']['length'] - 1;
+  function decodeSymbol(reader, huff) {
+    var table = huff['table'];
+    var maxBits = huff['maxBits'];
+    if (!table) return 0;
+    var code = 0;
+    for (var i = 1; i <= maxBits; i++) {
+      code = (code << 1) | reader['readBit']();
+      if (table[code + ':' + i] !== undefined) return table[code + ':' + i];
     }
-
-    bookNameEl['textContent'] = book['title'] || '未命名';
-
-    var p = book['pages'][book['cur']] || '';
-    contentEl['textContent'] = p;
-
-    var total = book['pages']['length'];
-    var percent = total > 0 ? Math['round']((book['cur'] + 1) / total * 100) : 0;
-    progressEl['textContent'] = percent + '%';
-    pageIndicatorEl['textContent'] = '第 ' + (book['cur'] + 1) + ' / ' + total + ' 页';
-
-    // 恢复批注显示
-    var k = 'p' + book['cur'];
-    if (book['annos'][k]) {
-      show(annoPanelEl);
-      annoBodyEl['textContent'] = book['annos'][k];
-    } else {
-      hide(annoPanelEl);
-      annoBodyEl['textContent'] = '';
-    }
-
-    // 换页时收起 AI 面板
-    hide(aiPanelEl);
-    aiBodyEl['textContent'] = '';
-
-    writeBook();
+    return 0;
   }
 
-  /* ============================================================
-     六、AI 调用
-     ============================================================ */
-  function callAI(prompt, onDone, onError) {
-    if (!apiKey) {
-      onError('请先在上方填写并保存 DeepSeek API Key');
-      return;
-    }
-
-    /* 截断超长 prompt，防止超出 API 上下文限制 */
-    var p = prompt;
-    if (p['length'] > CONFIG['maxContext']) {
-      p = p['slice'](0, CONFIG['maxContext']) + '…';
-    }
-
-    var url = CONFIG['apiBase'] + '/chat/completions';
-
-    var body = {
-      model: CONFIG['apiModel'],
-      messages: [
-        { role: 'system', content: '你是一个温柔、耐心的读书伙伴，回答简洁、真诚，不用客套话。' },
-        { role: 'user', content: p }
-      ],
-      temperature: 0.7,
-      max_tokens: CONFIG['maxTokens']
-    };
-
-    window['fetch'](url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + apiKey
-      },
-      body: JSON['stringify'](body)
-    })
-    ['then'](function (r) {
-      if (!r['ok']) {
-        return r['text']()['then'](function (t) {
-          throw new Error('API ' + r['status'] + ': ' + t);
-        });
-      }
-      return r['json']();
-    })
-    ['then'](function (d) {
-      var txt = '';
-      if (d && d['choices'] && d['choices'][0] && d['choices'][0]['message']) {
-        txt = d['choices'][0]['message']['content'] || '';
-      }
-      onDone(txt);
-    })
-    ['catch'](function (e) {
-      onError(e['message'] || '请求失败');
-    });
-  }
-
-  /* 问 AI：对选中文字提问 */
-  function askAI() {
-    if (!selText) return;
-
-    show(aiPanelEl);
-    aiBodyEl['innerHTML'] = '<span class="r-panel-loading"></span>正在想……';
-
-    var q =
-      '我在读《' + (book['title'] || '未命名') + '》，选中了这段文字：\n\n' +
-      '「' + selText + '」\n\n' +
-      '请帮我解释这段话的意思，或者说说你的理解。';
-
-    callAI(q, function (txt) {
-      aiBodyEl['textContent'] = txt || '（没有返回内容）';
-    }, function (err) {
-      aiBodyEl['textContent'] = err;
-    });
-  }
-
-  /* 写批注：对选中文字生成批注并保存 */
-  function writeAnno() {
-    if (!selText) return;
-
-    show(aiPanelEl);
-    aiBodyEl['innerHTML'] = '<span class="r-panel-loading"></span>正在写批注……';
-
-    var q =
-      '请为下面这段书里的文字写一段简短的批注，像读书伙伴在书页边写的感想，100 字以内，语气温暖：\n\n' +
-      '「' + selText + '」';
-
-    callAI(q, function (txt) {
-      var note = txt || '（没有返回内容）';
-      aiBodyEl['textContent'] = note;
-
-      var k = 'p' + book['cur'];
-      var old = book['annos'][k] || '';
-      book['annos'][k] = old ? (old + '\n\n---\n\n' + note) : note;
-      writeBook();
-
-      show(annoPanelEl);
-      annoBodyEl['textContent'] = book['annos'][k];
-    }, function (err) {
-      aiBodyEl['textContent'] = err;
-    });
-  }
-
-  /* ============================================================
-     七、选中文字处理
-     ============================================================ */
-  function onSelect() {
-    var sel = window['getSelection']();
-    if (!sel) return;
-
-    var txt = sel['toString']()['trim']();
-    if (!txt || !contentEl) {
-      menuEl['classList']['remove']('show');
-      selText = '';
-      return;
-    }
-
-    // 判断选区是否在正文里
-    var node = sel['anchorNode'];
-    if (!node || !contentEl['contains'](node)) {
-      menuEl['classList']['remove']('show');
-      selText = '';
-      return;
-    }
-
-    selText = txt;
-
-    // 菜单定位到选区上方
-    try {
-      var rect = sel['getRangeAt'](0)['getBoundingClientRect']();
-      var appRect = appEl['getBoundingClientRect']();
-
-      var left = rect['left'] - appRect['left'] + rect['width'] / 2 - 70;
-      var top = rect['top'] - appRect['top'] - 48;
-
-      if (left < 8) left = 8;
-      if (top < 8) top = rect['bottom'] - appRect['top'] + 8;
-
-      menuEl['style']['left'] = left + 'px';
-      menuEl['style']['top'] = top + 'px';
-    } catch (e) { /* 老浏览器忽略定位 */ }
-
-    menuEl['classList']['add']('show');
-  }
-
-  function onDocMouseDown(e) {
-    if (!menuEl) return;
-    if (menuEl['contains'](e['target'])) return;
-    menuEl['classList']['remove']('show');
-  }
-
-  /* ============================================================
-     八、加载书籍
-     ============================================================ */
-  function startReading(text, title) {
-    var t = (text || '')['trim']();
-    if (!t) {
-      // 不用 alert，用状态栏提示
-      apiStatusEl['textContent'] = '请先粘贴或上传内容';
-      return;
-    }
-
-    book = {
-      title: title || '未命名',
-      pages: paginate(t),
-      cur: 0,
-      annos: {}
-    };
-
-    writeBook();
-
-    hide(importEl);
-    show(readerEl);
-
-    renderPage();
-  }
-
-  /* ============================================================
-     九、初始化
-     ============================================================ */
-  function init() {
-    var _app = $('read-app');
-    var _apiKey = $('r-api-key');
-    var _apiSave = $('r-api-save');
-    var _apiStatus = $('r-api-status');
-
-    var _import = $('r-import');
-    var _bookText = $('r-book-text');
-    var _load = $('r-load');
-    var _upload = $('r-upload');
-    var _file = $('r-file');
-
-    var _reader = $('r-reader');
-    var _bookName = $('r-book-name');
-    var _progress = $('r-progress');
-    var _content = $('r-content');
-    var _pageIndicator = $('r-page-indicator');
-    var _prev = $('r-prev');
-    var _next = $('r-next');
-
-    var _annoPanel = $('r-anno-panel');
-    var _annoBody = $('r-anno-body');
-    var _aiPanel = $('r-ai-panel');
-    var _aiBody = $('r-ai-body');
-
-    var _menu = $('r-menu');
-    var _ask = $('r-ask');
-    var _anno = $('r-anno');
-
-    if (!_app || !_apiKey || !_load || !_content || !_menu) return false;
-
-    appEl = _app;
-    apiKeyEl = _apiKey;
-    apiSaveEl = _apiSave;
-    apiStatusEl = _apiStatus;
-
-    importEl = _import;
-    bookTextEl = _bookText;
-    loadBtn = _load;
-    uploadBtn = _upload;
-    fileInputEl = _file;
-
-    readerEl = _reader;
-    bookNameEl = _bookName;
-    progressEl = _progress;
-    contentEl = _content;
-    pageIndicatorEl = _pageIndicator;
-    prevBtn = _prev;
-    nextBtn = _next;
-
-    annoPanelEl = _annoPanel;
-    annoBodyEl = _annoBody;
-    aiPanelEl = _aiPanel;
-    aiBodyEl = _aiBody;
-
-    menuEl = _menu;
-    askBtn = _ask;
-    annoBtn = _anno;
-
-    /* ---------- API Key ---------- */
-    apiKey = readKey();
-    if (apiKey) {
-      apiKeyEl['value'] = apiKey;
-      apiStatusEl['textContent'] = '已保存';
-    } else {
-      apiStatusEl['textContent'] = '未配置';
-    }
-
-    apiSaveEl['addEventListener']('click', function () {
-      var v = apiKeyEl['value']['trim']();
-      if (!v) {
-        apiStatusEl['textContent'] = 'Key 不能为空';
-        return;
-      }
-      apiKey = v;
-      writeKey(v);
-      apiStatusEl['textContent'] = '已保存';
-    });
-
-    /* ---------- 加载书 ---------- */
-    loadBtn['addEventListener']('click', function () {
-      startReading(bookTextEl['value'], '未命名');
-    });
-
-    uploadBtn['addEventListener']('click', function () {
-      if (fileInputEl) fileInputEl['click']();
-    });
-
-    if (fileInputEl) {
-      fileInputEl['addEventListener']('change', function () {
-        var f = fileInputEl['files'][0];
-        if (!f) return;
-
-        var lower = (f['name'] || '')['toLowerCase']();
-        var isEpub = lower['endsWith']('.epub');
-
-        if (isEpub) {
-          apiStatusEl['textContent'] = '正在解析 EPUB……';
-          parseEPUB(f, function (text) {
-            var title = f['name']['replace'](/\.epub$/i, '');
-            startReading(text, title);
-          }, function (err) {
-            apiStatusEl['textContent'] = err;
-          });
-        } else {
-          // 当作 txt
-          var reader = new FileReader();
-          reader['onload'] = function (e) {
-            var title = f['name']['replace'](/\.txt$/i, '');
-            startReading(e['target']['result'], title);
-          };
-          reader['readAsText'](f);
+  function inflateBlock(reader, litHuff, distHuff, out) {
+    while (true) {
+      var sym = decodeSymbol(reader, litHuff);
+      if (sym === 256) break;
+      if (sym < 256) {
+        out['push'](sym);
+      } else {
+        var lenIdx = sym - 257;
+        if (lenIdx >= 29) break;
+        var len = lengthBase[lenIdx];
+        var extraLen = lengthExtra[lenIdx];
+        if (extraLen > 0) len += reader['readBits'](extraLen);
+        var distSym = decodeSymbol(reader, distHuff);
+        var dist = distBase[distSym];
+        var extraDist = distExtra[distSym];
+        if (extraDist > 0) dist += reader['readBits'](extraDist);
+        var start = out['length'] - dist;
+        for (var i = 0; i < len; i++) {
+          out['push'](out[start + i]);
         }
-        fileInputEl['value'] = '';
+      }
+    }
+  }
+
+  function inflateRaw(data) {
+    var reader = new BitReader(data);
+    var out = [];
+    while (true) {
+      var bfinal = reader['readBit']();
+      var btype = reader['readBits'](2);
+      if (btype === 0) {
+        reader['skipToByte']();
+        var len = reader['data'][reader['pos']] | (reader['data'][reader['pos'] + 1] << 8);
+        var nlen = reader['data'][reader['pos'] + 2] | (reader['data'][reader['pos'] + 3] << 8);
+        if ((len ^ nlen ^ 0xffff) !== 0) break;
+        reader['pos'] += 4;
+        for (var i = 0; i < len; i++) out['push'](reader['data'][reader['pos']++]);
+      } else if (btype === 1) {
+        inflateBlock(reader, buildHuffmanTable(fixedLiteralCodeLengths()), buildHuffmanTable(fixedDistanceCodeLengths()), out);
+      } else if (btype === 2) {
+        var hlit = reader['readBits'](5) + 257;
+        var hdist = reader['readBits'](5) + 1;
+        var hclen = reader['readBits'](4) + 4;
+        var clCodes = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+        var clenLen = new Array(hclen);
+        for (var j = 0; j < hclen; j++) clenLen[clCodes[j]] = reader['readBits'](3);
+        var clHuff = buildHuffmanTable(clenLen);
+        var total = hlit + hdist;
+        var allLen = new Array(total);
+        var idx = 0;
+        while (idx < total) {
+          var sym = decodeSymbol(reader, clHuff);
+          if (sym < 16) {
+            allLen[idx++] = sym;
+          } else if (sym === 16) {
+            var rep = reader['readBits'](2) + 3;
+            var prev = idx > 0 ? allLen[idx - 1] : 0;
+            for (var k = 0; k < rep && idx < total; k++) allLen[idx++] = prev;
+          } else if (sym === 17) {
+            var rep2 = reader['readBits'](3) + 3;
+            for (var m = 0; m < rep2 && idx < total; m++) allLen[idx++] = 0;
+          } else if (sym === 18) {
+            var rep3 = reader['readBits'](7) + 11;
+            for (var n = 0; n < rep3 && idx < total; n++) allLen[idx++] = 0;
+          } else break;
+        }
+        var litHuff = buildHuffmanTable(allLen['slice'](0, hlit));
+        var distHuff = buildHuffmanTable(allLen['slice'](hlit, total));
+        inflateBlock(reader, litHuff, distHuff, out);
+      } else { break; }
+      if (bfinal) break;
+    }
+    return new Uint8Array(out);
+  }
+
+  function scanZip(arrayBuffer) {
+    var view = new DataView(arrayBuffer);
+    var bytes = new Uint8Array(arrayBuffer);
+    var eocdOffset = -1;
+    var minSearch = Math['max'](0, arrayBuffer['byteLength'] - 65557);
+    for (var i = arrayBuffer['byteLength'] - 22; i >= minSearch; i--) {
+      if (view['getUint32'](i, true) === 0x06054b50) { eocdOffset = i; break; }
+    }
+    if (eocdOffset === -1) throw new Error('不是有效的 EPUB 文件');
+    var cdOffset = view['getUint32'](eocdOffset + 16, true);
+    var cdCount = view['getUint16'](eocdOffset + 10, true);
+    var entriesByPath = {};
+    var offset = cdOffset;
+    for (var n = 0; n < cdCount; n++) {
+      if (view['getUint32'](offset, true) !== 0x02014b50) break;
+      var compression = view['getUint16'](offset + 10, true);
+      var compressedSize = view['getUint32'](offset + 20, true);
+      var fileNameLength = view['getUint16'](offset + 28, true);
+      var extraLength = view['getUint16'](offset + 30, true);
+      var commentLength = view['getUint16'](offset + 32, true);
+      var localHeaderOffset = view['getUint32'](offset + 42, true);
+      var nameBytes = bytes['slice'](offset + 46, offset + 46 + fileNameLength);
+      var name = new TextDecoder('utf-8')['decode'](nameBytes);
+      entriesByPath[name] = { name: name, compression: compression, compressedSize: compressedSize, localHeaderOffset: localHeaderOffset };
+      offset += 46 + fileNameLength + extraLength + commentLength;
+    }
+    return { view: view, bytes: bytes, entries: entriesByPath };
+  }
+
+  function decompressSync(scan, entry) {
+    var view = scan['view'];
+    var bytes = scan['bytes'];
+    var lnl = view['getUint16'](entry['localHeaderOffset'] + 26, true);
+    var lel = view['getUint16'](entry['localHeaderOffset'] + 28, true);
+    var dataStart = entry['localHeaderOffset'] + 30 + lnl + lel;
+    /* 检查 general purpose bit flag 第 3 位：若为 1，数据后有 16 字节 data descriptor */
+    var gpbf = view['getUint16'](entry['localHeaderOffset'] + 6, true);
+    var hasDD = (gpbf & 0x08) !== 0;
+    var compSize = entry['compressedSize'];
+    if (hasDD) compSize -= 16;  /* 跳过 descriptor 后才是真实压缩数据 */
+    var cd = bytes['slice'](dataStart, dataStart + compSize);
+    if (entry['compression'] === 0) return cd;
+    if (entry['compression'] === 8) { try { return inflateRaw(cd); } catch (e) { return null; } }
+    return null;
+  }
+
+  function parseEpub(file, onProgress) {
+    var decoder = new TextDecoder('utf-8');
+    var parser = new DOMParser();
+    function progress(s, c, t) { if (typeof onProgress === 'function') { try { onProgress(s, c, t); } catch (e) { } } }
+    return file['arrayBuffer']()['then'](function (buf) {
+      progress('扫描目录', 1, 1);
+      var scan = scanZip(buf);
+      progress('解压 container.xml', 1, 1);
+      var ce = scan['entries']['META-INF/container.xml'];
+      if (!ce) throw new Error('EPUB 结构异常：找不到 container.xml');
+      var cb = decompressSync(scan, ce);
+      if (!cb) throw new Error('EPUB 结构异常：container.xml 解压失败');
+      var cd = parser['parseFromString'](decoder['decode'](cb), 'application/xml');
+      var rf = cd['querySelector']('rootfile');
+      if (!rf) throw new Error('EPUB 结构异常：找不到 rootfile');
+      var opfPath = rf['getAttribute']('full-path');
+      var slash = opfPath['lastIndexOf']('/');
+      var baseDir = slash !== -1 ? opfPath['substring'](0, slash + 1) : '';
+      progress('解压 OPF', 1, 1);
+      var oe = scan['entries'][opfPath];
+      if (!oe) throw new Error('EPUB 结构异常：找不到 OPF');
+      var ob = decompressSync(scan, oe);
+      if (!ob) throw new Error('OPF 解压失败');
+      var od = parser['parseFromString'](decoder['decode'](ob), 'application/xml');
+      var manifest = {};
+      var items = od['querySelectorAll']('manifest > item');
+      for (var i = 0; i < items['length']; i++) {
+        var id = items[i]['getAttribute']('id');
+        var href = items[i]['getAttribute']('href');
+        if (id && href) manifest[id] = href;
+      }
+      var spine = [];
+      var refs = od['querySelectorAll']('spine > itemref');
+      for (var j = 0; j < refs['length']; j++) {
+        var idref = refs[j]['getAttribute']('idref');
+        if (idref) spine['push'](idref);
+      }
+      var titleEl = od['getElementsByTagNameNS']('http://purl.org/dc/elements/1.1/', 'title')[0];
+      var title = titleEl ? titleEl['textContent']['trim']() : '';
+      var cps = [];
+      for (var k = 0; k < spine['length']; k++) {
+        var href2 = manifest[spine[k]];
+        if (!href2) continue;
+        var rel = baseDir + decodeURIComponent(href2);
+        var entry = scan['entries'][rel];
+        if (entry) cps['push']({ rel: rel, entry: entry });
+      }
+      progress('解压章节', 0, cps['length']);
+      var chapters = new Array(cps['length']);
+      for (var t = 0; t < cps['length']; t++) {
+        chapters[t] = decompressSync(scan, cps[t]['entry']);
+        progress('解压章节', t + 1, cps['length']);
+      }
+      progress('提取文字', 0, cps['length']);
+      var fullText = '';
+      for (var m = 0; m < chapters['length']; m++) {
+        if (!chapters[m]) { progress('提取文字', m + 1, cps['length']); continue; }
+        var xmlStr = decoder['decode'](chapters[m]);
+        var ch;
+        try { ch = parser['parseFromString'](xmlStr, 'application/xml'); if (ch['querySelector']('parsererror')) throw new Error('x'); }
+        catch (e) { ch = parser['parseFromString'](xmlStr, 'text/html'); }
+        var junk = ch['querySelectorAll']('script, style');
+        for (var p = 0; p < junk['length']; p++) junk[p]['remove']();
+        var txt = ch['body'] ? ch['body']['textContent'] : '';
+        txt = txt['replace'](/\s+\n/g, '\n')['replace'](/\n{3,}/g, '\n\n')['trim']();
+        if (txt) fullText += txt + '\n\n';
+        progress('提取文字', m + 1, cps['length']);
+      }
+      return { title: title, text: fullText['trim']() };
+    });
+  }
+  return { parse: parseEpub };
+})();
+
+/* ============================================================
+   一起看书 · 主程序（带记忆库）
+   ============================================================ */
+
+var CONFIG = {
+  pageSize: 500,
+  defaultBaseUrl: 'https://token.sensenova.cn/v1',
+  defaultModel: '',
+  storageConfig: 'readApp.config',
+  storageAnnotations: 'readApp.ann',
+  storageChatPrefix: 'readApp.chat.',
+  storageMemory: 'readApp.memory',
+  maxMemoryInPrompt: 20
+};
+
+var $ = function (id) { return document['getElementById'](id); };
+
+var state = {
+  title: '', text: '', bookId: '',
+  pages: [], pageIdx: 0,
+  lastSel: '', chatMsgs: [],
+  memFilter: 'book'
+};
+
+/* ===== 配置 ===== */
+function loadCfg() {
+  try { return JSON['parse'](localStorage['getItem'](CONFIG['storageConfig'])) || { apiKey: '', baseUrl: CONFIG['defaultBaseUrl'], model: CONFIG['defaultModel'] }; }
+  catch (e) { return { apiKey: '', baseUrl: CONFIG['defaultBaseUrl'], model: CONFIG['defaultModel'] }; }
+}
+function saveCfg() {
+  var c = { apiKey: $('raApiKey')['value']['trim'](), baseUrl: $('raBaseUrl')['value']['trim']() || CONFIG['defaultBaseUrl'], model: $('raModel')['value']['trim']() };
+  localStorage['setItem'](CONFIG['storageConfig'], JSON['stringify'](c));
+  $('raCfgMsg')['textContent'] = '已保存';
+  setTimeout(function () { $('raCfgMsg')['textContent'] = ''; }, 2000);
+}
+
+/* ===== 批注 ===== */
+function annKey() { return state['bookId'] + '::' + state['pageIdx']; }
+function getAllAnn() { try { return JSON['parse'](localStorage['getItem'](CONFIG['storageAnnotations'])) || {}; } catch (e) { return {}; } }
+function saveAnn(quote, note) {
+  var all = getAllAnn();
+  var k = annKey();
+  if (!all[k]) all[k] = [];
+  all[k]['push']({ quote: quote, note: note, time: Date['now']() });
+  localStorage['setItem'](CONFIG['storageAnnotations'], JSON['stringify'](all));
+  renderAnn();
+  updateAnnCount();
+}
+function delAnn(idx) {
+  var all = getAllAnn();
+  var k = annKey();
+  if (all[k] && all[k][idx]) { all[k]['splice'](idx, 1); if (all[k]['length'] === 0) delete all[k]; localStorage['setItem'](CONFIG['storageAnnotations'], JSON['stringify'](all)); }
+  renderAnn(); updateAnnCount();
+}
+function renderAnn() {
+  var el = $('raAnnList');
+  var all = getAllAnn();
+  var list = all[annKey()] || [];
+  if (list['length'] === 0) { el['innerHTML'] = '<div class="read-app-annempty">本页还没有批注<br>选中文字 → 点「做批注」</div>'; return; }
+  var html = '';
+  for (var i = 0; i < list['length']; i++) {
+    html += '<div class="read-app-ann"><div class="read-app-annquote">引用：' + esc(list[i]['quote']) + '</div><div class="read-app-annnote">' + esc(list[i]['note']) + '</div><div class="read-app-annmeta"><span>' + new Date(list[i]['time'])['toLocaleString']() + '</span><button class="read-app-anndel" data-i="' + i + '">删除</button></div></div>';
+  }
+  el['innerHTML'] = html;
+  var btns = el['querySelectorAll']('.read-app-anndel');
+  for (var j = 0; j < btns['length']; j++) btns[j]['addEventListener']('click', function () { delAnn(parseInt(this['getAttribute']('data-i'))); });
+}
+function updateAnnCount() {
+  var all = getAllAnn(); var total = 0; var keys = Object['keys'](all);
+  for (var i = 0; i < keys['length']; i++) total += all[keys[i]]['length'];
+  $('raAnnCount')['textContent'] = total;
+}
+
+/* ===== 记忆库 ===== */
+function getAllMem() {
+  try { return JSON['parse'](localStorage['getItem'](CONFIG['storageMemory'])) || []; }
+  catch (e) { return []; }
+}
+function saveAllMem(mem) { localStorage['setItem'](CONFIG['storageMemory'], JSON['stringify'](mem)); }
+
+/* 存一条记忆：手动或 AI 总结后 */
+function saveMemory(quote, thought, opt) {
+  opt = opt || {};
+  var mem = getAllMem();
+  mem['push']({
+    id: 'm' + Date['now']() + '_' + Math['floor'](Math['random']() * 1000),
+    bookId: state['bookId'],
+    bookTitle: state['title'],
+    pageIdx: state['pageIdx'],
+    quote: quote || '',
+    thought: thought || '',
+    time: Date['now'],
+    source: opt['source'] || 'manual'  // manual | ai_note | ai_auto
+  });
+  saveAllMem(mem);
+  renderMemory();
+  updateMemCount();
+}
+
+function delMemory(id) {
+  var mem = getAllMem();
+  for (var i = 0; i < mem['length']; i++) {
+    if (mem[i]['id'] === id) { mem['splice'](i, 1); break; }
+  }
+  saveAllMem(mem); renderMemory(); updateMemCount();
+}
+
+/* 当前书的记忆 + 全局记忆 */
+function getRelevantMemories() {
+  var all = getAllMem();
+  var result = [];
+  for (var i = all['length'] - 1; i >= 0; i--) {
+    if (all[i]['bookId'] === state['bookId']) result['push'](all[i]);
+  }
+  return result;
+}
+
+function updateMemCount() {
+  var all = getAllMem();
+  var bookMem = 0;
+  for (var i = 0; i < all['length']; i++) if (all[i]['bookId'] === state['bookId']) bookMem++;
+  $('raMemCount')['textContent'] = bookMem;
+}
+
+/* 渲染记忆面板 */
+function renderMemory() {
+  var el = $('raMemList');
+  var all = getAllMem();
+  var list = [];
+  if (state['memFilter'] === 'book') {
+    for (var i = all['length'] - 1; i >= 0; i--) if (all[i]['bookId'] === state['bookId']) list['push'](all[i]);
+  } else {
+    for (var j = all['length'] - 1; j >= 0; j--) list['push'](all[j]);
+  }
+  if (list['length'] === 0) {
+    el['innerHTML'] = '<div class="read-app-memempty">' + (state['memFilter'] === 'book' ? '本书还没有记忆<br>选中文字 → 点「存入记忆」' : '还没有任何记忆') + '</div>';
+    return;
+  }
+  var html = '';
+  for (var k = 0; k < list['length']; k++) {
+    var m = list[k];
+    html += '<div class="read-app-mem">';
+    if (m['quote']) html += '<div class="read-app-memquote">「' + esc(m['quote']['slice'](0, 120)) + '」</div>';
+    html += '<div class="read-app-memthought">' + esc(m['thought'] || '(空)') + '</div>';
+    html += '<div class="read-app-memmeta">';
+    html += '<span>';
+    if (state['memFilter'] === 'all') html += '<span class="memtag">' + esc(m['bookTitle'] || '未知') + '</span> ';
+    html += new Date(m['time'])['toLocaleString']() + '</span>';
+    html += '<button class="read-app-memdel" data-id="' + m['id'] + '">删除</button>';
+    html += '</div></div>';
+  }
+  el['innerHTML'] = html;
+  var btns = el['querySelectorAll']('.read-app-memdel');
+  for (var n = 0; n < btns['length']; n++) btns[n]['addEventListener']('click', function () { delMemory(this['getAttribute']('data-id')); });
+}
+
+/* ===== 聊天（带记忆库） ===== */
+function chatKey() { return CONFIG['storageChatPrefix'] + state['bookId']; }
+function loadChat() {
+  if (!state['bookId']) { state['chatMsgs'] = []; return; }
+  try { state['chatMsgs'] = JSON['parse'](localStorage['getItem'](chatKey())) || []; }
+  catch (e) { state['chatMsgs'] = []; }
+  renderChat();
+}
+function saveChat() { localStorage['setItem'](chatKey(), JSON['stringify'](state['chatMsgs'])); }
+function renderChat() {
+  var el = $('raChat');
+  if (state['chatMsgs']['length'] === 0) {
+    el['innerHTML'] = '<div class="read-app-chat-hint"><b>AI 正在陪你读：</b><br>「' + esc(state['title'] || '还没载入书') + '」<br><br>它有<b>记忆库</b>，你可以让它记住你读过的内容～</div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < state['chatMsgs']['length']; i++) {
+    var m = state['chatMsgs'][i];
+    html += '<div class="read-app-msg ' + m['role'] + '">' + esc(m['content']) + '</div>';
+  }
+  el['innerHTML'] = html;
+  el['scrollTop'] = el['scrollHeight'];
+  updateChatBadge();
+}
+function updateChatBadge() {
+  var badge = $('raChatBadge'); var u = 0;
+  for (var i = 0; i < state['chatMsgs']['length']; i++) if (state['chatMsgs'][i]['role'] === 'ai') u++;
+  if (u > 0) { badge['style']['display'] = 'inline-block'; badge['textContent'] = u; }
+  else { badge['style']['display'] = 'none'; }
+}
+function clearChat() { state['chatMsgs'] = []; saveChat(); renderChat(); }
+
+function esc(s) { if (!s) return ''; var d = document['createElement']('div'); d['textContent'] = s; return d['innerHTML']; }
+
+/* ===== 渲染阅读器 ===== */
+function renderPage() {
+  var el = $('raContent');
+  if (state['pages']['length'] === 0) el['textContent'] = '';
+  else el['textContent'] = state['pages'][state['pageIdx']];
+  $('raPageCount')['textContent'] = (state['pageIdx'] + 1) + ' / ' + state['pages']['length'];
+  var bar = $('raPageBar'); bar['textContent'] = (state['pageIdx'] + 1) + ' / ' + state['pages']['length'];
+  bar['classList']['add']('show');
+  clearTimeout(renderPage['_t']); renderPage['_t'] = setTimeout(function () { bar['classList']['remove']('show'); }, 1500);
+  $('raPrev')['disabled'] = state['pageIdx'] <= 0;
+  $('raNext')['disabled'] = state['pageIdx'] >= state['pages']['length'] - 1;
+  renderAnn(); updateAnnCount(); renderMemory(); updateMemCount();
+}
+
+function paginate(text) {
+  var size = CONFIG['pageSize']; var out = [];
+  if (!text) { out['push'](''); return out; }
+  for (var i = 0; i < text['length']; i += size) out['push'](text['slice'](i, i + size));
+  if (out['length'] === 0) out['push']('');
+  return out;
+}
+
+function makeBookId(title, text) {
+  var base = title || (text ? text['slice'](0, 80) : 'default'); var h = 0;
+  for (var i = 0; i < base['length']; i++) h = (h * 31 + base['charCodeAt'](i)) | 0;
+  return 'b' + (h >>> 0)['toString'](36);
+}
+function loadBook(title, text) {
+  state['title'] = title; state['text'] = text; state['bookId'] = makeBookId(title, text);
+  state['pages'] = paginate(text); state['pageIdx'] = 0; state['chatMsgs'] = [];
+  $('raBookName')['textContent'] = title || '未命名';
+  loadChat(); renderPage();
+}
+
+function prevPage() { if (state['pageIdx'] > 0) { state['pageIdx']--; renderPage(); } }
+function nextPage() { if (state['pageIdx'] < state['pages']['length'] - 1) { state['pageIdx']++; renderPage(); } }
+
+function handleTextImport() {
+  var t = $('raPaste')['value'];
+  if (!t || !t['trim']()) { $('raStatus')['textContent'] = '请先粘贴内容'; return; }
+  $('raStatus')['textContent'] = '已载入粘贴文本'; loadBook('粘贴文本', t); $('raImport')['style']['display'] = 'none';
+}
+function handleFileImport(e) {
+  var f = e['target']['files'] && e['target']['files'][0]; if (!f) return;
+  var name = f['name'] || ''; var dot = name['lastIndexOf']('.');
+  var ext = dot !== -1 ? name['slice'](dot + 1)['toLowerCase']() : '';
+  if (ext === 'txt') {
+    $('raStatus')['textContent'] = '正在读取…';
+    f['text']()['then'](function (t) { $('raStatus')['textContent'] = '已载入：' + name; loadBook(name, t); $('raImport')['style']['display'] = 'none'; })['catch'](function (err) { $('raStatus')['textContent'] = '读取失败：' + err['message']; });
+  } else if (ext === 'epub') {
+    $('raStatus')['textContent'] = '正在解析 EPUB…'; var lp = '';
+    EpubParser['parse'](f, function (stage, cur, total) {
+      var txt = stage + (total > 1 ? ' ' + cur + '/' + total : ''); if (txt !== lp) { lp = txt; $('raStatus')['textContent'] = txt + ' …'; }
+    })['then'](function (res) { $('raStatus')['textContent'] = '已载入 EPUB：' + (res['title'] || name); loadBook(res['title'] || name, res['text']); $('raImport')['style']['display'] = 'none'; })['catch'](function (err) { $('raStatus')['textContent'] = 'EPUB 解析失败：' + err['message']; });
+  } else { $('raStatus')['textContent'] = '仅支持 .txt 与 .epub'; }
+  e['target']['value'] = '';
+}
+
+/* ===== 选中菜单 ===== */
+function handleSelection() {
+  var sel = window['getSelection'](); var text = sel ? sel['toString']() : '';
+  if (!text) { hideSel(); return; }
+  var node = sel['anchorNode']; var content = $('raContent');
+  if (!node || !content['contains'](node)) { hideSel(); return; }
+  state['lastSel'] = text;
+  try { var rect = sel['getRangeAt'](0)['getBoundingClientRect'](); if (rect && rect['width'] > 0) { showSel(rect); return; } } catch (e) { }
+  var fb = content['getBoundingClientRect'](); showSel({ left: fb['left'] + fb['width'] / 2, top: fb['top'] + 20, width: 0 });
+}
+function showSel(rect) {
+  var top = rect['top']; var left = rect['left'] + rect['width'] / 2; var mw = 200;
+  if (left < mw / 2 + 4) left = mw / 2 + 4;
+  if (left > window['innerWidth'] - mw / 2 - 4) left = window['innerWidth'] - mw / 2 - 4;
+  if (top < 8) top = rect['bottom'] + 30;
+  var m = $('raSelMenu'); m['style']['left'] = left + 'px'; m['style']['top'] = top + 'px'; m['style']['display'] = 'flex';
+}
+function hideSel() { $('raSelMenu')['style']['display'] = 'none'; }
+
+/* ===== AI 调用 ===== */
+function callAI(msgs, onDone) {
+  var cfg = loadCfg();
+  if (!cfg['apiKey'] || !cfg['model']) { onDone('请先在 ⚙ 里填 API Key 和模型名并保存', 'error'); return; }
+  var url = cfg['baseUrl'] + '/chat/completions';
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg['apiKey'] },
+    body: JSON['stringify']({ model: cfg['model'], messages: msgs })
+  })['then'](function (res) {
+    if (!res['ok']) { return res['text']()['then'](function (t) { throw new Error('HTTP ' + res['status'] + ' ' + t['slice'](0, 200)); }); }
+    return res['json']();
+  })['then'](function (data) {
+    var ans = ''; try { ans = data['choices'][0]['message']['content'] || ''; } catch (e) { ans = '（返回格式异常）'; }
+    onDone(ans);
+  })['catch'](function (err) { onDone('请求失败：' + err['message'], 'error'); });
+}
+
+/* 把记忆库拼进系统提示 */
+function buildMsgs(userText) {
+  var page = state['pages']['length'] > 0 ? state['pages'][state['pageIdx']] : '';
+  var bookMem = getRelevantMemories();
+  var memLines = '';
+  for (var i = 0; i < bookMem['length'] && i < CONFIG['maxMemoryInPrompt']; i++) {
+    var m = bookMem[bookMem['length'] - 1 - i];
+    var tag = '[记忆]';
+    if (m['quote']) memLines += tag + ' 引用「' + m['quote']['slice'](0, 80) + '」 → ' + m['thought'] + '\n';
+    else memLines += tag + ' ' + m['thought'] + '\n';
+  }
+
+  var sys = '你是读者的 AI 陪读，和读者「一起看书」。你有长期记忆库，能记住读者读过的内容、产生的思考、人物关系等。';
+  sys += '\n\n当前书：' + (state['title'] || '未载入');
+  sys += '\n当前进度：第 ' + (state['pageIdx'] + 1) + ' / ' + state['pages']['length'] + ' 页';
+  sys += '\n本页内容：\n' + page;
+  if (memLines) sys += '\n\n===== 你的记忆库（之前和读者一起存的） =====\n' + memLines + '===== 记忆结束 =====\n你可以主动引用这些记忆，让读者知道你还记得。';
+  sys += '\n\n请用简洁中文回答。';
+
+  var history = [];
+  for (var j = 0; j < state['chatMsgs']['length']; j++) { var mm = state['chatMsgs'][j]; history['push']({ role: mm['role'], content: mm['content'] }); }
+  var arr = [{ role: 'system', content: sys }];
+  for (var k = 0; k < history['length']; k++) arr['push'](history[k]);
+  arr['push']({ role: 'user', content: userText });
+  return arr;
+}
+
+function sendChat(text) {
+  text = (text || '')['trim'](); if (!text) return;
+  state['chatMsgs']['push']({ role: 'user', content: text }); saveChat(); renderChat();
+  var tmp = document['createElement']('div'); tmp['className'] = 'read-app-msg ai loading'; tmp['textContent'] = 'AI 正在思考…';
+  $('raChat')['appendChild'](tmp); $('raChat')['scrollTop'] = $('raChat')['scrollHeight'];
+  var msgs = buildMsgs(text);
+  callAI(msgs, function (ans, err) {
+    if (tmp['parentNode']) tmp['parentNode']['removeChild'](tmp);
+    var role = err === 'error' ? 'error' : 'ai';
+    state['chatMsgs']['push']({ role: role, content: ans }); saveChat(); renderChat();
+  });
+}
+
+function askSel() { var t = state['lastSel']; hideSel(); if (!t) { sendChat('帮我解释一下这句话'); return; } sendChat('帮我解释一下这句话：「' + t + '」'); }
+
+/* 选中做批注：AI 生成 → 存批注 + 自动存记忆 */
+function makeNote() {
+  var t = state['lastSel']; hideSel(); if (!t) return;
+  var loading = document['createElement']('div'); loading['className'] = 'read-app-msg ai loading'; loading['textContent'] = 'AI 正在写批注…';
+  $('raChat')['appendChild'](loading);
+  var msgs = [
+    { role: 'system', content: '你是读者的 AI 陪读。请为读者选中的文字写一条简洁的批注（含义解释、背景补充、人物关系、金句点评等），控制在 150 字以内。直接输出批注内容，不要加前后缀。' },
+    { role: 'user', content: '请为这句话写批注：「' + t + '」' }
+  ];
+  callAI(msgs, function (ans, err) {
+    if (loading['parentNode']) loading['parentNode']['removeChild'](loading);
+    if (err === 'error') { sendChat('（批注生成失败：' + ans + '）'); return; }
+    saveAnn(t, ans);
+    /* 同时存进记忆库，AI 后续可以引用 */
+    saveMemory(t, ans, { source: 'ai_note' });
+    switchTab('notes');
+  });
+}
+
+/* 选中直接存记忆（手动） */
+function saveSelMem() {
+  var t = state['lastSel']; hideSel();
+  if (!t) return;
+  saveMemory(t, '（手动保存的引用，可在记忆 Tab 查看）', { source: 'manual' });
+  switchTab('memory');
+}
+
+/* ===== Tab 切换 ===== */
+function switchTab(name) {
+  var tabs = document['querySelectorAll']('.read-app-tab');
+  for (var i = 0; i < tabs['length']; i++) { if (tabs[i]['getAttribute']('data-tab') === name) tabs[i]['classList']['add']('active'); else tabs[i]['classList']['remove']('active'); }
+  var panels = document['querySelectorAll']('.read-app-panel');
+  for (var k = 0; k < panels['length']; k++) panels[k]['classList']['remove']('active');
+  $('raPanel-' + name)['classList']['add']('active');
+  if (name === 'chat') $('raChat')['scrollTop'] = $('raChat')['scrollHeight'];
+  if (name === 'memory') { renderMemory(); updateMemCount(); }
+}
+
+function toggleCfg() { var c = $('raCfg'); c['classList']['toggle']('open'); if (c['classList']['contains']('open')) $('raImport')['style']['display'] = 'none'; }
+function toggleImport() { var imp = $('raImport'); if (imp['style']['display'] === 'none') { imp['style']['display'] = 'block'; $('raCfg')['classList']['remove']('open'); } else { imp['style']['display'] = 'none'; } }
+
+/* ===== 初始化（带重试） ===== */
+function boot(retry) {
+  retry = retry || 0;
+  if (!$('readRoot')) { if (retry < 40) setTimeout(function () { boot(retry + 1); }, 50); return; }
+  try {
+    var cfg = loadCfg();
+    $('raApiKey')['value'] = cfg['apiKey'] || '';
+    $('raBaseUrl')['value'] = cfg['baseUrl'] || CONFIG['defaultBaseUrl'];
+    $('raModel')['value'] = cfg['model'] || '';
+
+    $('raSaveCfg')['addEventListener']('click', saveCfg);
+    $('raLoadText')['addEventListener']('click', handleTextImport);
+    $('raFile')['addEventListener']('change', handleFileImport);
+    $('raCloseImport')['addEventListener']('click', function () { $('raImport')['style']['display'] = 'none'; });
+    $('raPrev')['addEventListener']('click', prevPage);
+    $('raNext')['addEventListener']('click', nextPage);
+    $('raAskAi')['addEventListener']('click', askSel);
+    $('raMakeNote')['addEventListener']('click', makeNote);
+    $('raSaveMem')['addEventListener']('click', saveSelMem);
+    $('raToggleCfg')['addEventListener']('click', toggleCfg);
+    $('raToggleImport')['addEventListener']('click', toggleImport);
+
+    $('raContent')['addEventListener']('mouseup', handleSelection);
+    $('raContent')['addEventListener']('touchend', function () { setTimeout(handleSelection, 30); });
+    document['addEventListener']('mousedown', function (e) {
+      var t = e['target'];
+      if ($('raSelMenu')['contains'](t) || t === $('raContent')) return;
+      hideSel();
+    });
+    window['addEventListener']('scroll', hideSel, true);
+    window['addEventListener']('resize', hideSel);
+
+    var tabs = document['querySelectorAll']('.read-app-tab');
+    for (var i = 0; i < tabs['length']; i++) tabs[i]['addEventListener']('click', function () { switchTab(this['getAttribute']('data-tab')); });
+
+    var memTabs = document['querySelectorAll']('.read-app-memtab');
+    for (var j = 0; j < memTabs['length']; j++) {
+      memTabs[j]['addEventListener']('click', function () {
+        var f = this['getAttribute']('data-memfilter');
+        state['memFilter'] = f;
+        for (var k = 0; k < memTabs['length']; k++) {
+          if (memTabs[k]['getAttribute']('data-memfilter') === f) memTabs[k]['classList']['add']('active');
+          else memTabs[k]['classList']['remove']('active');
+        }
+        renderMemory();
       });
     }
 
-    /* ---------- 翻页 ---------- */
-    prevBtn['addEventListener']('click', function () {
-      if (book['cur'] > 0) {
-        book['cur']--;
-        renderPage();
-      }
-    });
+    $('raChatSend')['addEventListener']('click', function () { var v = $('raChatInput')['value']; if (!v) return; $('raChatInput')['value'] = ''; sendChat(v); });
+    $('raChatInput')['addEventListener']('keydown', function (e) { if (e['key'] === 'Enter' && !e['shiftKey']) { e['preventDefault'](); $('raChatSend')['click'](); } });
+    $('raChatClear')['addEventListener']('click', clearChat);
 
-    nextBtn['addEventListener']('click', function () {
-      if (book['cur'] < book['pages']['length'] - 1) {
-        book['cur']++;
-        renderPage();
-      }
-    });
+    renderChat(); renderPage(); updateAnnCount(); updateMemCount();
+  } catch (e) { if (retry < 40) setTimeout(function () { boot(retry + 1); }, 50); }
+}
 
-    /* ---------- 选中文字 ---------- */
-    document['addEventListener']('mouseup', onSelect);
-    document['addEventListener']('touchend', function () {
-      // 触摸结束后稍等一下，等选区稳定
-      window['setTimeout'](onSelect, 60);
-    });
-    document['addEventListener']('mousedown', onDocMouseDown);
-    document['addEventListener']('touchstart', function (e) {
-      if (!menuEl['contains'](e['target'])) menuEl['classList']['remove']('show');
-    }, { passive: true });
+boot();
 
-    /* ---------- 菜单按钮 ---------- */
-    askBtn['addEventListener']('click', function () {
-      menuEl['classList']['remove']('show');
-      askAI();
-    });
-
-    annoBtn['addEventListener']('click', function () {
-      menuEl['classList']['remove']('show');
-      writeAnno();
-    });
-
-    /* ---------- 恢复上次阅读 ---------- */
-    var saved = readBook();
-    if (saved && saved['pages'] && saved['pages']['length']) {
-      book = saved;
-      hide(importEl);
-      show(readerEl);
-      renderPage();
-    }
-
-    return true;
-  }
-
-  /* 重试启动：应对 playable 系统把脚本抽到 DOM 之前执行的情况 */
-  var tries = 0;
-  var MAX_TRIES = 40;
-
-  function tryInit() {
-    if (init()) return;
-    tries++;
-    if (tries < MAX_TRIES) {
-      window['setTimeout'](tryInit, 100);
-    }
-  }
-
-  if (document['readyState'] === 'loading') {
-    document['addEventListener']('DOMContentLoaded', tryInit);
-  } else {
-    tryInit();
-  }
-})();
 </script>
-  </div>
 </body>
 </html>
