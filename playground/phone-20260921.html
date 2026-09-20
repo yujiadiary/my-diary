@@ -110,8 +110,8 @@
 @keyframes pa-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,59,48,.5)}50%{box-shadow:0 0 0 12px rgba(255,59,48,0)}}
 
 .phone-app-call-controls{display:flex;justify-content:space-around;padding:12px 30px 8px}
-.phone-app-ctrl-btn{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--pa-muted)}
-.phone-app-ctrl-btn .pa-ico{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center}
+.phone-app-ctrl-btn{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--pa-muted);background:transparent;-webkit-appearance:none;appearance:none}
+.phone-app-ctrl-btn .pa-ico{width:48px;height:48px;border-radius:50%;background:#3a3a3c;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#fff}
 .phone-app-ctrl-btn .pa-label{font-size:11px}
 .phone-app-ctrl-btn.active .pa-ico{background:#fff;color:#000}
 .phone-app-ctrl-btn.active .pa-label{color:#fff}
@@ -614,6 +614,11 @@ function handleUserText(text) {
 
 function callAi(userText) {
   var cfg = state['config'];
+  /* 没填模型名，直接提示，不发请求 */
+  if (!cfg['model']) {
+    aiReplied('请先在设置里填写「模型名称」，例如 SenseChat-5。');
+    return;
+  }
   var url = cfg['baseUrl']['replace'](/\/+$/, '') + '/chat/completions';
   var sysPrompt = (state['currentContact'] && state['currentContact']['sys']) || cfg['sysPrompt'];
   var recent = state['history']['slice'](-CONFIG['maxHistory']);
@@ -625,7 +630,13 @@ function callAi(userText) {
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg['apiKey'] },
     body: JSON['stringify']({ model: cfg['model'], messages: messages })
   })['then'](function (resp) {
-    if (!resp['ok']) throw new Error('HTTP ' + resp['status']);
+    if (!resp['ok']) {
+      /* 解析 API 返回的具体错误信息 */
+      return resp['json']()['then'](function (errData) {
+        var msg = (errData && errData['error'] && (errData['error']['message'] || errData['error']['code'])) || ('HTTP ' + resp['status']);
+        throw new Error(msg);
+      })['catch'](function () { throw new Error('HTTP ' + resp['status']); });
+    }
     return resp['json']();
   })['then'](function (data) {
     var reply = data && data['choices'] && data['choices'][0] && data['choices'][0]['message'] && data['choices'][0]['message']['content'];
