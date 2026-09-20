@@ -110,10 +110,12 @@
 @keyframes pa-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,59,48,.5)}50%{box-shadow:0 0 0 12px rgba(255,59,48,0)}}
 
 .phone-app-call-controls{display:flex;justify-content:space-around;padding:12px 30px 8px}
-.phone-app-ctrl-btn{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--pa-muted);background:transparent;-webkit-appearance:none;appearance:none}
-.phone-app-ctrl-btn .pa-ico{width:48px;height:48px;border-radius:50%;background:#3a3a3c;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#fff}
+.phone-app-ctrl-btn{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--pa-muted);background:transparent!important;-webkit-appearance:none;appearance:none;padding:0}
+.phone-app-ctrl-btn .pa-ico{width:48px;height:48px;border-radius:50%!important;background-color:#3a3a3c!important;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#fff!important}
+.phone-app-ctrl-btn .pa-ico svg{fill:#fff!important;width:24px;height:24px}
 .phone-app-ctrl-btn .pa-label{font-size:11px}
-.phone-app-ctrl-btn.active .pa-ico{background:#fff;color:#000}
+.phone-app-ctrl-btn.active .pa-ico{background-color:#fff!important;color:#000!important}
+.phone-app-ctrl-btn.active .pa-ico svg{fill:#000!important}
 .phone-app-ctrl-btn.active .pa-label{color:#fff}
 
 .phone-app-hangup-row{display:flex;justify-content:center;padding:12px 0 20px}
@@ -686,6 +688,11 @@ function initTts() {
 function speak(text) {
   var cfg = state['config'];
   if (cfg['useCloudTts'] && cfg['ttsUrl']) { speakCloud(text); return; }
+  speakBrowser(text);
+}
+
+/* 浏览器原生 TTS */
+function speakBrowser(text) {
   if (!state['synthSupport']) { toast('当前浏览器不支持语音朗读，已切换为文字模式'); return; }
   try {
     window['speechSynthesis']['cancel']();
@@ -696,6 +703,7 @@ function speak(text) {
   } catch (e) {}
 }
 
+/* 云端 TTS，失败时自动降级到浏览器朗读 */
 function speakCloud(text) {
   var cfg = state['config'];
   fetch(cfg['ttsUrl'], {
@@ -709,7 +717,10 @@ function speakCloud(text) {
     var audio = new window['Audio']();
     audio['src'] = URL['createObjectURL'](blob);
     audio['play']();
-  })['catch'](function (e) { toast('云端 TTS 失败：' + e['message']); });
+  })['catch'](function (e) {
+    toast('云端 TTS 不可用，改用浏览器朗读');
+    speakBrowser(text); /* 自动降级 */
+  });
 }
 
 function stopSpeaking() {
