@@ -257,7 +257,7 @@
       </div>
       <div class="phone-app-settings-row">
         <label>TTS 接口地址（MiniMax T2A V2）</label>
-        <input type="text" id="paTtsUrl" placeholder="https://api.minimaxi.com/v1/t2a_v2" />
+        <input type="text" id="paTtsUrl" placeholder="https://api.minimax.cn/v1/t2a_v2" />
       </div>
       <div class="phone-app-settings-row">
         <label>MiniMax API Key（单独填，和聊天的 Key 不一样）</label>
@@ -296,7 +296,8 @@
 var CONFIG = {
   defaultBaseUrl: 'https://token.sensenova.cn/v1',
   defaultSysPrompt: '你是电话那头的人，用口语化的方式简短回复，像真实通话一样，每次不超过50字。',
-  defaultTtsUrl: 'https://api.minimaxi.com/v1/t2a_v2', /* MiniMax T2A V2 接口 */
+  defaultTtsUrl: 'https://api.minimax.cn/v1/t2a_v2', /* MiniMax T2A V2 接口（国内主站 .cn） */
+  defaultTtsBackupUrl: 'https://api-bj.minimaxi.com/v1/t2a_v2', /* MiniMax 备用接口 */
   defaultTtsGroupId: '210158230773437642',              /* MiniMax Group ID */
   defaultTtsVoiceId: 'male-qn-qingse',                  /* MiniMax 音色 ID */
   ttsModel: 'speech-2.8-hd',                            /* MiniMax TTS 模型 */
@@ -727,60 +728,75 @@ function speakCloud(text) {
   var cfg = state['config'];
   var key = cfg['ttsApiKey'] || cfg['apiKey']; /* MiniMax key，没填就用聊天的 key */
   if (!key) { toast('TTS 需要 API Key，请在设置里填写'); speakBrowser(text); return; }
-  var url = cfg['ttsUrl'] + '?GroupId=' + encodeURIComponent(cfg['ttsGroupId']);
-  fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + key
+
+  var body = JSON['stringify']({
+    model: CONFIG['ttsModel'],
+    text: text,
+    stream: false,
+    output_format: 'hex',
+    language_boost: 'auto',
+    voice_setting: {
+      voice_id: cfg['ttsVoiceId'],
+      speed: 1,
+      vol: 1,
+      pitch: 0
     },
-    body: JSON['stringify']({
-      model: CONFIG['ttsModel'],
-      text: text,
-      stream: false,
-      voice_setting: {
-        voice_id: cfg['ttsVoiceId'],
-        speed: 1,
-        vol: 1,
-        pitch: 0
-      },
-      audio_setting: {
-        sample_rate: 32000,
-        bitrate: 128000,
-        format: 'mp3',
-        channel: 1
-      }
-    })
-  })['then'](function (resp) {
-    if (!resp['ok']) {
-      /* 解析 MiniMax 返回的错误信息 */
-      return resp['text']()['then'](function (body) {
-        var msg = 'TTS HTTP ' + resp['status'];
-        try {
-          var j = JSON['parse'](body);
-          if (j && j['base_resp']) msg += '：' + (j['base_resp']['status_msg'] || j['base_resp']['status_code']);
-        } catch (e) { msg += '：' + body['slice'](0, 80); }
-        throw new Error(msg);
-      });
+    audio_setting: {
+      sample_rate: 32000,
+      bitrate: 128000,
+      format: 'mp3',
+      channel: 1
     }
-    return resp['json']();
-  })['then'](function (data) {
-    /* MiniMax 返回 hex 编码的音频，需转成 Blob 播放 */
-    var hex = data && data['data'] && data['data']['audio'];
-    if (!hex) throw new Error('未返回音频数据');
-    var blob = hexToBlob(hex, 'audio/mpeg');
-    var audio = new window['Audio']();
-    audio['src'] = URL['createObjectURL'](blob);
-    audio['play']();
-  })['catch'](function (e) {
-    var errMsg = e['message'] || String(e);
-    /* 网络错误/CORS 会是 TypeError */
-    if (errMsg['indexOf']('Failed to fetch') >= 0 || errMsg['indexOf']('NetworkError') >= 0) {
-      errMsg = '网络或跨域(CORS)错误，浏览器无法直连 MiniMax';
-    }
-    toast('MiniMax TTS 失败：' + errMsg);
-    speakBrowser(text); /* 自动降级 */
   });
+
+  /* 主接口 + 备用接口，主接口失败自动试备用 */
+  var urls = [cfg['ttsUrl']];
+  if (cfg['ttsUrl'] !== CONFIG['defaultTtsBackupUrl']) {
+    urls['push'](CONFIG['defaultTtsBackupUrl']);
+  }
+
+  function tryTts(idx, lastErr) {
+    if (idx >= urls['length']) {
+      var errMsg = lastErr || '未知错误';
+      if (errMsg['indexOf']('Failed to fetch') >= 0 || errMsg['indexOf']('NetworkError') >= 0) {
+        errMsg = '网络或跨域(CORS)错误，浏览器无法直连 MiniMax';
+      }
+      toast('MiniMax TTS 失败：' + errMsg);
+      speakBrowser(text); /* 自动降级 */
+      return;
+    }
+    var url = urls[idx] + '?GroupId=' + encodeURIComponent(cfg['ttsGroupId']);
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + key
+      },
+      body: body
+    })['then'](function (resp) {
+      if (!resp['ok']) {
+        return resp['text']()['then'](function (body) {
+          var msg = 'HTTP ' + resp['status'];
+          try {
+            var j = JSON['parse'](body);
+            if (j && j['base_resp']) msg += '：' + (j['base_resp']['status_msg'] || j['base_resp']['status_code']);
+          } catch (e) { msg += '：' + body['slice'](0, 80); }
+          throw new Error(msg);
+        });
+      }
+      return resp['json']();
+    })['then'](function (data) {
+      var hex = data && data['data'] && data['data']['audio'];
+      if (!hex) throw new Error('未返回音频数据');
+      var blob = hexToBlob(hex, 'audio/mpeg');
+      var audio = new window['Audio']();
+      audio['src'] = URL['createObjectURL'](blob);
+      audio['play']();
+    })['catch'](function (e) {
+      tryTts(idx + 1, e['message'] || String(e)); /* 主接口失败，试备用 */
+    });
+  }
+  tryTts(0);
 }
 
 /* hex 字符串转 Blob */
