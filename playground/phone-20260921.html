@@ -363,7 +363,7 @@ function loadConfig() {
       ttsUrl: CONFIG['defaultTtsUrl'],
       ttsGroupId: CONFIG['defaultTtsGroupId'],
       ttsVoiceId: CONFIG['defaultTtsVoiceId'],
-      autoTrans: true
+      autoTrans: false
     };
   }
   state['config']['baseUrl'] = state['config']['baseUrl'] || CONFIG['defaultBaseUrl'];
@@ -642,13 +642,8 @@ function callAi(userText) {
     return;
   }
   var url = cfg['baseUrl']['replace'](/\/+$/, '') + '/chat/completions';
-  /* 系统提示词优先级：用户自定义 > 联系人预设 > 默认 */
-  var sysPrompt;
-  if (cfg['sysPrompt'] && cfg['sysPrompt'] !== CONFIG['defaultSysPrompt']) {
-    sysPrompt = cfg['sysPrompt'];
-  } else {
-    sysPrompt = (state['currentContact'] && state['currentContact']['sys']) || CONFIG['defaultSysPrompt'];
-  }
+  /* 系统提示词：用户设置的优先，没填才用联系人预设，最后用默认 */
+  var sysPrompt = cfg['sysPrompt'] || (state['currentContact'] && state['currentContact']['sys']) || CONFIG['defaultSysPrompt'];
   var recent = state['history']['slice'](-CONFIG['maxHistory']);
   var messages = [{ role: 'system', content: sysPrompt }];
   for (var i = 0; i < recent['length']; i++) messages['push'](recent[i]);
