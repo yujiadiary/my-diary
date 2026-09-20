@@ -786,8 +786,17 @@ function speakCloud(text) {
       }
       return resp['json']();
     })['then'](function (data) {
+      /* MiniMax 即使业务错误也返回 HTTP 200，需检查 base_resp.status_code */
+      var base = data && data['base_resp'];
+      if (base && base['status_code'] !== 0) {
+        throw new Error('业务错误 ' + base['status_code'] + '：' + (base['status_msg'] || '未知'));
+      }
       var hex = data && data['data'] && data['data']['audio'];
-      if (!hex) throw new Error('未返回音频数据');
+      if (!hex) {
+        /* 调试：把完整响应打出来 */
+        var dump = JSON['stringify'](data)['slice'](0, 200);
+        throw new Error('未返回音频数据，响应：' + dump);
+      }
       var blob = hexToBlob(hex, 'audio/mpeg');
       var audio = new window['Audio']();
       audio['src'] = URL['createObjectURL'](blob);
