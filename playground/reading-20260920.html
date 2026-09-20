@@ -863,7 +863,12 @@ var EpubParser = (function () { 'use strict';
     var lnl = view['getUint16'](entry['localHeaderOffset'] + 26, true);
     var lel = view['getUint16'](entry['localHeaderOffset'] + 28, true);
     var dataStart = entry['localHeaderOffset'] + 30 + lnl + lel;
-    var cd = bytes['slice'](dataStart, dataStart + entry['compressedSize']);
+    /* 检查 general purpose bit flag 第 3 位：若为 1，数据后有 16 字节 data descriptor */
+    var gpbf = view['getUint16'](entry['localHeaderOffset'] + 6, true);
+    var hasDD = (gpbf & 0x08) !== 0;
+    var compSize = entry['compressedSize'];
+    if (hasDD) compSize -= 16;  /* 跳过 descriptor 后才是真实压缩数据 */
+    var cd = bytes['slice'](dataStart, dataStart + compSize);
     if (entry['compression'] === 0) return cd;
     if (entry['compression'] === 8) { try { return inflateRaw(cd); } catch (e) { return null; } }
     return null;
@@ -880,7 +885,7 @@ var EpubParser = (function () { 'use strict';
       var ce = scan['entries']['META-INF/container.xml'];
       if (!ce) throw new Error('EPUB 结构异常：找不到 container.xml');
       var cb = decompressSync(scan, ce);
-      if (!cb) cb = new Uint8Array([0]);
+      if (!cb) throw new Error('EPUB 结构异常：container.xml 解压失败');
       var cd = parser['parseFromString'](decoder['decode'](cb), 'application/xml');
       var rf = cd['querySelector']('rootfile');
       if (!rf) throw new Error('EPUB 结构异常：找不到 rootfile');
