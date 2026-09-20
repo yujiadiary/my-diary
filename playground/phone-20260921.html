@@ -295,7 +295,7 @@
    ============================================================ */
 var CONFIG = {
   defaultBaseUrl: 'https://token.sensenova.cn/v1',
-  defaultSysPrompt: '你是电话那头的人，用口语化的方式简短回复，像真实通话一样，每次不超过50字。',
+  defaultSysPrompt: '你是电话那头的人，用口语化的方式简短回复，像真实通话一样，每次不超过50字。如需指定语言，请在此处写明（例如：全程用英文回复）。',
   defaultTtsUrl: 'https://api.minimax.cn/v1/t2a_v2', /* MiniMax T2A V2 接口（国内主站 .cn） */
   defaultTtsBackupUrl: 'https://api-bj.minimaxi.com/v1/t2a_v2', /* MiniMax 备用接口 */
   defaultTtsGroupId: '210158230773437642',              /* MiniMax Group ID */
@@ -372,7 +372,7 @@ function loadConfig() {
   state['config']['ttsGroupId'] = state['config']['ttsGroupId'] || CONFIG['defaultTtsGroupId'];
   state['config']['ttsVoiceId'] = state['config']['ttsVoiceId'] || CONFIG['defaultTtsVoiceId'];
   if (typeof state['config']['useCloudTts'] !== 'boolean') state['config']['useCloudTts'] = false;
-  if (typeof state['config']['autoTrans'] !== 'boolean') state['config']['autoTrans'] = true;
+  if (typeof state['config']['autoTrans'] !== 'boolean') state['config']['autoTrans'] = false;
 }
 
 function saveConfig() {
@@ -642,8 +642,11 @@ function callAi(userText) {
     return;
   }
   var url = cfg['baseUrl']['replace'](/\/+$/, '') + '/chat/completions';
-  /* 系统提示词：用户设置的优先，没填才用联系人预设，最后用默认 */
-  var sysPrompt = cfg['sysPrompt'] || (state['currentContact'] && state['currentContact']['sys']) || CONFIG['defaultSysPrompt'];
+  /* 系统提示词：用户设置的优先，加上联系人名作为上下文 */
+  var sysPrompt = cfg['sysPrompt'] || CONFIG['defaultSysPrompt'];
+  if (state['currentContact'] && state['currentContact']['name']) {
+    sysPrompt = '你正在和「' + state['currentContact']['name'] + '」通电话。\n' + sysPrompt;
+  }
   var recent = state['history']['slice'](-CONFIG['maxHistory']);
   var messages = [{ role: 'system', content: sysPrompt }];
   for (var i = 0; i < recent['length']; i++) messages['push'](recent[i]);
