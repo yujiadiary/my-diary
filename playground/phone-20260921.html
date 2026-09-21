@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>模拟苹果电话</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>模拟苹果电话 v3</title>
 <style>
 /* ========== 核心参数（颜色/尺寸都在这里改） ========== */
 .phone-app{
@@ -182,10 +185,16 @@
 
 /* 短信对话页（全屏覆盖） */
 .phone-app-sms-chat{position:fixed;inset:0;background:#000;z-index:180;display:flex;flex-direction:column}
-.phone-app-sms-topbar{flex-shrink:0;height:54px;display:flex;align-items:center;padding:0 12px;background:#1c1c1e;border-bottom:1px solid #38383a;gap:10px}
+.phone-app-sms-topbar{flex-shrink:0;height:54px;display:flex;align-items:center;padding:0 8px;background:#1c1c1e;border-bottom:1px solid #38383a;gap:8px}
 .phone-app-sms-back{color:#0a84ff;font-size:28px;background:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center}
 .phone-app-sms-back:active{opacity:.5}
-.phone-app-sms-title{flex:1;text-align:center;font-size:17px;font-weight:600}
+.phone-app-sms-top-info{flex:1;display:flex;align-items:center;gap:10px;min-width:0}
+.phone-app-sms-top-avatar{width:34px;height:34px;border-radius:50%;background:#3a3a3c;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;color:#fff;overflow:hidden;background-size:cover;background-position:center;flex-shrink:0}
+.phone-app-sms-top-text{display:flex;flex-direction:column;min-width:0}
+.phone-app-sms-title{font-size:16px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phone-app-sms-sub{font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phone-app-sms-facetime{width:36px;height:36px;border-radius:50%;background:rgba(10,132,255,.18);color:#0a84ff;border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:manipulation}
+.phone-app-sms-facetime:active{opacity:.6;background:rgba(10,132,255,.3)}
 .phone-app-sms-messages{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 0;display:flex;flex-direction:column;gap:6px;background:#000}
 .phone-app-sms-input{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:10px 12px;background:#1c1c1e;border-top:1px solid #38383a}
 .phone-app-sms-input input{flex:1;background:#2c2c2e;border:1px solid #38383a;border-radius:20px;padding:8px 14px;color:#fff;font-size:15px;outline:none}
@@ -199,7 +208,10 @@
 .phone-app-sms-bubble .pa-sms-bar{display:none;margin-top:6px;gap:6px}
 .phone-app-sms-bubble.pinned .pa-sms-bar{display:flex}
 .phone-app-sms-bubble .pa-sms-btn{font-size:11px;background:rgba(255,255,255,.18);border-radius:8px;padding:3px 8px;color:#fff}
-.phone-app-sms-delivered{align-self:flex-end;font-size:11px;color:var(--pa-muted);margin:2px 4px 0}
+.phone-app-sms-delivered{align-self:flex-end;font-size:11px;color:rgba(255,255,255,.45);margin:2px 4px 0}
+.phone-app-sms-time-sep{align-self:center;font-size:11px;color:rgba(255,255,255,.5);background:rgba(255,255,255,.08);border-radius:10px;padding:4px 10px;margin:10px 0 4px;white-space:nowrap}
+.phone-app-sms-plus{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border:1px solid #38383a;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:300}
+.phone-app-sms-plus:active{background:rgba(255,255,255,.2)}
 
 /* 记忆库（短信） */
 .phone-app-smem-group{padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.06)}
@@ -230,7 +242,10 @@
   <div class="phone-app-dial phone-app-call" id="paDialView">
     <div class="phone-app-topbar">
       <h1 id="paDialTitle">最近通话</h1>
-      <button class="phone-app-settings-btn" id="paSettingsBtn" title="设置">⚙</button>
+      <div style="display:flex;gap:6px">
+        <button class="phone-app-settings-btn" id="paAddContactBtn" title="新建联系人">＋</button>
+        <button class="phone-app-settings-btn" id="paSettingsBtn" title="设置">⚙</button>
+      </div>
     </div>
 
     <!-- 最近通话 tab -->
@@ -279,6 +294,10 @@
         <svg class="pa-tab-ico" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
         <span class="pa-tab-label">联系人</span>
       </button>
+      <button class="phone-app-tab" data-tab="keypad">
+        <svg class="pa-tab-ico" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="6" r="1.8"/><circle cx="12" cy="6" r="1.8"/><circle cx="18" cy="6" r="1.8"/><circle cx="6" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="18" cy="12" r="1.8"/><circle cx="6" cy="18" r="1.8"/><circle cx="12" cy="18" r="1.8"/><circle cx="18" cy="18" r="1.8"/></svg>
+        <span class="pa-tab-label">键盘</span>
+      </button>
       <button class="phone-app-tab" data-tab="sms">
         <svg class="pa-tab-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke-linejoin="round"/></svg>
         <span class="pa-tab-label">短信</span>
@@ -294,11 +313,20 @@
   <div class="phone-app-sms-chat phone-app-hidden" id="paSmsChatView">
     <div class="phone-app-sms-topbar">
       <button class="phone-app-sms-back" id="paSmsBack" style="transform:scaleX(-1)">›</button>
-      <div class="phone-app-sms-title" id="paSmsTitle">联系人</div>
-      <div style="width:32px"></div>
+      <div class="phone-app-sms-top-info" id="paSmsTopInfo">
+        <div class="phone-app-sms-top-avatar" id="paSmsTopAvatar">?</div>
+        <div class="phone-app-sms-top-text">
+          <div class="phone-app-sms-title" id="paSmsTitle">联系人</div>
+          <div class="phone-app-sms-sub" id="paSmsSub">138 0013 8000</div>
+        </div>
+      </div>
+      <button class="phone-app-sms-facetime" id="paSmsCall" title="拨打电话">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+      </button>
     </div>
     <div class="phone-app-sms-messages" id="paSmsMessages"></div>
     <div class="phone-app-sms-input">
+      <button class="phone-app-sms-plus" id="paSmsPlus" title="更多">+</button>
       <input type="text" id="paSmsInput" placeholder="iMessage" />
       <button class="phone-app-sms-send" id="paSmsSend" title="发送">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
@@ -698,14 +726,17 @@ function renderSmsList(){
     var c=state['contacts'][i];
     var mem=loadSmsMem(c['name']);
     var preview='(还没有短信)';
-    for(var j=mem['length']-1;j>=0;j--){if(mem[j]['content']){preview=mem[j]['content'];break;}}
+    var lastTs=0;
+    for(var j=mem['length']-1;j>=0;j--){
+      if(mem[j]['content']){preview=mem[j]['content'];lastTs=mem[j]['timestamp']||0;break;}
+    }
     var avStyle=c['img']?'background-image:url('+c['img']+');background-size:cover;background-position:center':'';
     var avText=c['img']?'':c['avatar'];
     html+='<div class="phone-app-sms-item" data-sms="'+i+'">'
       +'<div class="phone-app-sms-avatar" style="'+avStyle+'">'+avText+'</div>'
       +'<div class="phone-app-sms-info"><div class="phone-app-sms-name">'+c['name']+'</div>'
       +'<div class="phone-app-sms-preview">'+preview+'</div></div>'
-      +'<div class="phone-app-sms-time">短信</div></div>';
+      +'<div class="phone-app-sms-time">'+(lastTs?fmtSmsListTime(lastTs):'短信')+'</div></div>';
   }
   if(!html)html='<div class="phone-app-sms-empty">还没有短信对话</div>';
   list['innerHTML']=html;
@@ -724,6 +755,10 @@ function openSmsChat(idx){
   var c=state['contacts'][idx];
   smsMsgs=loadSmsMem(c['name']);
   $('paSmsTitle')['textContent']=c['name'];
+  $('paSmsSub')['textContent']=c['num']||'';
+  var av=$('paSmsTopAvatar');
+  if(c['img']){av['style']['backgroundImage']='url('+c['img']+')';av['textContent']='';}
+  else{av['style']['backgroundImage']='';av['textContent']=c['avatar']||c['name']['charAt'](0);}
   $('paSmsChatView')['classList']['remove']('phone-app-hidden');
   $('paSmsChatView')['style']['zIndex']=300;
   renderSmsMessages();
@@ -736,8 +771,18 @@ function closeSmsChat(){
 function renderSmsMessages(){
   var box=$('paSmsMessages');
   box['innerHTML']='';
+  var prevTs=null;
   for(var i=0;i<smsMsgs['length'];i++){
     var m=smsMsgs[i];
+    var currTs=m['timestamp'];
+    /* 时间分隔符 */
+    if(needTimeSep(prevTs,currTs)){
+      var sep=document['createElement']('div');
+      sep['className']='phone-app-sms-time-sep';
+      sep['textContent']=fmtSmsTime(currTs);
+      box['appendChild'](sep);
+    }
+    prevTs=currTs;
     var div=document['createElement']('div');
     div['className']='phone-app-sms-bubble '+(m['role']==='user'?'me':'other');
     div['textContent']=m['content'];
@@ -761,7 +806,7 @@ function renderSmsMessages(){
         var mem=loadSmsMem(state['contacts'][smsChatIdx]['name']);
         var exists=false;
         for(var k=0;k<mem['length'];k++){if(mem[k]['role']===msg['role']&&mem[k]['content']===msg['content']){exists=true;break;}}
-        if(!exists){mem['push']({role:msg['role'],content:msg['content']});saveSmsMem(state['contacts'][smsChatIdx]['name'],mem);}
+        if(!exists){mem['push']({role:msg['role'],content:msg['content'],timestamp:msg['timestamp']});saveSmsMem(state['contacts'][smsChatIdx]['name'],mem);}
         el['classList']['remove']('pinned');
         toast('已记住');
       });
@@ -784,8 +829,45 @@ function renderSmsMessages(){
   box['scrollTop']=box['scrollHeight'];
 }
 
+/* ========== 时间格式化 ========== */
+function fmtSmsTime(ts){
+  if(!ts)return '';
+  var d=new Date(ts);
+  var now=new Date();
+  var sameDay=d['getFullYear']()===now['getFullYear']()&&d['getMonth']()===now['getMonth']()&&d['getDate']()===now['getDate']();
+  var hm=(d['getHours']()<10?'0':'')+d['getHours']()+':'+(d['getMinutes']()<10?'0':'')+d['getMinutes']();
+  if(sameDay)return hm;
+  var yesterday=new Date(now);yesterday['setDate'](now['getDate']()-1);
+  var isYesterday=d['getFullYear']()===yesterday['getFullYear']()&&d['getMonth']()===yesterday['getMonth']()&&d['getDate']()===yesterday['getDate']();
+  if(isYesterday)return '昨天 '+hm;
+  var diffDays=Math['floor']((now['getTime']()-d['getTime']())/86400000);
+  if(diffDays<7){var wd=['周日','周一','周二','周三','周四','周五','周六'];return wd[d['getDay']()]+' '+hm;}
+  return (d['getMonth']()+1)+'月'+d['getDate']()+'日 '+hm;
+}
+/* 判断两条消息是否需要插入时间分隔（同一天同一小时且间隔<15分钟就不插） */
+function needTimeSep(prevTs,currTs){
+  if(!prevTs||!currTs)return true;
+  var p=new Date(prevTs),c=new Date(currTs);
+  if(p['getFullYear']()!==c['getFullYear']()||p['getMonth']()!==c['getMonth']()||p['getDate']()!==c['getDate'])return true;
+  return(c['getTime']()-p['getTime'])>15*60*1000;
+}
+/* 简化时间（短信列表用，类似微信“昨天”“09:30”） */
+function fmtSmsListTime(ts){
+  if(!ts)return '';
+  var d=new Date(ts);var now=new Date();
+  var sameDay=d['getFullYear']()===now['getFullYear']()&&d['getMonth']()===now['getMonth']()&&d['getDate']()===now['getDate']();
+  if(sameDay)return (d['getHours']()<10?'0':'')+d['getHours']()+':'+(d['getMinutes']()<10?'0':'')+d['getMinutes']();
+  var yesterday=new Date(now);yesterday['setDate'](now['getDate']()-1);
+  var isYesterday=d['getFullYear']()===yesterday['getFullYear']()&&d['getMonth']()===yesterday['getMonth']()&&d['getDate']()===yesterday['getDate']();
+  if(isYesterday)return '昨天';
+  var diffDays=Math['floor']((now['getTime']()-d['getTime']())/86400000);
+  if(diffDays<7){var wd=['周日','周一','周二','周三','周四','周五','周六'];return wd[d['getDay']()];}
+  return (d['getMonth']()+1)+'/'+d['getDate']();
+}
+
 function addSmsBubble(role,text){
-  smsMsgs['push']({role:role,content:text});
+  var ts=Date['now']();
+  smsMsgs['push']({role:role,content:text,timestamp:ts});
   if(smsChatIdx>=0){saveSmsMem(state['contacts'][smsChatIdx]['name'],smsMsgs);}
   renderSmsMessages();
   renderSmsList();
@@ -1405,23 +1487,43 @@ var cEditImg = '';
 function openContactEdit(idx) {
   cEditIdx = idx;
   var c = state['contacts'][idx];
-  if (!c) return;
-  cEditImg = c['img'] || '';
-  $('paCEditName')['value'] = c['name'];
-  $('paCEditNum')['value'] = c['num'];
-  $('paCEditLetter')['textContent'] = c['avatar'];
-  var av = $('paCEditAvatar');
-  if (cEditImg) {
-    av['style']['backgroundImage'] = 'url(' + cEditImg + ')';
-    av['classList']['add']('has-img');
-  } else {
+  if (!c) {
+    /* 新建联系人模式 */
+    cEditImg = '';
+    $('paCEditName')['value'] = '';
+    $('paCEditNum')['value'] = '';
+    $('paCEditLetter')['textContent'] = '联';
+    var av = $('paCEditAvatar');
     av['style']['backgroundImage'] = '';
     av['classList']['remove']('has-img');
+    /* 新建时隐藏清除记忆按钮，显示拨打按钮的文字变一下 */
+    $('paCEditClear')['style']['display'] = 'none';
+    $('paCEditCall')['style']['display'] = 'none';
+  } else {
+    cEditImg = c['img'] || '';
+    $('paCEditName')['value'] = c['name'];
+    $('paCEditNum')['value'] = c['num'];
+    $('paCEditLetter')['textContent'] = c['avatar'];
+    var av = $('paCEditAvatar');
+    if (cEditImg) {
+      av['style']['backgroundImage'] = 'url(' + cEditImg + ')';
+      av['classList']['add']('has-img');
+    } else {
+      av['style']['backgroundImage'] = '';
+      av['classList']['remove']('has-img');
+    }
+    $('paCEditClear')['style']['display'] = '';
+    $('paCEditCall')['style']['display'] = '';
   }
   $('paCEditMask')['classList']['remove']('phone-app-hidden');
 }
 
-function closeContactEdit() { $('paCEditMask')['classList']['add']('phone-app-hidden'); }
+function closeContactEdit() {
+  $('paCEditMask')['classList']['add']('phone-app-hidden');
+  /* 恢复按钮显示（新建时被隐藏了） */
+  $('paCEditClear')['style']['display'] = '';
+  $('paCEditCall')['style']['display'] = '';
+}
 
 function onCEditAvatarClick() { $('paCEditFile')['click'](); }
 
@@ -1441,20 +1543,34 @@ function onCEditFileChange(e) {
 }
 
 function saveContactEdit() {
-  if (cEditIdx < 0) return;
   var name = $('paCEditName')['value']['trim']();
   var num = $('paCEditNum')['value']['trim']();
   if (!name) { toast('备注名不能为空'); return; }
-  var c = state['contacts'][cEditIdx];
-  c['name'] = name;
-  c['num'] = num;
-  c['avatar'] = name['charAt'](0);
-  if (cEditImg) c['img'] = cEditImg;
-  saveContacts();
-  renderRecents();
-  renderContacts();
-  closeContactEdit();
-  toast('联系人已保存');
+  if (cEditIdx < 0) {
+    /* 新建 */
+    var newSys = '你是「' + name + '」，用简短口语回复，每次不超过50字。';
+    var newContact = { name: name, num: num, avatar: name['charAt'](0), sys: newSys, img: cEditImg || '' };
+    state['contacts']['push'](newContact);
+    saveContacts();
+    renderKeypad();
+    renderRecents();
+    renderContacts();
+    closeContactEdit();
+    toast('联系人已添加');
+  } else {
+    /* 编辑 */
+    var c = state['contacts'][cEditIdx];
+    c['name'] = name;
+    c['num'] = num;
+    c['avatar'] = name['charAt'](0);
+    if (cEditImg) c['img'] = cEditImg;
+    saveContacts();
+    renderKeypad();
+    renderRecents();
+    renderContacts();
+    closeContactEdit();
+    toast('联系人已保存');
+  }
 }
 
 /* ========== 设置面板 ========== */
@@ -1540,6 +1656,8 @@ function boot() {
   $('paAvatarFile')['addEventListener']('change', onAvatarFileChange);
   /* 设置 */
   $('paSettingsBtn')['addEventListener']('click', openSettings);
+  /* 新建联系人 */
+  $('paAddContactBtn')['addEventListener']('click', function () { openContactEdit(-1); });
   $('paCloseSettings')['addEventListener']('click', closeSettings);
   $('paSaveSettings')['addEventListener']('click', saveSettings);
   $('paSettingsMask')['addEventListener']('click', function (e) {
@@ -1570,6 +1688,15 @@ function boot() {
   $('paSmsBack')['addEventListener']('click', closeSmsChat);
   $('paSmsSend')['addEventListener']('click', sendSms);
   $('paSmsInput')['addEventListener']('keydown', function (e) { if (e['key'] === 'Enter') sendSms(); });
+  $('paSmsPlus')['addEventListener']('click', function () { toast('（+ 号功能开发中）'); });
+  /* 右上角拨打电话 */
+  $('paSmsCall')['addEventListener']('click', function () {
+    if (smsChatIdx < 0) return;
+    var c = state['contacts'][smsChatIdx];
+    state['fromSms'] = true;
+    closeSmsChat();
+    startCall(c);
+  });
   /* 来电按钮 */
   $('paIncomingAccept')['addEventListener']('click', acceptIncomingCall);
   $('paIncomingDecline')['addEventListener']('click', declineIncomingCall);
