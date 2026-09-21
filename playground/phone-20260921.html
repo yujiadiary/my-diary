@@ -134,6 +134,25 @@
 .phone-app-settings-save{width:100%;background:var(--pa-accent);color:#fff;border-radius:12px;padding:14px;font-size:16px;font-weight:500;margin-top:8px}
 .phone-app-settings-save:active{opacity:.8}
 .phone-app-close-settings{position:absolute;top:16px;right:20px;color:var(--pa-muted);font-size:22px;background:none}
+
+/* ========== 联系人编辑（Apple 风格卡片） ========== */
+.phone-app-cedit-mask{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:210;display:flex;align-items:flex-end;justify-content:center}
+.phone-app-cedit{background:var(--pa-panel-bg);width:100%;max-width:420px;border-radius:var(--pa-radius) var(--pa-radius) 0 0;padding:20px;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.phone-app-cedit-close{position:absolute;top:16px;right:20px;color:var(--pa-muted);font-size:22px;background:none}
+.phone-app-cedit-avatar-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:20px}
+.phone-app-cedit-avatar{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#555,#333);display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:300;color:#fff;overflow:hidden;background-size:cover;background-position:center;position:relative;touch-action:manipulation}
+.phone-app-cedit-avatar.has-img .pa-cedit-letter{display:none}
+.phone-app-cedit-avatar .pa-cedit-cam{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.5);font-size:11px;padding:3px 0;color:#fff;text-align:center}
+.phone-app-cedit-avatar-hint{font-size:12px;color:var(--pa-muted)}
+.phone-app-cedit-row{margin-bottom:14px}
+.phone-app-cedit-row label{display:block;font-size:13px;color:var(--pa-muted);margin-bottom:6px}
+.phone-app-cedit-row input{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--pa-border);border-radius:10px;padding:10px 12px;color:#fff;font-size:14px;outline:none}
+.phone-app-cedit-row input:focus{border-color:var(--pa-accent)}
+.phone-app-cedit-save{width:100%;background:var(--pa-accent);color:#fff;border-radius:12px;padding:14px;font-size:16px;font-weight:500;margin-top:8px}
+.phone-app-cedit-save:active{opacity:.8}
+.phone-app-cedit-call{width:100%;background:var(--pa-call-green);color:#fff;border-radius:12px;padding:14px;font-size:16px;font-weight:500;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px}
+.phone-app-cedit-call:active{opacity:.8}
+.phone-app-contact-avatar.editable{cursor:pointer;touch-action:manipulation}
 </style>
 </head>
 <body>
@@ -281,8 +300,33 @@
     </div>
   </div>
 
+  <!-- ===== 联系人编辑（Apple 风格） ===== -->
+  <div class="phone-app-cedit-mask phone-app-hidden" id="paCEditMask">
+    <div class="phone-app-cedit" id="paCEditPanel">
+      <button class="phone-app-cedit-close" id="paCEditClose">×</button>
+      <div class="phone-app-cedit-avatar-wrap">
+        <div class="phone-app-cedit-avatar" id="paCEditAvatar">
+          <span class="pa-cedit-letter" id="paCEditLetter">联</span>
+          <span class="pa-cedit-cam">更换头像</span>
+        </div>
+        <div class="phone-app-cedit-avatar-hint">点击头像更换图片</div>
+      </div>
+      <div class="phone-app-cedit-row">
+        <label>备注名</label>
+        <input type="text" id="paCEditName" placeholder="联系人名称" />
+      </div>
+      <div class="phone-app-cedit-row">
+        <label>电话号码</label>
+        <input type="text" id="paCEditNum" placeholder="例如 138 0013 8000" />
+      </div>
+      <button class="phone-app-cedit-call" id="paCEditCall">📞 拨打</button>
+      <button class="phone-app-cedit-save" id="paCEditSave">保存</button>
+    </div>
+  </div>
+
   <div class="phone-app-toast" id="paToast"></div>
   <input type="file" id="paAvatarFile" accept="image/*" style="display:none" />
+  <input type="file" id="paCEditFile" accept="image/*" style="display:none" />
 
 </div>
 
@@ -445,11 +489,13 @@ function renderKeypad() {
 function renderRecents() {
   var list = $('paRecentList');
   var html = '<div class="phone-app-recent-title">最近通话</div>';
-  for (var i = 0; i < CONFIG['contacts']['length']; i++) {
-    var c = CONFIG['contacts'][i];
+  for (var i = 0; i < state['contacts']['length']; i++) {
+    var c = state['contacts'][i];
+    var avStyle = c['img'] ? ' style="background-image:url(' + c['img'] + ');background-size:cover;background-position:center"' : '';
+    var avText = c['img'] ? '' : c['avatar'];
     html += '<div class="phone-app-contact" data-idx="' + i + '">'
       + '<div class="phone-app-contact-left">'
-      + '<div class="phone-app-contact-avatar">' + c['avatar'] + '</div>'
+      + '<div class="phone-app-contact-avatar editable" data-edit="' + i + '"' + avStyle + '>' + avText + '</div>'
       + '<div class="phone-app-contact-info"><div class="phone-app-contact-name">' + c['name'] + '</div>'
       + '<div class="phone-app-contact-num">' + c['num'] + ' · 呼出</div></div></div>'
       + '<div class="phone-app-contact-type">📞</div></div>';
@@ -462,11 +508,13 @@ function renderRecents() {
 function renderContacts() {
   var list = $('paContactList');
   var html = '';
-  for (var i = 0; i < CONFIG['contacts']['length']; i++) {
-    var c = CONFIG['contacts'][i];
+  for (var i = 0; i < state['contacts']['length']; i++) {
+    var c = state['contacts'][i];
+    var avStyle = c['img'] ? ' style="background-image:url(' + c['img'] + ');background-size:cover;background-position:center"' : '';
+    var avText = c['img'] ? '' : c['avatar'];
     html += '<div class="phone-app-contact" data-idx="' + i + '">'
       + '<div class="phone-app-contact-left">'
-      + '<div class="phone-app-contact-avatar">' + c['avatar'] + '</div>'
+      + '<div class="phone-app-contact-avatar editable" data-edit="' + i + '"' + avStyle + '>' + avText + '</div>'
       + '<div class="phone-app-contact-info"><div class="phone-app-contact-name">' + c['name'] + '</div>'
       + '<div class="phone-app-contact-num">' + c['num'] + '</div></div></div></div>';
   }
@@ -478,9 +526,16 @@ function bindContactClicks(list, sel) {
   var items = list['querySelectorAll'](sel);
   for (var j = 0; j < items['length']; j++) {
     (function (item) {
-      item['addEventListener']('click', function () {
+      item['addEventListener']('click', function (e) {
+        var editTarget = e['target'] && e['target']['closest'] ? e['target']['closest']('[data-edit]') : null;
+        if (editTarget) {
+          e['stopPropagation']();
+          var idx = parseInt(editTarget['getAttribute']('data-edit'));
+          openContactEdit(idx);
+          return;
+        }
         var idx = parseInt(item['getAttribute']('data-idx'));
-        startCall(CONFIG['contacts'][idx]);
+        startCall(state['contacts'][idx]);
       });
     })(items[j]);
   }
@@ -509,10 +564,14 @@ function startCall(contact) {
   $('paCallName')['textContent'] = contact['name'];
   $('paCallNum')['textContent'] = contact['num'];
   $('paAvatarLetter')['textContent'] = contact['avatar'];
-  /* 恢复默认头像（清除自定义图片） */
   var av = $('paCallAvatar');
-  av['style']['backgroundImage'] = '';
-  av['classList']['remove']('has-img');
+  if (contact['img']) {
+    av['style']['backgroundImage'] = 'url(' + contact['img'] + ')';
+    av['classList']['add']('has-img');
+  } else {
+    av['style']['backgroundImage'] = '';
+    av['classList']['remove']('has-img');
+  }
   $('paSubtitles')['innerHTML'] = '';
   $('paCallStatus')['textContent'] = '呼出中...';
   state['callSeconds'] = 0;
@@ -844,6 +903,83 @@ function onAvatarFileChange(e) {
   e['target']['value'] = '';
 }
 
+/* ========== 联系人持久化 ========== */
+function loadContacts() {
+  try {
+    var saved = JSON['parse'](localStorage['getItem']('phone_app_contacts') || '[]');
+    if (saved && saved['length']) {
+      state['contacts'] = saved;
+      return;
+    }
+  } catch (e) {}
+  state['contacts'] = CONFIG['contacts']['map'](function (c) {
+    return { name: c['name'], num: c['num'], avatar: c['avatar'], sys: c['sys'], img: '' };
+  });
+}
+
+function saveContacts() {
+  try { localStorage['setItem']('phone_app_contacts', JSON['stringify'](state['contacts'])); } catch (e) {}
+}
+
+/* ========== 联系人编辑（Apple 风格） ========== */
+var cEditIdx = -1;
+var cEditImg = '';
+
+function openContactEdit(idx) {
+  cEditIdx = idx;
+  var c = state['contacts'][idx];
+  if (!c) return;
+  cEditImg = c['img'] || '';
+  $('paCEditName')['value'] = c['name'];
+  $('paCEditNum')['value'] = c['num'];
+  $('paCEditLetter')['textContent'] = c['avatar'];
+  var av = $('paCEditAvatar');
+  if (cEditImg) {
+    av['style']['backgroundImage'] = 'url(' + cEditImg + ')';
+    av['classList']['add']('has-img');
+  } else {
+    av['style']['backgroundImage'] = '';
+    av['classList']['remove']('has-img');
+  }
+  $('paCEditMask')['classList']['remove']('phone-app-hidden');
+}
+
+function closeContactEdit() { $('paCEditMask')['classList']['add']('phone-app-hidden'); }
+
+function onCEditAvatarClick() { $('paCEditFile')['click'](); }
+
+function onCEditFileChange(e) {
+  var file = e['target'] && e['target']['files'] && e['target']['files'][0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader['onload'] = function (ev) {
+    cEditImg = ev['target']['result'];
+    var av = $('paCEditAvatar');
+    av['style']['backgroundImage'] = 'url(' + cEditImg + ')';
+    av['classList']['add']('has-img');
+    toast('头像已更换，记得点保存');
+  };
+  reader['readAsDataURL'](file);
+  e['target']['value'] = '';
+}
+
+function saveContactEdit() {
+  if (cEditIdx < 0) return;
+  var name = $('paCEditName')['value']['trim']();
+  var num = $('paCEditNum')['value']['trim']();
+  if (!name) { toast('备注名不能为空'); return; }
+  var c = state['contacts'][cEditIdx];
+  c['name'] = name;
+  c['num'] = num;
+  c['avatar'] = name['charAt'](0);
+  if (cEditImg) c['img'] = cEditImg;
+  saveContacts();
+  renderRecents();
+  renderContacts();
+  closeContactEdit();
+  toast('联系人已保存');
+}
+
 /* ========== 设置面板 ========== */
 function openSettings() {
   var cfg = state['config'];
@@ -887,6 +1023,7 @@ function boot() {
     return;
   }
   loadConfig();
+  loadContacts();
   renderKeypad();
   renderRecents();
   renderContacts();
@@ -903,7 +1040,7 @@ function boot() {
 
   /* 拨号按钮 */
   $('paCallBtn')['addEventListener']('click', function () {
-    startCall(CONFIG['contacts'][0]);
+    startCall(state['contacts'][0]);
   });
   /* 挂断 */
   $('paHangupBtn')['addEventListener']('click', hangup);
@@ -929,6 +1066,20 @@ function boot() {
   $('paSaveSettings')['addEventListener']('click', saveSettings);
   $('paSettingsMask')['addEventListener']('click', function (e) {
     if (e['target'] === $('paSettingsMask')) closeSettings();
+  });
+  /* 联系人编辑 */
+  $('paCEditClose')['addEventListener']('click', closeContactEdit);
+  $('paCEditSave')['addEventListener']('click', saveContactEdit);
+  $('paCEditAvatar')['addEventListener']('click', onCEditAvatarClick);
+  $('paCEditFile')['addEventListener']('change', onCEditFileChange);
+  $('paCEditMask')['addEventListener']('click', function (e) {
+    if (e['target'] === $('paCEditMask')) closeContactEdit();
+  });
+  $('paCEditCall')['addEventListener']('click', function () {
+    if (cEditIdx < 0) return;
+    var c = state['contacts'][cEditIdx];
+    closeContactEdit();
+    startCall(c);
   });
 }
 
