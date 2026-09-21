@@ -321,6 +321,7 @@
       </div>
       <button class="phone-app-cedit-call" id="paCEditCall">📞 拨打</button>
       <button class="phone-app-cedit-save" id="paCEditSave">保存</button>
+      <button class="phone-app-cedit-clear" id="paCEditClear" style="width:100%;background:rgba(255,59,48,.15);color:#ff453a;border-radius:12px;padding:12px;font-size:14px;margin-top:8px;border:1px solid rgba(255,59,48,.3)">清除记忆</button>
     </div>
   </div>
 
@@ -346,6 +347,8 @@ var CONFIG = {
   defaultTtsVoiceId: 'male-qn-qingse',                  /* MiniMax 音色 ID */
   ttsModel: 'speech-2.8-hd',                            /* MiniMax TTS 模型 */
   maxHistory: 8,          /* 发给 AI 的最近对话轮数 */
+  memoryKey: 'phone_app_memory', /* 联系人记忆库 localStorage 键名 */
+  memoryMax: 20,          /* 每个联系人最多保存多少轮对话 */
   callWaitMs: 1500,       /* 呼出后多少毫秒自动接听 */
   contacts: [             /* 预设联系人（真实备注名+电话） */
     { name: '老公', num: '138 0013 8000', avatar: '老', sys: '你是「老公」，温柔体贴，用简短口语回复，像打电话一样，每次不超过50字。' },
@@ -559,7 +562,8 @@ function showCall() {
 /* ========== 通话流程 ========== */
 function startCall(contact) {
   state['currentContact'] = contact;
-  state['history'] = [];
+  /* 加载该联系人的历史记忆 */
+  state['history'] = loadMemory(contact['name']);
   state['fallbackIdx'] = 0;
   $('paCallName')['textContent'] = contact['name'];
   $('paCallNum')['textContent'] = contact['num'];
@@ -683,6 +687,7 @@ function updateMicBtn() {
 function handleUserText(text) {
   pushSub('user', text);
   state['history']['push']({ role: 'user', content: text });
+  if (state['currentContact']) saveMemory(state['currentContact']['name'], state['history']);
   var cfg = state['config'];
   if (!cfg['apiKey']) {
     var reply = CONFIG['fallbackReplies'][state['fallbackIdx'] % CONFIG['fallbackReplies']['length']];
@@ -734,6 +739,7 @@ function callAi(userText) {
 function aiReplied(text) {
   var subEl = pushSub('ai', text);
   state['history']['push']({ role: 'assistant', content: text });
+  if (state['currentContact']) saveMemory(state['currentContact']['name'], state['history']);
   speak(text);
   /* 英文自动翻译 */
   if (state['config']['autoTrans'] && isEnglish(text)) {
@@ -901,6 +907,31 @@ function onAvatarFileChange(e) {
   };
   reader['readAsDataURL'](file);
   e['target']['value'] = '';
+}
+
+/* ========== 联系人记忆库 ========== */
+function loadMemory(contactName) {
+  try {
+    var all = JSON['parse'](localStorage['getItem'](CONFIG['memoryKey']) || '{}');
+    var mem = all[contactName] || [];
+    return mem;
+  } catch (e) { return []; }
+}
+
+function saveMemory(contactName, history) {
+  try {
+    var all = JSON['parse'](localStorage['getItem'](CONFIG['memoryKey']) || '{}');
+    all[contactName] = history['slice'](-CONFIG['memoryMax'] * 2);
+    localStorage['setItem'](CONFIG['memoryKey'], JSON['stringify'](all));
+  } catch (e) {}
+}
+
+function clearMemory(contactName) {
+  try {
+    var all = JSON['parse'](localStorage['getItem'](CONFIG['memoryKey']) || '{}');
+    delete all[contactName];
+    localStorage['setItem'](CONFIG['memoryKey'], JSON['stringify'](all));
+  } catch (e) {}
 }
 
 /* ========== 联系人持久化 ========== */
@@ -1080,6 +1111,13 @@ function boot() {
     var c = state['contacts'][cEditIdx];
     closeContactEdit();
     startCall(c);
+  });
+  $('paCEditClear')['addEventListener']('click', function () {
+    if (cEditIdx < 0) return;
+    var c = state['contacts'][cEditIdx];
+    clearMemory(c['name']);
+    state['history'] = [];
+    toast('已清除「' + c['name'] + '」的记忆');
   });
 }
 
