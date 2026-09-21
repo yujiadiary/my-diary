@@ -961,15 +961,14 @@ function acceptIncomingCall(){
   $('paAvatarLetter')['textContent']=c['avatar']||c['name']['charAt'](0);
   $('paCallStatus')['textContent']='通话中';
   startCallTimer();
-  /* AI 先说话，用来电前的那条短信内容做情绪衔接 */
-  var opener=incomingContext['openingLine']||'喂？';
-  setTimeout(function(){
-    aiReplied(opener);
-  },800);
-  /* 再让 AI 生成一句更适合电话的开场白 */
+  /* AI 用英文说开场白（opener 只做上下文，不朗读） */
+  var opener=incomingContext['openingLine']||'';
   setTimeout(function(){
     var cfg=state['config'];
-    if(!cfg['apiKey']||!cfg['model'])return;
+    if(!cfg['apiKey']||!cfg['model']){
+      aiReplied('Hey, what\'s up?');
+      return;
+    }
     var sysPrompt='You are calling 「'+c['name']+'」 on the phone. In the SMS you just said: '+opener+'. Now the call is connected. Please say your opening line in English, natural and conversational, short (no more than 30 words). Reply in English only.';
     var msgs=[{role:'system',content:sysPrompt},{role:'user',content:'The call is connected. Speak your first line.'}];
     fetch(cfg['baseUrl']['replace'](/\/+$/, '')+'/chat/completions',{
@@ -978,9 +977,9 @@ function acceptIncomingCall(){
       body:JSON['stringify']({model:cfg['model'],messages:msgs})
     })['then'](function(r){return r['json']();})['then'](function(d){
       var t=(d['choices']&&d['choices'][0]&&d['choices'][0]['message']&&d['choices'][0]['message']['content']||'')['trim']();
-      if(t)aiReplied(t);
-    })['catch'](function(){});
-  },2500);
+      if(t)aiReplied(t);else aiReplied('Hey, what\'s up?');
+    })['catch'](function(){aiReplied('Hey, what\'s up?');});
+  },1200);
   incomingContext=null;
 }
 
