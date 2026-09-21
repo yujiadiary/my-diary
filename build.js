@@ -124,7 +124,7 @@ function toList(v) {
 // ---------- HTML 转义 ----------
 function escapeHtml(s) {
   return String(s)
-    .replace(/&/g, '&amp;')
+    .replace(/&(?!(nbsp|amp|lt|gt|quot|apos|#\d+|#x[\da-fA-F]+);)/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
