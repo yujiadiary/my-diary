@@ -207,6 +207,20 @@
 .phone-app-smem-item{font-size:13px;color:var(--pa-muted);padding:2px 0}
 .phone-app-smem-item .pa-role{font-size:11px;color:#0a84ff;margin-right:6px}
 .phone-app-smem-del{font-size:11px;color:#ff453a;background:rgba(255,59,48,.15);border-radius:6px;padding:1px 6px;margin-left:4px}
+
+/* ========== 来电界面 ========== */
+.phone-app-incoming{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:350;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.phone-app-incoming-name{font-size:24px;font-weight:600;margin-top:16px;color:#fff}
+.phone-app-incoming-status{font-size:14px;color:rgba(255,255,255,.6);margin-top:6px}
+.phone-app-incoming-avatar{width:120px;height:120px;border-radius:50%;background:#3a3a3c;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:300;color:#fff;overflow:hidden;background-size:cover;background-position:center;animation:paRing 1.2s ease-in-out infinite}
+@keyframes paRing{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.phone-app-incoming-actions{display:flex;gap:60px;margin-top:80px}
+.phone-app-incoming-btn{width:64px;height:64px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,.4);touch-action:manipulation}
+.phone-app-incoming-btn:active{transform:scale(.92)}
+.phone-app-incoming-btn.accept{background:#34c759}
+.phone-app-incoming-btn.decline{background:#ff453a}
+.phone-app-incoming-label{font-size:12px;color:rgba(255,255,255,.7);margin-top:10px;text-align:center;width:64px}
+.phone-app-incoming-btns{display:flex;gap:60px}
 </style>
 </head>
 <body>
@@ -292,7 +306,26 @@
     </div>
   </div>
 
-  <!-- ===== 通话页 ===== -->
+  <!-- ===== 来电界面 ===== -->
+  <div class="phone-app-incoming phone-app-hidden" id="paIncomingView">
+    <div class="phone-app-incoming-avatar" id="paIncomingAvatar">?</div>
+    <div class="phone-app-incoming-name" id="paIncomingName">老公</div>
+    <div class="phone-app-incoming-status">对方正在呼叫你…</div>
+    <div class="phone-app-incoming-btns" style="margin-top:80px">
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <button class="phone-app-incoming-btn decline" id="paIncomingDecline">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M16.48 7.73c-2.36-1.56-5.42-2.3-8.28-1.82-.48.08-.84.5-.84.98v4.16c0 .28.11.55.31.74l1.88 1.88c1.12 1.12 2.57 1.73 4.1 1.73.27 0 .5.22.5.5v3.09c0 .42.28.8.67.94.54.2 1.14.27 1.77.27.7 0 1.43-.1 2.18-.31.43-.12.76-.5.76-.94v-3.43c0-.65-.42-1.22-1.03-1.42-2.52-.82-4.1-3.24-3.75-5.96z"/></svg>
+        </button>
+        <div class="phone-app-incoming-label">挂断</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <button class="phone-app-incoming-btn accept" id="paIncomingAccept">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+        </button>
+        <div class="phone-app-incoming-label">接听</div>
+      </div>
+    </div>
+  </div>
   <div class="phone-app-call phone-app-hidden" id="paCallView">
     <div class="phone-app-call-header">
       <div class="phone-app-call-name" id="paCallName">老公</div>
@@ -774,7 +807,8 @@ function callSmsAi(userText){
     return;
   }
   var sysPrompt=cfg['sysPrompt']||CONFIG['defaultSysPrompt'];
-  if(smsChatIdx>=0)sysPrompt='你正在和「'+state['contacts'][smsChatIdx]['name']+'」发短信。回复要短，像短信一样不超过30字。\n'+sysPrompt;
+  var callRule='\n\n【主动打电话规则】\n你是一个有情绪、有温度的AI。你可以在短信中主动打电话给用户。触发通话的原因不限于生气，也可以是开心、想念、担心、想认真解释、觉得文字说不清、用户很久没回、用户想听你的声音等。如果你决定打电话，请在回复的最后加上特殊标记：[CALL]。加上这个标记后，系统会触发一个电话。请在需要时使用。';
+  if(smsChatIdx>=0)sysPrompt='你正在和「'+state['contacts'][smsChatIdx]['name']+'」发短信。回复要短，像短信一样不超过30字。\n'+sysPrompt+callRule;
   var recent=smsMsgs['slice'](-CONFIG['maxHistory']);
   var msgs=[{role:'system',content:sysPrompt}];
   for(var i=0;i<recent['length'];i++)msgs['push'](recent[i]);
@@ -786,12 +820,85 @@ function callSmsAi(userText){
     if(!resp['ok']){return resp['json']()['then'](function(d){throw new Error(d['error']&&d['error']['message']||'HTTP '+resp['status']);});}
     return resp['json']();
   })['then'](function(data){
-    var text=(data['choices']&&data['choices'][0]&&data['choices'][0]['message']&&data['choices'][0]['message']['content']||'')['trim']();
-    if(!text)throw new Error('空回复');
+    var raw=(data['choices']&&data['choices'][0]&&data['choices'][0]['message']&&data['choices'][0]['message']['content']||'')['trim']();
+    if(!raw)throw new Error('空回复');
+    /* 检测 [CALL] 标记 */
+    var wantCall=/\[CALL\]/.test(raw);
+    var text=raw['replace'](/\[CALL\]/g,'')['trim']();
     addSmsBubble('assistant',text);
+    if(wantCall){
+      /* 延迟 1.5s 触发来电 */
+      setTimeout(function(){triggerIncomingCall(text);},1500);
+    }
   })['catch'](function(e){
     addSmsBubble('assistant','出错了：'+e['message']);
   });
+}
+
+/* ========== AI 主动来电 ========== */
+var incomingContext = null; /* { contact, openingLine } */
+
+function triggerIncomingCall(openingLine){
+  if(smsChatIdx<0)return;
+  var c=state['contacts'][smsChatIdx];
+  incomingContext={contact:c,openingLine:openingLine};
+  var av=$('paIncomingAvatar');
+  if(c['img']){av['style']['backgroundImage']='url('+c['img']+')';av['textContent']='';}
+  else{av['style']['backgroundImage']='';av['textContent']=c['avatar'];}
+  $('paIncomingName')['textContent']=c['name'];
+  $('paSmsChatView')['classList']['add']('phone-app-hidden');
+  $('paIncomingView')['classList']['remove']('phone-app-hidden');
+  $('paIncomingView')['style']['zIndex']=400;
+  /* 震动提示 */
+  if(navigator['vibrate']){navigator['vibrate']([400,200,400,200,400]);}
+}
+
+function acceptIncomingCall(){
+  if(!incomingContext)return;
+  $('paIncomingView')['classList']['add']('phone-app-hidden');
+  var c=incomingContext['contact'];
+  state['fromSms']=true;
+  /* 复用现有 startCall 进入通话，但跳过自动播放声，AI 先说话 */
+  state['currentContact']=c;
+  state['history']=loadMemory(c['name']);
+  showCall();
+  $('paCallName')['textContent']=c['name'];
+  $('paCallNum')['textContent']=c['num']||'';
+  $('paCallAvatar')['style']['backgroundImage']=c['img']?'url('+c['img']+')':'';
+  $('paAvatarLetter')['textContent']=c['avatar']||c['name']['charAt'](0);
+  $('paCallAvatar')['style']['background']=c['img']?'transparent':'linear-gradient(135deg,#444,#222)';
+  $('paCallStatus')['textContent']='通话中';
+  startCallTimer();
+  /* AI 先说话，用来电前的那条短信内容做情绪衔接 */
+  var opener=incomingContext['openingLine']||'喂？';
+  setTimeout(function(){
+    aiReplied(opener);
+  },800);
+  /* 再让 AI 生成一句更适合电话的开场白 */
+  setTimeout(function(){
+    var cfg=state['config'];
+    if(!cfg['apiKey']||!cfg['model'])return;
+    var sysPrompt='你正在用电话联系「'+c['name']+'」。刚才你在短信里说了：'+opener+'。现在接通了，请用口语化自然的方式开口说第一句电话开场白，简短不超过30字。';
+    var msgs=[{role:'system',content:sysPrompt},{role:'user',content:'你刚打电话过来了，现在接通了。'}];
+    fetch(cfg['baseUrl']['replace'](/\/+$/, '')+'/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg['apiKey']},
+      body:JSON['stringify']({model:cfg['model'],messages:msgs})
+    })['then'](function(r){return r['json']();})['then'](function(d){
+      var t=(d['choices']&&d['choices'][0]&&d['choices'][0]['message']&&d['choices'][0]['message']['content']||'')['trim']();
+      if(t)aiReplied(t);
+    })['catch'](function(){});
+  },2500);
+  incomingContext=null;
+}
+
+function declineIncomingCall(){
+  if(!incomingContext)return;
+  $('paIncomingView')['classList']['add']('phone-app-hidden');
+  /* 回到短信对话页 */
+  $('paSmsChatView')['classList']['remove']('phone-app-hidden');
+  incomingContext=null;
+  toast('已挂断来电');
 }
 
 /* ========== 通话流程 ========== */
@@ -843,7 +950,18 @@ function hangup() {
   if (state['recognition']) { try { state['recognition']['stop'](); } catch (e) {} }
   stopSpeaking();
   $('paCallStatus')['textContent'] = '已挂断';
-  setTimeout(function () { showDial(); }, 600);
+  setTimeout(function () {
+    if (state['fromSms']) {
+      state['fromSms'] = false;
+      $('paCallView')['classList']['add']('phone-app-hidden');
+      $('paSmsChatView')['classList']['remove']('phone-app-hidden');
+      /* 重新显示短信 */
+      renderSmsMessages();
+      toast('通话已结束，返回短信');
+    } else {
+      showDial();
+    }
+  }, 600);
 }
 
 /* ========== 字幕 ========== */
@@ -1452,6 +1570,9 @@ function boot() {
   $('paSmsBack')['addEventListener']('click', closeSmsChat);
   $('paSmsSend')['addEventListener']('click', sendSms);
   $('paSmsInput')['addEventListener']('keydown', function (e) { if (e['key'] === 'Enter') sendSms(); });
+  /* 来电按钮 */
+  $('paIncomingAccept')['addEventListener']('click', acceptIncomingCall);
+  $('paIncomingDecline')['addEventListener']('click', declineIncomingCall);
 }
 
 if (document['readyState'] === 'loading') {
