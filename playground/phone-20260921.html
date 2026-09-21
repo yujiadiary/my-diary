@@ -511,7 +511,7 @@ var CONFIG = {
     '需要先填 API Key 我才能说话哦。',
     '设置入口在拨号页右上角的齿轮图标。'
   ],
-  aiFirstWord: '喂？'
+  aiFirstWord: 'Hello?'
 };
 
 /* ========== 全局状态 ========== */
@@ -890,7 +890,7 @@ function callSmsAi(userText){
   }
   var sysPrompt=cfg['sysPrompt']||CONFIG['defaultSysPrompt'];
   var callRule='\n\n【主动打电话规则】\n你是一个有情绪、有温度的AI。你可以在短信中主动打电话给用户。触发通话的原因不限于生气，也可以是开心、想念、担心、想认真解释、觉得文字说不清、用户很久没回、用户想听你的声音等。如果你决定打电话，请在回复的最后加上特殊标记：[CALL]。加上这个标记后，系统会触发一个电话。请在需要时使用。';
-  if(smsChatIdx>=0)sysPrompt='你正在和「'+state['contacts'][smsChatIdx]['name']+'」发短信。回复要短，像短信一样不超过30字。\n'+sysPrompt+callRule;
+  if(smsChatIdx>=0)sysPrompt='你正在和「'+state['contacts'][smsChatIdx]['name']+'」发短信。【重要：请全程用中文回复，不要用英文。】回复要短，像短信一样不超过30字。\n'+sysPrompt+callRule;
   var recent=smsMsgs['slice'](-CONFIG['maxHistory']);
   var msgs=[{role:'system',content:sysPrompt}];
   for(var i=0;i<recent['length'];i++)msgs['push'](recent[i]);
@@ -960,8 +960,8 @@ function acceptIncomingCall(){
   setTimeout(function(){
     var cfg=state['config'];
     if(!cfg['apiKey']||!cfg['model'])return;
-    var sysPrompt='你正在用电话联系「'+c['name']+'」。刚才你在短信里说了：'+opener+'。现在接通了，请用口语化自然的方式开口说第一句电话开场白，简短不超过30字。';
-    var msgs=[{role:'system',content:sysPrompt},{role:'user',content:'你刚打电话过来了，现在接通了。'}];
+    var sysPrompt='You are calling 「'+c['name']+'」 on the phone. In the SMS you just said: '+opener+'. Now the call is connected. Please say your opening line in English, natural and conversational, short (no more than 30 words). Reply in English only.';
+    var msgs=[{role:'system',content:sysPrompt},{role:'user',content:'The call is connected. Speak your first line.'}];
     fetch(cfg['baseUrl']['replace'](/\/+$/, '')+'/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg['apiKey']},
@@ -1238,7 +1238,7 @@ function callAi(userText) {
   /* 系统提示词：用户设置的优先，加上联系人名作为上下文 */
   var sysPrompt = cfg['sysPrompt'] || CONFIG['defaultSysPrompt'];
   if (state['currentContact'] && state['currentContact']['name']) {
-    sysPrompt = '你正在和「' + state['currentContact']['name'] + '」通电话。\n' + sysPrompt;
+    sysPrompt = 'You are on the phone with 「' + state['currentContact']['name'] + '」.\n[IMPORTANT: Reply in English only. Do not use Chinese.]\n' + sysPrompt;
   }
   var recent = state['history']['slice'](-CONFIG['maxHistory']);
   var messages = [{ role: 'system', content: sysPrompt }];
