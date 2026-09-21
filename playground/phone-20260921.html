@@ -945,7 +945,12 @@ function callSmsAi(userText){
   if(smsChatIdx>=0)sysPrompt='你正在和「'+state['contacts'][smsChatIdx]['name']+'」发短信。【重要：请全程用中文回复，不要用英文。】回复要短，像短信一样不超过30字。\n'+sysPrompt+callRule;
   var recent=smsMsgs['slice'](-CONFIG['maxHistory']);
   var msgs=[{role:'system',content:sysPrompt}];
-  for(var i=0;i<recent['length'];i++)msgs['push'](recent[i]);
+  for(var i=0;i<recent['length'];i++){
+    var m=recent[i];
+    if(m&&m['content']&&String(m['content'])['trim']()){
+      msgs['push']({role:m['role']||'user',content:String(m['content'])['trim']()});
+    }
+  }
   fetch(cfg['baseUrl']['replace'](/\/+$/, '')+'/chat/completions',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg['apiKey']},
@@ -1012,22 +1017,25 @@ function acceptIncomingCall(){
   $('paCallStatus')['textContent']='通话中';
   startCallTimer();
   /* AI 用英文说开场白（opener 只做上下文，不朗读） */
-  var opener=incomingContext['openingLine']||'';
+  var opener=(incomingContext['openingLine']||'')['replace'](/\s+/g,' ').trim();
   setTimeout(function(){
     var cfg=state['config'];
     if(!cfg['apiKey']||!cfg['model']){
       aiReplied('Hey, what\'s up?');
       return;
     }
-    var sysPrompt='You are calling 「'+c['name']+'」 on the phone. In the SMS you just said: '+opener+'. Now the call is connected. Please say your opening line in English, natural and conversational, short (no more than 30 words). Reply in English only.';
+    var sysPrompt='You are calling 「'+c['name']+'」 on the phone.'+(opener?' In the SMS you just said: '+opener+'.':'')+' Now the call is connected. Please say your opening line in English, natural and conversational, short (no more than 30 words). Reply in English only.';
     var msgs=[{role:'system',content:sysPrompt},{role:'user',content:'The call is connected. Speak your first line.'}];
     fetch(cfg['baseUrl']['replace'](/\/+$/, '')+'/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg['apiKey']},
       body:JSON['stringify']({model:cfg['model'],messages:msgs})
-    })['then'](function(r){return r['json']();})['then'](function(d){
+    })['then'](function(r){
+      if(!r['ok']){return r['json']()['then'](function(err){var m=(err&&err['error']&&(err['error']['message']||err['error']['code']))||('HTTP '+r['status']);throw new Error(m);})['catch'](function(){throw new Error('HTTP '+r['status']);});}
+      return r['json']();
+    })['then'](function(d){
       var t=(d['choices']&&d['choices'][0]&&d['choices'][0]['message']&&d['choices'][0]['message']['content']||'')['trim']();
-      if(t)aiReplied(t);else aiReplied('Hey, what\'s up?');
+      aiReplied(t||'Hey, what\'s up?');
     })['catch'](function(){aiReplied('Hey, what\'s up?');});
   },1200);
   incomingContext=null;
@@ -1301,7 +1309,14 @@ function callAi(userText) {
   }
   var recent = state['history']['slice'](-CONFIG['maxHistory']);
   var messages = [{ role: 'system', content: sysPrompt }];
-  for (var i = 0; i < recent['length']; i++) messages['push'](recent[i]);
+  for (var i = 0; i < recent['length']; i++) {
+    var m = recent[i];
+    /* 过滤掉空内容/非法role的消息，避免 API 返回 422 */
+    if (m && m['content'] && String(m['content'])['trim']()) {
+      var role = (m['role'] === 'assistant' || m['role'] === 'user') ? m['role'] : 'user';
+      messages['push']({ role: role, content: String(m['content'])['trim']() });
+    }
+  }
 
   fetch(url, {
     method: 'POST',
@@ -1309,11 +1324,20 @@ function callAi(userText) {
     body: JSON['stringify']({ model: cfg['model'], messages: messages })
   })['then'](function (resp) {
     if (!resp['ok']) {
-      /* 解析 API 返回的具体错误信息 */
-      return resp['json']()['then'](function (errData) {
-        var msg = (errData && errData['error'] && (errData['error']['message'] || errData['error']['code'])) || ('HTTP ' + resp['status']);
+      return resp['text']()['then'](function (bodyText) {
+        var msg = 'HTTP ' + resp['status'];
+        try {
+          var j = JSON['parse'](bodyText);
+          if (j && j['error']) {
+            msg += '：' + (j['error']['message'] || j['error']['code'] || JSON['stringify'](j['error']));
+          } else if (j && j['message']) {
+            msg += '：' + j['message'];
+          } else {
+            msg += '：' + bodyText['slice'](0, 100);
+          }
+        } catch (e) { msg += '：' + bodyText['slice'](0, 100); }
         throw new Error(msg);
-      })['catch'](function () { throw new Error('HTTP ' + resp['status']); });
+      });
     }
     return resp['json']();
   })['then'](function (data) {
