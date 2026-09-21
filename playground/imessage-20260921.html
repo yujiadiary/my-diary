@@ -481,57 +481,9 @@ function callAi(userText){
     var text=(data['choices']&&data['choices'][0]&&data['choices'][0]['message']&&data['choices'][0]['message']['content']||'')['trim']();
     if(!text)throw new Error('空回复');
     addBubble('assistant',text);
-    speak(text);
   })['catch'](function(e){
     addBubble('assistant','出错了：'+e['message']);
   });
-}
-
-/* ========== TTS ========== */
-function speak(text){
-  try{
-    if(state['config']['useCloudTts']){miniMaxSpeak(text);return;}
-  }catch(e){}
-  try{
-    if('speechSynthesis'in window){
-      window['speechSynthesis']['cancel']();
-      var u=new SpeechSynthesisUtterance(text);
-      u['lang']='zh-CN';
-      u['rate']=1.0;
-      window['speechSynthesis']['speak'](u);
-    }
-  }catch(e){}
-}
-
-function miniMaxSpeak(text){
-  var cfg=state['config'];
-  var key=cfg['ttsApiKey'];
-  if(!key)return;
-  var groupId=cfg['ttsGroupId'];
-  var voiceId=cfg['ttsVoiceId'];
-  fetch(CONFIG['defaultTtsUrl']+'?GroupId='+encodeURIComponent(groupId),{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-    body:JSON['stringify']({
-      model:CONFIG['ttsModel'],
-      text:text,stream:false,
-      voice_setting:{voice_id:voiceId,speed:1,vol:1,pitch:0},
-      audio_setting:{sample_rate:32000,bitrate:128000,format:'mp3',channel:1},
-      output_format:'hex'
-    })
-  })['then'](function(r){return r['json']();})
-  ['then'](function(data){
-    if(data['base_resp']&&data['base_resp']['status_code']!==0)throw new Error(data['base_resp']['status_msg']||'业务错误');
-    var hex=data['data']&&data['data']['audio'];
-    if(!hex)return;
-    var bytes=new Uint8Array(hex['length']/2);
-    for(var i=0;i<bytes['length'];i++)bytes[i]=parseInt(hex['substr'](i*2,2),16);
-    var blob=new Blob([bytes],{type:'audio/mp3'});
-    var url=URL['createObjectURL'](blob);
-    var a=new Audio(url);
-    a['play']();
-    a['addEventListener']('ended',function(){URL['revokeObjectURL'](url);});
-  })['catch'](function(){});
 }
 
 /* ========== 设置面板 ========== */
