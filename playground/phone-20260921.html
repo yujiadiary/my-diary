@@ -844,12 +844,14 @@ function fmtSmsTime(ts){
   if(diffDays<7){var wd=['周日','周一','周二','周三','周四','周五','周六'];return wd[d['getDay']()]+' '+hm;}
   return (d['getMonth']()+1)+'月'+d['getDate']()+'日 '+hm;
 }
-/* 判断两条消息是否需要插入时间分隔（同一天同一小时且间隔<15分钟就不插） */
+/* 判断两条消息是否需要插入时间分隔：只有显示时间不同才插 */
 function needTimeSep(prevTs,currTs){
-  if(!prevTs||!currTs)return true;
-  var p=new Date(prevTs),c=new Date(currTs);
-  if(p['getFullYear']()!==c['getFullYear']()||p['getMonth']()!==c['getMonth']()||p['getDate']()!==c['getDate'])return true;
-  return(c['getTime']()-p['getTime'])>15*60*1000;
+  /* 当前消息没有时间戳 → 跟前面归为一组，不插 */
+  if(!currTs)return false;
+  /* 第一条消息 → 插 */
+  if(!prevTs)return true;
+  /* 同一显示时间（如同一分钟 "13:17"）→ 不重复插 */
+  return fmtSmsTime(prevTs)!==fmtSmsTime(currTs);
 }
 /* 简化时间（短信列表用，类似微信“昨天”“09:30”） */
 function fmtSmsListTime(ts){
