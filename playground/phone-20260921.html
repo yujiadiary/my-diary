@@ -742,7 +742,37 @@ function renderSmsList(){
   list['innerHTML']=html;
   var items=list['querySelectorAll']('[data-sms]');
   for(var k=0;k<items['length'];k++){
-    items[k]['addEventListener']('click',function(){openSmsChat(parseInt(this['getAttribute']('data-sms')));});
+    (function(item){
+      var pressTimer=null;
+      var longPressed=false;
+      var idx=parseInt(item['getAttribute']('data-sms'));
+      /* 点击进入对话 */
+      item['addEventListener']('click',function(){
+        if(longPressed){longPressed=false;return;}
+        openSmsChat(idx);
+      });
+      /* 长按删除对话 */
+      var startPress=function(e){
+        longPressed=false;
+        pressTimer=setTimeout(function(){
+          longPressed=true;
+          pressTimer=null;
+          if(navigator['vibrate'])navigator['vibrate'](30);
+          if(confirm('确定删除与「'+state['contacts'][idx]['name']+'」的所有短信记录？')){
+            saveSmsMem(state['contacts'][idx]['name'],[]);
+            renderSmsList();
+            toast('已清空对话');
+          }
+        },600);
+      };
+      var cancelPress=function(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}};
+      item['addEventListener']('touchstart',startPress);
+      item['addEventListener']('touchend',cancelPress);
+      item['addEventListener']('touchmove',cancelPress);
+      item['addEventListener']('mousedown',startPress);
+      item['addEventListener']('mouseup',cancelPress);
+      item['addEventListener']('mouseleave',cancelPress);
+    })(items[k]);
   }
 }
 
@@ -810,11 +840,31 @@ function renderSmsMessages(){
         el['classList']['remove']('pinned');
         toast('已记住');
       });
+      var delBtn=document['createElement']('span');
+      delBtn['className']='pa-sms-btn';
+      delBtn['style']['background']='rgba(255,59,48,.25)';
+      delBtn['textContent']='🗑删除';
+      delBtn['addEventListener']('click',function(e){
+        e['stopPropagation'];
+        el['classList']['remove']('pinned');
+        /* 从 smsMsgs 中删除该条 */
+        var idx=-1;
+        for(var d=0;d<smsMsgs['length'];d++){
+          if(smsMsgs[d]===msg){idx=d;break;}
+        }
+        if(idx>=0){
+          smsMsgs['splice'](idx,1);
+          saveSmsMem(state['contacts'][smsChatIdx]['name'],smsMsgs);
+          renderSmsMessages();
+          renderSmsList();
+          toast('已删除');
+        }
+      });
       var cancel=document['createElement']('span');
       cancel['className']='pa-sms-btn';
       cancel['textContent']='取消';
       cancel['addEventListener']('click',function(e){e['stopPropagation'];el['classList']['remove']('pinned');});
-      bar['appendChild'](pin);bar['appendChild'](cancel);
+      bar['appendChild'](pin);bar['appendChild'](delBtn);bar['appendChild'](cancel);
       el['appendChild'](bar);
     })(div,m);
     box['appendChild'](div);
