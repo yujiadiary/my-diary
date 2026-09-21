@@ -948,9 +948,17 @@ function acceptIncomingCall(){
   showCall();
   $('paCallName')['textContent']=c['name'];
   $('paCallNum')['textContent']=c['num']||'';
-  $('paCallAvatar')['style']['backgroundImage']=c['img']?'url('+c['img']+')':'';
+  var av=$('paCallAvatar');
+  if(c['img']){
+    av['style']['backgroundImage']='url('+c['img']+')';
+    av['style']['backgroundColor']='transparent';
+    av['classList']['add']('has-img');
+  }else{
+    av['style']['backgroundImage']='';
+    av['style']['background']='linear-gradient(135deg,#444,#222)';
+    av['classList']['remove']('has-img');
+  }
   $('paAvatarLetter')['textContent']=c['avatar']||c['name']['charAt'](0);
-  $('paCallAvatar')['style']['background']=c['img']?'transparent':'linear-gradient(135deg,#444,#222)';
   $('paCallStatus')['textContent']='通话中';
   startCallTimer();
   /* AI 先说话，用来电前的那条短信内容做情绪衔接 */
