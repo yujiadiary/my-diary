@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>iMessage · 模拟短信</title>
+<style>
+:root{
+  --im-bg:#000;
+  --im-panel:#1c1c1e;
+  --im-panel-2:#2c2c2e;
+  --im-border:#38383a;
+  --im-muted:#8e8e93;
+  --im-blue:#0a84ff;
+  --im-green:#34c759;
+  --im-bubble-blue:#007aff;
+  --im-bubble-gray:#262628;
+  --im-text:#fff;
+  --im-input-bg:#1c1c1e;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","SF Pro Text","Helvetica Neue",sans-serif;background:var(--im-bg);color:var(--im-text);font-size:15px;line-height:1.4}
+.im-app{position:relative;width:100%;height:100vh;height:100dvh;max-width:480px;margin:0 auto;display:flex;flex-direction:column;background:var(--im-bg);overflow:hidden}
+.im-hidden{display:none!important}
+
+/* 顶栏 */
+.im-topbar{flex-shrink:0;height:54px;display:flex;align-items:center;padding:0 12px;background:var(--im-panel);border-bottom:1px solid var(--im-border);gap:10px}
+.im-back{width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--im-blue);font-size:24px;background:none;touch-action:manipulation}
+.im-back:active{opacity:.5}
+.im-top-title{flex:1;text-align:center;font-size:17px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.im-top-right{width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--im-blue);background:none}
+
+/* 底部导航 */
+.im-tabs{flex-shrink:0;height:56px;display:flex;background:var(--im-panel);border-top:1px solid var(--im-border);padding-bottom:env(safe-area-inset-bottom)}
+.im-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--im-muted);background:none;touch-action:manipulation}
+.im-tab.active{color:var(--im-blue)}
+.im-tab:active{opacity:.6}
+.im-tab-ico{width:24px;height:24px}
+.im-tab-label{font-size:10px}
+
+/* ===== 列表页（对话列表） ===== */
+.im-chatlist{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.im-chatlist-item{display:flex;align-items:center;padding:12px 16px;gap:12px;border-bottom:1px solid var(--im-border);touch-action:manipulation}
+.im-chatlist-item:active{background:rgba(255,255,255,.05)}
+.im-chatlist-avatar{width:46px;height:46px;border-radius:50%;background:var(--im-bubble-gray);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;color:#fff;overflow:hidden;background-size:cover;background-position:center;flex-shrink:0}
+.im-chatlist-info{flex:1;min-width:0}
+.im-chatlist-name{font-size:16px;font-weight:500;margin-bottom:2px}
+.im-chatlist-preview{font-size:13px;color:var(--im-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.im-chatlist-time{font-size:12px;color:var(--im-muted);flex-shrink:0}
+
+/* ===== 对话页 ===== */
+.im-chatview{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.im-messages{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 0;display:flex;flex-direction:column;gap:6px}
+.im-time-sep{align-self:center;font-size:11px;color:var(--im-muted);padding:8px 12px;background:rgba(255,255,255,.06);border-radius:10px;margin:8px 0}
+
+/* 气泡 */
+.im-bubble{max-width:72%;padding:9px 13px;border-radius:20px;font-size:15px;line-height:1.35;word-break:break-word;position:relative}
+.im-bubble.me{align-self:flex-end;background:var(--im-bubble-blue);color:#fff;border-bottom-right-radius:6px}
+.im-bubble.other{align-self:flex-start;background:var(--im-bubble-gray);color:#fff;border-bottom-left-radius:6px}
+.im-bubble.pinned{box-shadow:0 0 0 2px var(--im-blue) inset}
+.im-bubble .im-bubble-bar{display:none;margin-top:6px;gap:6px;justify-content:flex-end}
+.im-bubble.other .im-bubble-bar{justify-content:flex-start}
+.im-bubble.pinned .im-bubble-bar{display:flex}
+.im-bubble .im-bubble-bar .im-bubble-btn{font-size:11px;background:rgba(255,255,255,.18);border-radius:8px;padding:3px 8px}
+
+/* 已送达/已读 */
+.im-delivered{align-self:flex-end;font-size:11px;color:var(--im-muted);margin:2px 4px 0}
+
+/* 输入栏 */
+.im-input-bar{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--im-panel);border-top:1px solid var(--im-border);padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+.im-add-btn{width:36px;height:36px;border-radius:50%;background:var(--im-panel-2);display:flex;align-items:center;justify-content:center;color:var(--im-blue);font-size:20px;flex-shrink:0;touch-action:manipulation}
+.im-add-btn:active{opacity:.6}
+.im-input-wrap{flex:1;display:flex;align-items:center;background:var(--im-input-bg);border:1px solid var(--im-border);border-radius:20px;padding:6px 12px}
+.im-input{flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:15px;min-width:0}
+.im-input::placeholder{color:var(--im-muted)}
+.im-send-btn{width:32px;height:32px;border-radius:50%;background:var(--im-blue);color:#fff;border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;touch-action:manipulation}
+.im-send-btn:active{opacity:.7}
+.im-send-btn svg{width:18px;height:18px}
+
+/* 设置面板 */
+.im-settings-mask{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.im-settings{background:var(--im-panel);width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:20px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.im-settings h2{margin:0 0 14px;font-size:18px;text-align:center}
+.im-settings-row{margin-bottom:12px}
+.im-settings-row label{display:block;font-size:12px;color:var(--im-muted);margin-bottom:5px}
+.im-settings-row input,.im-settings-row textarea,.im-settings-row select{width:100%;background:var(--im-panel-2);border:1px solid var(--im-border);border-radius:10px;padding:9px 12px;color:#fff;font-size:14px;outline:none}
+.im-settings-row textarea{min-height:50px;resize:vertical}
+.im-settings-save{width:100%;background:var(--im-blue);color:#fff;border-radius:12px;padding:14px;font-size:16px;font-weight:500;margin-top:6px;border:none}
+.im-settings-save:active{opacity:.8}
+.im-settings-close{width:100%;background:transparent;color:var(--im-muted);border:none;padding:12px;font-size:15px;margin-top:4px}
+
+/* 记忆页 */
+.im-mem-empty{text-align:center;color:var(--im-muted);font-size:14px;padding:40px 20px}
+.im-mem-group{padding:10px 16px;border-bottom:1px solid var(--im-border)}
+.im-mem-name{font-size:15px;font-weight:600;margin-bottom:6px}
+.im-mem-item{font-size:13px;color:var(--im-muted);padding:3px 0;line-height:1.5}
+.im-mem-item .im-mem-role{font-size:11px;color:var(--im-blue);margin-right:6px}
+.im-mem-del{font-size:11px;color:#ff453a;background:rgba(255,59,48,.15);border-radius:6px;padding:1px 6px;margin-left:4px}
+
+/* Toast */
+.im-toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:10px 20px;border-radius:12px;font-size:14px;z-index:300;pointer-events:none;opacity:0;transition:opacity .2s}
+.im-toast.show{opacity:1}
+
+/* 联系人编辑 */
+.im-cedit-mask{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:210;display:flex;align-items:flex-end;justify-content:center}
+.im-cedit{background:var(--im-panel);width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:20px;max-height:88vh;overflow-y:auto}
+.im-cedit-avatar{width:80px;height:80px;border-radius:50%;background:var(--im-bubble-gray);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:300;color:#fff;overflow:hidden;background-size:cover;background-position:center;touch-action:manipulation;position:relative}
+.im-cedit-avatar.has-img .im-cedit-letter{display:none}
+.im-cedit-close{width:100%;background:transparent;color:var(--im-muted);border:none;padding:12px;font-size:15px}
+.im-cedit-save{width:100%;background:var(--im-blue);color:#fff;border-radius:12px;padding:14px;font-size:16px;font-weight:500;margin-top:6px;border:none}
+.im-cedit-clear{width:100%;background:rgba(255,59,48,.15);color:#ff453a;border-radius:12px;padding:12px;font-size:14px;margin-top:8px;border:1px solid rgba(255,59,48,.3)}
+</style>
+</head>
+<body>
+<div class="im-app" id="imRoot">
+
+  <!-- ===== 列表页 ===== -->
+  <div id="imListView" class="im-hidden" style="flex:1;display:flex;flex-direction:column">
+    <div class="im-topbar">
+      <div class="im-back" style="visibility:hidden">›</div>
+      <div class="im-top-title" id="imListTitle">信息</div>
+      <button class="im-top-right" id="imSettingsBtn">⚙</button>
+    </div>
+    <div class="im-chatlist" id="imChatList"></div>
+  </div>
+
+  <!-- ===== 对话页 ===== -->
+  <div id="imChatView" class="im-hidden" style="flex:1;display:flex;flex-direction:column">
+    <div class="im-topbar">
+      <button class="im-back" id="imChatBack" style="transform:scaleX(-1)">›</button>
+      <div class="im-top-title" id="imChatName">联系人</div>
+      <div class="im-top-right" style="opacity:0">…</div>
+    </div>
+    <div class="im-messages" id="imMessages"></div>
+    <div class="im-input-bar">
+      <div class="im-add-btn" id="imAddBtn">+</div>
+      <div class="im-input-wrap">
+        <input type="text" class="im-input" id="imTextInput" placeholder="iMessage" />
+      </div>
+      <button class="im-send-btn" id="imSendBtn" title="发送">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== 记忆页 ===== -->
+  <div id="imMemView" class="im-hidden" style="flex:1;display:flex;flex-direction:column">
+    <div class="im-topbar">
+      <div class="im-back" style="visibility:hidden">›</div>
+      <div class="im-top-title">记忆库</div>
+      <div class="im-top-right" style="opacity:0">…</div>
+    </div>
+    <div class="im-chatlist" id="imMemList"></div>
+  </div>
+
+  <!-- ===== 设置面板 ===== -->
+  <div class="im-settings-mask im-hidden" id="imSettingsMask">
+    <div class="im-settings">
+      <h2>设置</h2>
+      <div class="im-settings-row"><label>API Base URL</label><input type="text" id="imBaseUrl" /></div>
+      <div class="im-settings-row"><label>API Key</label><input type="password" id="imApiKey" placeholder="sk-..." /></div>
+      <div class="im-settings-row"><label>模型名称</label><input type="text" id="imModel" /></div>
+      <div class="im-settings-row"><label>系统提示词</label><textarea id="imSysPrompt"></textarea></div>
+      <div class="im-settings-row" style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="imUseCloudTts" style="width:auto" />
+        <label style="margin:0">使用云端 TTS</label>
+      </div>
+      <div class="im-settings-row"><label>MiniMax API Key</label><input type="password" id="imTtsApiKey" /></div>
+      <div class="im-settings-row"><label>MiniMax Group ID</label><input type="text" id="imTtsGroupId" /></div>
+      <div class="im-settings-row"><label>MiniMax Voice ID</label><input type="text" id="imTtsVoiceId" /></div>
+      <button class="im-settings-save" id="imSaveSettings">保存</button>
+      <button class="im-settings-close" id="imCloseSettings">取消</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="im-toast" id="imToast"></div>
+
+  <!-- 文件选择（头像） -->
+  <input type="file" id="imAvatarFile" accept="image/*" style="display:none" />
+
+</div>
+
+<script>
+'use strict';
+
+/* ========== CONFIG ========== */
+var CONFIG = {
+  defaultBaseUrl: 'https://api.deepseek.com',
+  defaultSysPrompt: '你是我手机里的联系人，用口语化短句子回复，像iMessage短信一样简短，每次不超过30字。',
+  defaultTtsUrl: 'https://api.minimax.cn/v1/t2a_v2',
+  defaultTtsGroupId: '210158230773437642',
+  defaultTtsVoiceId: 'male-qn-qingse',
+  ttsModel: 'speech-2.8-hd',
+  memoryKey: 'im_app_memory',
+  memoryMax: 30,
+  contacts: [
+    { name: '老婆', num: '138 0013 8000', avatar: '老' },
+    { name: '哥哥', num: '139 0013 9000', avatar: '哥' },
+    { name: '妈妈', num: '137 0013 7000', avatar: '妈' },
+    { name: '老板', num: '136 0013 6000', avatar: '板' },
+    { name: '小李', num: '135 0013 5000', avatar: '李' },
+    { name: '张姐', num: '134 0013 4000', avatar: '张' }
+  ]
+};
+
+/* ========== STATE ========== */
+var state = {
+  contacts: [],
+  config: null,
+  memory: {},
+  messages: [],
+  currentChat: null,
+  lastDelivered: false
+};
+
+/* ========== TOOLS ========== */
+function $(id){return document['getElementById'](id);}
+function toast(msg){
+  var t=$('imToast');
+  t['textContent']=msg;
+  t['classList']['add']('show');
+  setTimeout(function(){t['classList']['remove']('show');},1800);
+}
+
+/* ========== 配置持久化 ========== */
+function loadConfig(){
+  try{
+    state['config']=JSON['parse'](localStorage['getItem']('im_app_config')||'null');
+  }catch(e){}
+  if(!state['config']){
+    state['config']={
+      baseUrl:CONFIG['defaultBaseUrl'],
+      apiKey:'',model:'',
+      sysPrompt:CONFIG['defaultSysPrompt'],
+      useCloudTts:false,
+      ttsApiKey:'',
+      ttsUrl:CONFIG['defaultTtsUrl'],
+      ttsGroupId:CONFIG['defaultTtsGroupId'],
+      ttsVoiceId:CONFIG['defaultTtsVoiceId']
+    };
+  }
+}
+function saveConfig(){
+  try{localStorage['setItem']('im_app_config',JSON['stringify'](state['config']));}catch(e){}
+}
+function loadContacts(){
+  try{
+    var saved=JSON['parse'](localStorage['getItem']('im_app_contacts')||'[]');
+    if(saved['length']){state['contacts']=saved;return;}
+  }catch(e){}
+  state['contacts']=CONFIG['contacts']['map'](function(c){
+    return{name:c['name'],num:c['num'],avatar:c['avatar'],img:''};
+  });
+}
+function saveContacts(){
+  try{localStorage['setItem']('im_app_contacts',JSON['stringify'](state['contacts']));}catch(e){}
+}
+function loadMemoryAll(){
+  try{state['memory']=JSON['parse'](localStorage['getItem'](CONFIG['memoryKey'])||'{}');}catch(e){state['memory']={};}
+}
+function saveMemoryAll(){
+  try{localStorage['setItem'](CONFIG['memoryKey'],JSON['stringify'](state['memory']));}catch(e){}
+}
+function loadMemory(name){return state['memory'][name]||[];}
+function saveMemory(name,mem){state['memory'][name]=mem['slice'](-CONFIG['memoryMax']*2);saveMemoryAll();}
+
+/* ========== 渲染：对话列表 ========== */
+function renderChatList(){
+  var list=$('imChatList');
+  var html='';
+  for(var i=0;i<state['contacts']['length'];i++){
+    var c=state['contacts'][i];
+    var mem=loadMemory(c['name']);
+    var preview='(还没有对话)';
+    for(var j=mem['length']-1;j>=0;j--){if(mem[j]['content']){preview=mem[j]['content'];break;}}
+    var avStyle=c['img']?'background-image:url('+c['img']+');background-size:cover;background-position:center':'';
+    var avText=c['img']?'':c['avatar'];
+    html+='<div class="im-chatlist-item" data-idx="'+i+'">'
+      +'<div class="im-chatlist-avatar editable" data-edit="'+i+'" style="'+avStyle+'">'+avText+'</div>'
+      +'<div class="im-chatlist-info"><div class="im-chatlist-name">'+c['name']+'</div>'
+      +'<div class="im-chatlist-preview">'+preview+'</div></div>'
+      +'<div class="im-chatlist-time">'+c['num']+'</div></div>';
+  }
+  list['innerHTML']=html;
+  /* 点击进入对话 */
+  var items=list['querySelectorAll']('.im-chatlist-item');
+  for(var k=0;k<items['length'];k++){
+    (function(it){
+      it['addEventListener']('click',function(e){
+        var editEl=e['target']['closest']('[data-edit]');
+        if(editEl){
+          e['stopPropagation']();
+          openContactEdit(parseInt(editEl['getAttribute']('data-edit')));
+          return;
+        }
+        openChat(parseInt(it['getAttribute']('data-idx')));
+      });
+    })(items[k]);
+  }
+}
+
+/* ========== 渲染：记忆列表 ========== */
+function renderMemList(){
+  var list=$('imMemList');
+  var html='';
+  var has=false;
+  for(var name in state['memory']){
+    if(!state['memory']['hasOwnProperty'](name))continue;
+    var mem=state['memory'][name];
+    if(!mem['length'])continue;
+    has=true;
+    html+='<div class="im-mem-group"><div class="im-mem-name">'+name+'</div>';
+    for(var i=0;i<mem['length'];i++){
+      var item=mem[i];
+      var role=item['role']==='user'?'我':'AI';
+      html+='<div class="im-mem-item"><span class="im-mem-role">'+role+'</span>'
+        +item['content']
+        +' <span class="im-mem-del" data-m="'+name+'|'+i+'">删除</span></div>';
+    }
+    html+='</div>';
+  }
+  if(!has)html='<div class="im-mem-empty">还没有记忆。<br>对话时长按消息可记住。</div>';
+  list['innerHTML']=html;
+  var dels=list['querySelectorAll']('[data-m]');
+  for(var j=0;j<dels['length'];j++){
+    (function(b){
+      b['addEventListener']('click',function(){
+        var parts=b['getAttribute']('data-m')['split']('|');
+        var mem=loadMemory(parts[0]);
+        mem['splice'](parseInt(parts[1]),1);
+        saveMemory(parts[0],mem);
+        renderMemList();
+        toast('已删除');
+      });
+    })(dels[j]);
+  }
+}
+
+/* ========== 对话页 ========== */
+function openChat(idx){
+  var c=state['contacts'][idx];
+  state['currentChat']=c;
+  state['messages']=loadMemory(c['name']);
+  $('imChatName')['textContent']=c['name'];
+  $('imListView')['classList']['add']('im-hidden');
+  $('imMemView')['classList']['add']('im-hidden');
+  $('imChatView')['classList']['remove']('im-hidden');
+  $('imChatList')['style']['display']='none';
+  renderMessages();
+}
+
+function backToList(){
+  $('imChatView')['classList']['add']('im-hidden');
+  $('imListView')['classList']['remove']('im-hidden');
+  $('imMemView')['classList']['add']('im-hidden');
+  renderChatList();
+}
+
+function switchTab(tab){
+  $('imChatView')['classList']['add']('im-hidden');
+  if(tab==='mem'){
+    $('imListView')['classList']['add']('im-hidden');
+    $('imMemView')['classList']['remove']('im-hidden');
+    renderMemList();
+  }else{
+    $('imMemView')['classList']['add']('im-hidden');
+    $('imListView')['classList']['remove']('im-hidden');
+    renderChatList();
+  }
+  var tabs=document['querySelectorAll']('.im-tab');
+  for(var i=0;i<tabs['length'];i++){
+    if(tabs[i]['getAttribute']('data-tab')===tab)tabs[i]['classList']['add']('active');
+    else tabs[i]['classList']['remove']('active');
+  }
+}
+
+/* ========== 渲染消息气泡 ========== */
+function renderMessages(){
+  var box=$('imMessages');
+  box['innerHTML']='';
+  for(var i=0;i<state['messages']['length'];i++){
+    var m=state['messages'][i];
+    var isMe=m['role']==='user';
+    var div=document['createElement']('div');
+    div['className']='im-bubble '+(isMe?'me':'other');
+    div['textContent']=m['content'];
+    /* 长按记住 */
+    var timer=null;
+    div['addEventListener']('touchstart',function(){
+      timer=setTimeout(function(){
+        div['classList']['add']('pinned');
+        if(navigator['vibrate'])navigator['vibrate'](30);
+      },500);
+    });
+    div['addEventListener']('touchend',function(){clearTimeout(timer);});
+    div['addEventListener']('touchmove',function(){clearTimeout(timer);});
+    div['addEventListener']('mousedown',function(){
+      timer=setTimeout(function(){div['classList']['add']('pinned');},600);
+    });
+    div['addEventListener']('mouseup',function(){clearTimeout(timer);});
+    div['addEventListener']('mouseleave',function(){clearTimeout(timer);});
+    /* 操作栏 */
+    var bar=document['createElement']('div');
+    bar['className']='im-bubble-bar';
+    var pinBtn=document['createElement']('span');
+    pinBtn['className']='im-bubble-btn';
+    pinBtn['textContent']='📌记住';
+    pinBtn['addEventListener']('click',function(e){
+      e['stopPropagation'];
+      var mem=loadMemory(state['currentChat']['name']);
+      var exists=false;
+      for(var k=0;k<mem['length'];k++){
+        if(mem[k]['role']===m['role']&&mem[k]['content']===m['content']){exists=true;break;}
+      }
+      if(!exists){mem['push']({role:m['role'],content:m['content']});saveMemory(state['currentChat']['name'],mem);}
+      div['classList']['remove']('pinned');
+      toast('已记住');
+    });
+    var cancelBtn=document['createElement']('span');
+    cancelBtn['className']='im-bubble-btn';
+    cancelBtn['textContent']='取消';
+    cancelBtn['addEventListener']('click',function(e){e['stopPropagation'];div['classList']['remove']('pinned');});
+    bar['appendChild'](pinBtn);bar['appendChild'](cancelBtn);
+    div['appendChild'](bar);
+    box['appendChild'](div);
+    /* 已送达 */
+    if(isMe&&i===state['messages']['length']-1){
+      var del=document['createElement']('div');
+      del['className']='im-delivered';
+      del['textContent']='已送达';
+      box['appendChild'](del);
+    }
+  }
+  box['scrollTop']=box['scrollHeight'];
+}
+
+function addBubble(role,text){
+  state['messages']['push']({role:role,content:text});
+  var mem=loadMemory(state['currentChat']['name']);
+  mem['push']({role:role,content:text});
+  saveMemory(state['currentChat']['name'],mem);
+  renderMessages();
+}
+
+/* ========== AI 发送 ========== */
+function sendMsg(){
+  var input=$('imTextInput');
+  var text=input['value']['trim']();
+  if(!text)return;
+  input['value']='';
+  addBubble('user',text);
+  callAi(text);
+}
+
+function callAi(userText){
+  var cfg=state['config'];
+  if(!cfg['apiKey']||!cfg['model']){
+    setTimeout(function(){
+      addBubble('assistant','先在设置里填 API Key 和模型名称吧～');
+    },500);
+    return;
+  }
+  var sysPrompt=cfg['sysPrompt']||CONFIG['defaultSysPrompt'];
+  if(state['currentChat'])sysPrompt='你正在和「'+state['currentChat']['name']+'」发短信。\n'+sysPrompt;
+  var recent=state['messages']['slice'](-20);
+  var msgs=[{role:'system',content:sysPrompt}];
+  for(var i=0;i<recent['length'];i++)msgs['push'](recent[i]);
+
+  fetch(cfg['baseUrl']['replace'](/\/+$/, '')+'/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg['apiKey']},
+    body:JSON['stringify']({model:cfg['model'],messages:msgs})
+  })['then'](function(resp){
+    if(!resp['ok']){return resp['json']()['then'](function(d){throw new Error(d['error']&&d['error']['message']||'HTTP '+resp['status']);});}
+    return resp['json']();
+  })['then'](function(data){
+    var text=(data['choices']&&data['choices'][0]&&data['choices'][0]['message']&&data['choices'][0]['message']['content']||'')['trim']();
+    if(!text)throw new Error('空回复');
+    addBubble('assistant',text);
+    speak(text);
+  })['catch'](function(e){
+    addBubble('assistant','出错了：'+e['message']);
+  });
+}
+
+/* ========== TTS ========== */
+function speak(text){
+  try{
+    if(state['config']['useCloudTts']){miniMaxSpeak(text);return;}
+  }catch(e){}
+  try{
+    if('speechSynthesis'in window){
+      window['speechSynthesis']['cancel']();
+      var u=new SpeechSynthesisUtterance(text);
+      u['lang']='zh-CN';
+      u['rate']=1.0;
+      window['speechSynthesis']['speak'](u);
+    }
+  }catch(e){}
+}
+
+function miniMaxSpeak(text){
+  var cfg=state['config'];
+  var key=cfg['ttsApiKey'];
+  if(!key)return;
+  var groupId=cfg['ttsGroupId'];
+  var voiceId=cfg['ttsVoiceId'];
+  fetch(CONFIG['defaultTtsUrl']+'?GroupId='+encodeURIComponent(groupId),{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    body:JSON['stringify']({
+      model:CONFIG['ttsModel'],
+      text:text,stream:false,
+      voice_setting:{voice_id:voiceId,speed:1,vol:1,pitch:0},
+      audio_setting:{sample_rate:32000,bitrate:128000,format:'mp3',channel:1},
+      output_format:'hex'
+    })
+  })['then'](function(r){return r['json']();})
+  ['then'](function(data){
+    if(data['base_resp']&&data['base_resp']['status_code']!==0)throw new Error(data['base_resp']['status_msg']||'业务错误');
+    var hex=data['data']&&data['data']['audio'];
+    if(!hex)return;
+    var bytes=new Uint8Array(hex['length']/2);
+    for(var i=0;i<bytes['length'];i++)bytes[i]=parseInt(hex['substr'](i*2,2),16);
+    var blob=new Blob([bytes],{type:'audio/mp3'});
+    var url=URL['createObjectURL'](blob);
+    var a=new Audio(url);
+    a['play']();
+    a['addEventListener']('ended',function(){URL['revokeObjectURL'](url);});
+  })['catch'](function(){});
+}
+
+/* ========== 设置面板 ========== */
+function openSettings(){
+  var c=state['config'];
+  $('imBaseUrl')['value']=c['baseUrl']||'';
+  $('imApiKey')['value']=c['apiKey']||'';
+  $('imModel')['value']=c['model']||'';
+  $('imSysPrompt')['value']=c['sysPrompt']||'';
+  $('imUseCloudTts')['checked']=!!c['useCloudTts'];
+  $('imTtsApiKey')['value']=c['ttsApiKey']||'';
+  $('imTtsGroupId')['value']=c['ttsGroupId']||'';
+  $('imTtsVoiceId')['value']=c['ttsVoiceId']||'';
+  $('imSettingsMask')['classList']['remove']('im-hidden');
+}
+function closeSettings(){$('imSettingsMask')['classList']['add']('im-hidden');}
+function saveSettings(){
+  var c=state['config'];
+  c['baseUrl']=$('imBaseUrl')['value']['trim']();
+  c['apiKey']=$('imApiKey')['value']['trim']();
+  c['model']=$('imModel')['value']['trim']();
+  c['sysPrompt']=$('imSysPrompt')['value']['trim']()||CONFIG['defaultSysPrompt'];
+  c['useCloudTts']=$('imUseCloudTts')['checked'];
+  c['ttsApiKey']=$('imTtsApiKey')['value']['trim']();
+  c['ttsGroupId']=$('imTtsGroupId')['value']['trim']();
+  c['ttsVoiceId']=$('imTtsVoiceId')['value']['trim']();
+  saveConfig();
+  toast('已保存');
+  closeSettings();
+}
+
+/* ========== 联系人编辑 ========== */
+var cEditIdx=-1;
+var cEditImg='';
+function openContactEdit(idx){
+  cEditIdx=idx;
+  var c=state['contacts'][idx];
+  cEditImg=c['img']||'';
+  var name=prompt('备注名',c['name']);
+  if(name===null)return;
+  var num=prompt('电话号码',c['num']);
+  if(num===null){num=c['num'];}
+  var av=confirm('是否更换头像？（确认后选择图片）');
+  c['name']=name['trim']()||c['name'];
+  c['num']=num['trim']();
+  c['avatar']=c['name']['charAt'](0);
+  saveContacts();
+  renderChatList();
+  if(av){$('imAvatarFile')['click']();}
+}
+function onAvatarFile(e){
+  var f=e['target']['files']&&e['target']['files'][0];
+  if(!f)return;
+  var r=new FileReader();
+  r['onload']=function(ev){
+    if(cEditIdx<0)return;
+    state['contacts'][cEditIdx]['img']=ev['target']['result'];
+    saveContacts();
+    renderChatList();
+    toast('头像已更换');
+  };
+  r['readAsDataURL'](f);
+  e['target']['value']='';
+}
+
+/* ========== 初始化 ========== */
+function boot(){
+  loadConfig();
+  loadContacts();
+  loadMemoryAll();
+
+  renderChatList();
+
+  $('imSettingsBtn')['addEventListener']('click',openSettings);
+  $('imCloseSettings')['addEventListener']('click',closeSettings);
+  $('imSaveSettings')['addEventListener']('click',saveSettings);
+  $('imSettingsMask')['addEventListener']('click',function(e){if(e['target']===$('imSettingsMask'))closeSettings();});
+
+  $('imChatBack')['addEventListener']('click',backToList);
+  $('imAddBtn')['addEventListener']('click',function(){toast('长按消息可以📌记住');});
+  $('imSendBtn')['addEventListener']('click',sendMsg);
+  $('imTextInput')['addEventListener']('keydown',function(e){if(e['key']==='Enter')sendMsg();});
+  $('imAvatarFile')['addEventListener']('change',onAvatarFile);
+
+  var tabs=document['querySelectorAll']('.im-tab');
+  for(var i=0;i<tabs['length'];i++){
+    (function(t){
+      t['addEventListener']('click',function(){switchTab(t['getAttribute']('data-tab'));});
+    })(tabs[i]);
+  }
+}
+
+if(document['readyState']==='loading'){document['addEventListener']('DOMContentLoaded',boot);}else{boot();}
+</script>
+</body>
+</html>
