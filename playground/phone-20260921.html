@@ -100,6 +100,12 @@
 .phone-app-sub .pa-trans{display:block;font-size:12px;color:var(--pa-muted);margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.12)}
 .phone-app-sub.user .pa-trans{color:rgba(255,255,255,.7);border-top-color:rgba(255,255,255,.2)}
 
+/* 记忆 pin 按钮 */
+.phone-app-sub .pa-pin{display:inline-block;font-size:11px;color:var(--pa-muted);background:rgba(255,255,255,.08);border-radius:8px;padding:2px 8px;margin-top:6px;cursor:pointer;touch-action:manipulation;user-select:none}
+.phone-app-sub .pa-pin:active{opacity:.6}
+.phone-app-sub.pinned{box-shadow:0 0 0 2px var(--pa-accent) inset}
+.phone-app-sub.pinned .pa-pin{color:var(--pa-accent);background:rgba(100,120,255,.15)}
+
 /* ========== 输入区（语音+打字双模式） ========== */
 .phone-app-input-bar{display:flex;align-items:center;gap:8px;padding:10px 16px}
 .phone-app-input-bar input{flex:1;background:rgba(255,255,255,0.1);border:1px solid var(--pa-border);border-radius:20px;padding:10px 16px;color:#fff;font-size:14px;outline:none;min-width:0}
@@ -622,9 +628,49 @@ function pushSub(role, text, trans) {
     t['textContent'] = trans;
     div['appendChild'](t);
   }
+  /* pin 按钮 */
+  var pin = document['createElement']('span');
+  pin['className'] = 'pa-pin';
+  pin['textContent'] = '📌记住';
+  pin['addEventListener']('click', function (e) {
+    e['stopPropagation']();
+    togglePin(div, role, text);
+  });
+  div['appendChild'](pin);
   $('paSubtitles')['appendChild'](div);
   $('paSubtitles')['scrollTop'] = $('paSubtitles')['scrollHeight'];
   return div;
+}
+
+function togglePin(divEl, role, text) {
+  var isPinned = divEl['classList']['toggle']('pinned');
+  if (isPinned) {
+    divEl['querySelector']('.pa-pin')['textContent'] = '✓ 已记住';
+    if (state['currentContact']) {
+      var mem = loadMemory(state['currentContact']['name']);
+      /* 去重：同样 role+text 不重复加 */
+      var exists = false;
+      for (var i = 0; i < mem['length']; i++) {
+        if (mem[i]['role'] === role && mem[i]['content'] === text) { exists = true; break; }
+      }
+      if (!exists) {
+        mem['push']({ role: role, content: text });
+        saveMemory(state['currentContact']['name'], mem);
+      }
+    }
+    toast('已记住这条');
+  } else {
+    divEl['querySelector']('.pa-pin')['textContent'] = '📌记住';
+    if (state['currentContact']) {
+      var mem = loadMemory(state['currentContact']['name']);
+      var filtered = [];
+      for (var i = 0; i < mem['length']; i++) {
+        if (!(mem[i]['role'] === role && mem[i]['content'] === text)) filtered['push'](mem[i]);
+      }
+      saveMemory(state['currentContact']['name'], filtered);
+    }
+    toast('已取消记住');
+  }
 }
 
 /* 给已有字幕追加翻译 */
@@ -687,7 +733,6 @@ function updateMicBtn() {
 function handleUserText(text) {
   pushSub('user', text);
   state['history']['push']({ role: 'user', content: text });
-  if (state['currentContact']) saveMemory(state['currentContact']['name'], state['history']);
   var cfg = state['config'];
   if (!cfg['apiKey']) {
     var reply = CONFIG['fallbackReplies'][state['fallbackIdx'] % CONFIG['fallbackReplies']['length']];
@@ -739,7 +784,6 @@ function callAi(userText) {
 function aiReplied(text) {
   var subEl = pushSub('ai', text);
   state['history']['push']({ role: 'assistant', content: text });
-  if (state['currentContact']) saveMemory(state['currentContact']['name'], state['history']);
   speak(text);
   /* 英文自动翻译 */
   if (state['config']['autoTrans'] && isEnglish(text)) {
