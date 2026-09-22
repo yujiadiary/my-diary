@@ -452,6 +452,13 @@
         </select>
       </div>
       <div class="phone-app-settings-row">
+        <label>打电话语言</label>
+        <select id="paCallLanguage" style="width:100%;background:rgba(0,0,0,.3);border:1px solid var(--pa-border);border-radius:10px;padding:10px 12px;color:#fff;font-size:14px;outline:none">
+          <option value="en">英文 English</option>
+          <option value="zh">中文</option>
+        </select>
+      </div>
+      <div class="phone-app-settings-row">
         <label style="display:flex;align-items:center;gap:8px">
           <input type="checkbox" id="paAutoTrans" style="width:auto" checked />
           <span>英文回复自动显示中文翻译</span>
@@ -497,7 +504,7 @@
 
 /* ============================================================
    核心配置（都在这里改）
-   localStorage 键名：phone_app_config，存 { baseUrl, apiKey, model, sysPrompt, useCloudTts, ttsApiKey, ttsUrl, ttsGroupId, ttsVoiceId, ttsSpeed, ttsEmotion, autoTrans }
+   localStorage 键名：phone_app_config，存 { baseUrl, apiKey, model, sysPrompt, useCloudTts, ttsApiKey, ttsUrl, ttsGroupId, ttsVoiceId, ttsSpeed, ttsEmotion, callLanguage, autoTrans }
    ============================================================ */
 var CONFIG = {
   defaultBaseUrl: 'https://token.sensenova.cn/v1',
@@ -508,6 +515,7 @@ var CONFIG = {
   defaultTtsVoiceId: 'male-qn-qingse',                  /* MiniMax 音色 ID */
   defaultTtsSpeed: 0.9,                                 /* 默认语速 */
   defaultTtsEmotion: 'auto',                              /* auto=自动检测，或 neutral/happy/sad/angry */
+  defaultCallLanguage: 'en',                              /* 通话语言：en=英文 / zh=中文 */
   /* 情绪关键词表：用于自动检测 AI 回复的情绪 */
   emotionKeywords: {
     happy:   ['哈哈','嘻嘻','嘿嘿','太棒了','开心','高兴','喜欢','可爱','好呀','好呀','嘿嘿嘿','真的吗','太好了','爱你','mua','😆','😁','😄','😆','哇','哦耶','yeah','awesome','great','love','happy','haha','lol','yay','sweet'],
@@ -582,6 +590,7 @@ function loadConfig() {
       ttsVoiceId: CONFIG['defaultTtsVoiceId'],
       ttsSpeed: CONFIG['defaultTtsSpeed'],
       ttsEmotion: CONFIG['defaultTtsEmotion'],
+      callLanguage: CONFIG['defaultCallLanguage'],
       autoTrans: false
     };
   }
@@ -592,6 +601,7 @@ function loadConfig() {
   state['config']['ttsVoiceId'] = state['config']['ttsVoiceId'] || CONFIG['defaultTtsVoiceId'];
   state['config']['ttsSpeed'] = typeof state['config']['ttsSpeed'] === 'number' ? state['config']['ttsSpeed'] : CONFIG['defaultTtsSpeed'];
   state['config']['ttsEmotion'] = state['config']['ttsEmotion'] || CONFIG['defaultTtsEmotion'];
+  state['config']['callLanguage'] = state['config']['callLanguage'] || CONFIG['defaultCallLanguage'];
   if (typeof state['config']['useCloudTts'] !== 'boolean') state['config']['useCloudTts'] = false;
   if (typeof state['config']['autoTrans'] !== 'boolean') state['config']['autoTrans'] = false;
 }
@@ -1045,20 +1055,20 @@ function acceptIncomingCall(){
   $('paCallStatus')['textContent']='通话中 00:00';
   $('paSubtitles')['innerHTML'] = '';
   startCallTimer();
-  /* 关键：在点击事件的同步栈里先预热语音管线（iOS Safari 要求）
-     speak 会先 cancel 任何正在朗读的内容
-     API 很快返回时真正的开场白会 cancel 掉这句，慢返回时兜底也能朗读 */
-  speak('Hey, what\'s up?');
-  /* AI 用英文说开场白（opener 只做上下文） */
+  /* 关键：在点击事件的同步栈里先预热语音管线（iOS Safari 要求） */
+  var cfg=state['config'];
+  var warmup = (cfg['callLanguage']||'en')==='zh' ? '喂？我在。' : 'Hey, what\'s up?';
+  speak(warmup);
+  /* AI 生成开场白 */
   var opener=(incomingContext['openingLine']||'')['replace'](/\s+/g,' ').trim();
   setTimeout(function(){
-    var cfg=state['config'];
     if(!cfg['apiKey']||!cfg['model']){
       /* 没配 API Key，刚才的预热已经说了兜底 */
       return;
     }
-    var sysPrompt='You are calling 「'+c['name']+'」 on the phone.'+(opener?' In the SMS you just said: '+opener+'.':'')+' Now the call is connected. Please say your opening line in English, natural and conversational, short (no more than 30 words). Reply in English only.';
-    var msgs=[{role:'system',content:sysPrompt},{role:'user',content:'The call is connected. Speak your first line.'}];
+    var sysPrompt=callOpeningPrompt(cfg,c['name'],opener);
+    var msgs=[{role:'system',content:sysPrompt},{role:'user',content:(cfg['callLanguage']||'en')==='zh'?'电话接通了，说第一句吧。':'The call is connected. Speak your first line.'}];
+    var fallback = (cfg['callLanguage']||'en')==='zh' ? '喂？我在。' : 'Hey, what\'s up?';
     fetch(cfg['baseUrl']['replace'](/\/+$/, '')+'/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg['apiKey']},
@@ -1068,8 +1078,8 @@ function acceptIncomingCall(){
       return r['json']();
     })['then'](function(d){
       var t=(d['choices']&&d['choices'][0]&&d['choices'][0]['message']&&d['choices'][0]['message']['content']||'')['trim']();
-      aiReplied(t||'Hey, what\'s up?');
-    })['catch'](function(){aiReplied('Hey, what\'s up?');});
+      aiReplied(t||fallback);
+    })['catch'](function(){aiReplied(fallback);});
   },1200);
   incomingContext=null;
 }
@@ -1110,7 +1120,7 @@ function startCall(contact) {
     state['inCall'] = true;
     $('paCallStatus')['textContent'] = '通话中 00:00';
     startCallTimer();
-    var firstWord = CONFIG['aiFirstWord'];
+    var firstWord = callFirstWord(state['config']);
     pushSub('ai', firstWord);
     speak(firstWord);
   }, CONFIG['callWaitMs']);
@@ -1338,7 +1348,8 @@ function callAi(userText) {
   /* 系统提示词：用户设置的优先，加上联系人名作为上下文 */
   var sysPrompt = cfg['sysPrompt'] || CONFIG['defaultSysPrompt'];
   if (state['currentContact'] && state['currentContact']['name']) {
-    sysPrompt = 'You are on the phone with 「' + state['currentContact']['name'] + '」.\n[IMPORTANT: Reply in English only. Do not use Chinese.]\n' + sysPrompt;
+    var prefix = callLangPrefix(cfg)['replace']('{NAME}', state['currentContact']['name']);
+    sysPrompt = prefix + sysPrompt;
   }
   var recent = state['history']['slice'](-CONFIG['maxHistory']);
   var messages = [{ role: 'system', content: sysPrompt }];
@@ -1424,6 +1435,31 @@ function speak(text, forceEmotion) {
   if (emotion === 'auto') emotion = detectEmotion(text);
   if (cfg['useCloudTts'] && cfg['ttsUrl']) { speakCloud(text, emotion); return; }
   speakBrowser(text);
+}
+
+/* 根据 callLanguage 生成通话语言前缀 */
+function callLangPrefix(cfg) {
+  var lang = cfg['callLanguage'] || CONFIG['defaultCallLanguage'];
+  if (lang === 'zh') {
+    return '你正在和「{NAME}」通电话。\n【重要：请全程用中文回复，不要用英文。每次不超过50字。】\n';
+  }
+  return 'You are on the phone with 「{NAME}」.\n[IMPORTANT: Reply in English only. Do not use Chinese. Keep it short, under 50 words.]\n';
+}
+
+/* 根据 callLanguage 生成来电开场白的 system prompt */
+function callOpeningPrompt(cfg, contactName, opener) {
+  var lang = cfg['callLanguage'] || CONFIG['defaultCallLanguage'];
+  var openerPart = opener ? (lang === 'zh' ? '你刚才在短信里说：' + opener + '。' : 'In the SMS you just said: ' + opener + '. ') : '';
+  if (lang === 'zh') {
+    return '你正在给「' + contactName + '」打电话。' + openerPart + '现在接通了。请用中文说你的开场白，自然口语化，简短不超过30字。';
+  }
+  return 'You are calling 「' + contactName + '」 on the phone. ' + openerPart + 'Now the call is connected. Please say your opening line in English, natural and conversational, short (no more than 30 words). Reply in English only.';
+}
+
+/* 根据 callLanguage 生成主动拨号的 aiFirstWord */
+function callFirstWord(cfg) {
+  var lang = cfg['callLanguage'] || CONFIG['defaultCallLanguage'];
+  return lang === 'zh' ? '喂？' : 'Hello?';
 }
 
 /* 关键词检测文本情绪，返回 MiniMax 支持的 emotion 值 */
@@ -1794,6 +1830,7 @@ function openSettings() {
   $('paTtsSpeed')['value'] = cfg['ttsSpeed'];
   $('paTtsSpeedLabel')['textContent'] = cfg['ttsSpeed'];
   $('paTtsEmotion')['value'] = cfg['ttsEmotion'];
+  $('paCallLanguage')['value'] = cfg['callLanguage'];
   $('paAutoTrans')['checked'] = cfg['autoTrans'];
   $('paSettingsMask')['classList']['remove']('phone-app-hidden');
 }
@@ -1812,6 +1849,7 @@ function saveSettings() {
   state['config']['ttsVoiceId'] = $('paTtsVoiceId')['value']['trim']();
   state['config']['ttsSpeed'] = parseFloat($('paTtsSpeed')['value']);
   state['config']['ttsEmotion'] = $('paTtsEmotion')['value'];
+  state['config']['callLanguage'] = $('paCallLanguage')['value'];
   state['config']['autoTrans'] = $('paAutoTrans')['checked'];
   saveConfig();
   toast('已保存');
