@@ -1064,7 +1064,7 @@ function acceptIncomingCall(){
   var warmup = (cfg['callLanguage']||'en')==='zh' ? '嗯哼？' : 'Hmm?';
   speak(warmup);
   /* ⚠️ 必须在 incomingContext=null 之前把需要的值拷出来，否则 setTimeout 里访问崩 */
-  var opener=(incomingContext['openingLine']||'')['replace'](/\s+/g,' ').trim();
+  var opener=(incomingContext['openingLine']||'')['replace'](/\s+/g,' ')['trim']();
   incomingContext=null;
   setTimeout(function(){
     var lang=(cfg['callLanguage']||'en');
@@ -1560,7 +1560,7 @@ function splitTextForTTS(text) {
   /* 合并短段（<3字且无标点的） */
   var merged = [];
   for (var j = 0; j < segs['length']; j++) {
-    var cur = segs[j]['trim'];
+    var cur = segs[j]['trim']();
     if (!cur) continue;
     if (merged['length'] > 0 && cur['length'] < 3 && !/[。！？!?；;]$/['test'](merged[merged['length'] - 1])) {
       merged[merged['length'] - 1] += cur;
