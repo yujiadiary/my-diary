@@ -546,7 +546,7 @@ var CONFIG = {
     angry:   ['生气','讨厌','滚','闭嘴','烦不烦','你敢','不行','别碰','出去','混蛋','可恶','哼！','气死','讨厌鬼','angry','hate','shut up','damn','hell','😠','😡','💢','👊']
   },
   ttsModel: 'speech-2.8-hd',                            /* MiniMax TTS 模型 */
-  maxHistory: 8,          /* 发给 AI 的最近对话轮数 */
+  maxHistory: 8,          /* 发给 AI 的最近对话轮数（旧字段，保留兼容；实际用 LIMITS['historyTurns']） */
   memoryKey: 'phone_app_memory', /* 通话联系人记忆库 localStorage 键名 */
   smsMemoryKey: 'phone_app_sms_memory', /* 短信记忆库 */
   memoryMax: 20,          /* 每个联系人最多保存多少轮对话 */
@@ -566,6 +566,95 @@ var CONFIG = {
   ],
   aiFirstWord: 'Hello?'
 };
+
+/* ★★★ API 调用上下文上限（可调）★★★
+   减少 Token 消耗：每次只发限定长度的内容给 AI */
+var LIMITS = {
+  systemPrompt:    2000,  /* 系统提示词上限（字，人设需完整所以放宽）*/
+  userInput:        1500,  /* 用户输入上限（字）*/
+  historyTurns:     6,    /* 保留历史对话轮数（1轮=用户+AI 各1条）*/
+  memoryMatches:   3,    /* 关键词匹配记忆条数 */
+  msgTruncate:     1500   /* 单条历史消息截断上限（字）*/
+};
+
+/* ----- 通用工具：截断 / 关键词提取 / 记忆匹配（通话+短信共用）----- */
+function truncateText(s, n) { s = String(s || ''); return s['length'] > n ? s['slice'](0, n) + '…' : s; }
+
+/* 从用户输入里提取关键词（中文 2-4 字词 + 英文单词，不引入外部分词库） */
+function extractKeywords(text) {
+  text = String(text || '');
+  var kws = [];
+  var seen = {};
+  /* 英文单词（2-8 字符）*/
+  var en = text['match'](/[A-Za-z]{2,8}/g);
+  if (en) for (var i = 0; i < en['length']; i++) {
+    var w = en[i]['toLowerCase']();
+    if (!seen[w]) { seen[w] = 1; kws['push'](w); }
+    if (kws['length'] >= 12) break;
+  }
+  /* 中文 2-4 字词（滑窗去空白，先抓长词）*/
+  var clean = text['replace'](/[^\u4e00-\u9fa5]/g, ' ');
+  var tryLens = [4, 3, 2];
+  for (var L = 0; L < tryLens['length']; L++) {
+    var len = tryLens[L];
+    for (var i = 0; i + len <= clean['length']; i++) {
+      var frag = clean['slice'](i, i + len);
+      if (/^\s+$|^\s|\s$/.test(frag)) continue;
+      var frag2 = frag['replace'](/\s/g, '');
+      if (frag2['length'] !== len) continue;
+      if (!seen[frag2]) { seen[frag2] = 1; kws['push'](frag2); }
+      if (kws['length'] >= 12) break;
+    }
+    if (kws['length'] >= 12) break;
+  }
+  return kws['slice'](0, 12);
+}
+
+/* 用关键词从通话记忆库里匹配，最多返回 max 条 */
+function matchCallMemories(name, keywords, max) {
+  if (!keywords['length']) return [];
+  var all = loadMemory(name);
+  var scored = [];
+  for (var i = 0; i < all['length']; i++) {
+    var m = all[i];
+    var hay = String(m['content'] || '');
+    var score = 0;
+    for (var k = 0; k < keywords['length']; k++) {
+      if (hay['indexOf'](keywords[k]) !== -1) score++;
+    }
+    if (score > 0) scored['push']({ m: m, score: score, idx: i });
+  }
+  scored['sort'](function (a, b) {
+    if (b['score'] !== a['score']) return b['score'] - a['score'];
+    return b['idx'] - a['idx'];
+  });
+  var out = [];
+  for (var j = 0; j < scored['length'] && j < max; j++) out['push'](scored[j]['m']);
+  return out;
+}
+
+/* 用关键词从短信记忆库里匹配，最多返回 max 条 */
+function matchSmsMemories(name, keywords, max) {
+  if (!keywords['length']) return [];
+  var all = loadSmsMem(name);
+  var scored = [];
+  for (var i = 0; i < all['length']; i++) {
+    var m = all[i];
+    var hay = String(m['content'] || '');
+    var score = 0;
+    for (var k = 0; k < keywords['length']; k++) {
+      if (hay['indexOf'](keywords[k]) !== -1) score++;
+    }
+    if (score > 0) scored['push']({ m: m, score: score, idx: i });
+  }
+  scored['sort'](function (a, b) {
+    if (b['score'] !== a['score']) return b['score'] - a['score'];
+    return b['idx'] - a['idx'];
+  });
+  var out = [];
+  for (var j = 0; j < scored['length'] && j < max; j++) out['push'](scored[j]['m']);
+  return out;
+}
 
 /* ========== 全局状态 ========== */
 var state = {
@@ -1082,15 +1171,41 @@ function callSmsAi(userText){
     setTimeout(function(){addSmsBubble('assistant','先去通话页设置里填 API Key 和模型～');},400);
     return;
   }
+  /* ★ 截断用户输入 */
+  userText = truncateText(userText, LIMITS['userInput']);
+
   var sysPrompt=cfg['sysPrompt']||CONFIG['defaultSysPrompt'];
   var callRule='\n\n【主动打电话规则】\n你是一个有情绪、有温度的AI。你可以在短信中主动打电话给用户。触发通话的原因不限于生气，也可以是开心、想念、担心、想认真解释、觉得文字说不清、用户很久没回、用户想听你的声音等。如果你决定打电话，请在回复的最后加上特殊标记：[CALL]。加上这个标记后，系统会触发一个电话。请在需要时使用。';
-  if(smsChatIdx>=0)sysPrompt='你正在和「'+state['contacts'][smsChatIdx]['name']+'」发短信。【重要：请全程用中文回复，不要用英文。】回复要短，像短信一样不超过30字。\n'+sysPrompt+callRule;
-  var recent=smsMsgs['slice'](-CONFIG['maxHistory']);
+  if(smsChatIdx>=0){
+    var cname = state['contacts'][smsChatIdx]['name'];
+    sysPrompt = '你正在和「'+cname+'」发短信。【重要：请全程用中文回复，不要用英文。】回复要短，像短信一样不超过30字。\n'+sysPrompt+callRule;
+
+    /* ★ 关键词匹配短信记忆（最多 3 条），拼进系统提示词 */
+    var keywords = extractKeywords(userText);
+    var matched = matchSmsMemories(cname, keywords, LIMITS['memoryMatches']);
+    if(matched['length']){
+      var memBlock = '\n\n===== 已知信息 =====\n';
+      for(var i=0;i<matched['length'];i++){
+        memBlock += (i+1) + '. ' + truncateText(matched[i]['content'], 80) + '\n';
+      }
+      memBlock += '===== 已知信息结束 =====\n';
+      sysPrompt += memBlock;
+    }
+  }
+  /* ★ 截断系统提示词（人设+规则+已知信息总和上限） */
+  sysPrompt = truncateText(sysPrompt, LIMITS['systemPrompt']);
+
+  /* ★ 最近 6 轮（user+ai 各算 1 条） */
+  var histLimit = LIMITS['historyTurns'] * 2;
+  var recent = smsMsgs['slice'](-histLimit);
   var msgs=[{role:'system',content:sysPrompt}];
   for(var i=0;i<recent['length'];i++){
     var m=recent[i];
     if(m&&m['content']&&String(m['content'])['trim']()){
-      msgs['push']({role:m['role']||'user',content:String(m['content'])['trim']()});
+      msgs['push']({
+        role: m['role']||'user',
+        content: truncateText(String(m['content'])['trim'](), LIMITS['msgTruncate'])
+      });
     }
   }
   fetch(cfg['baseUrl']['replace'](/\/+$/, '')+'/chat/completions',{
@@ -1479,20 +1594,48 @@ function callAi(userText) {
     return;
   }
   var url = cfg['baseUrl']['replace'](/\/+$/, '') + '/chat/completions';
-  /* 系统提示词：用户设置的优先，加上联系人名作为上下文 */
+
+  /* ★ 截断用户输入（如果非空） */
+  if (userText) userText = truncateText(userText, LIMITS['userInput']);
+
+  /* 系统提示词：用户设置的优先，加上联系人名作为上下文（保持完整人设） */
   var sysPrompt = cfg['sysPrompt'] || CONFIG['defaultSysPrompt'];
   if (state['currentContact'] && state['currentContact']['name']) {
     var prefix = callLangPrefix(cfg)['replace']('{NAME}', state['currentContact']['name']);
     sysPrompt = prefix + sysPrompt;
   }
-  var recent = state['history']['slice'](-CONFIG['maxHistory']);
+
+  /* ★ 关键词匹配通话记忆（最多 3 条），拼进系统提示词 */
+  var refText = userText || (state['history']['length'] ? state['history'][state['history']['length'] - 1]['content'] : '');
+  var keywords = extractKeywords(refText);
+  if (state['currentContact'] && state['currentContact']['name']) {
+    var matched = matchCallMemories(state['currentContact']['name'], keywords, LIMITS['memoryMatches']);
+    if (matched['length']) {
+      var memBlock = '\n\n===== 已知信息 =====\n';
+      for (var i = 0; i < matched['length']; i++) {
+        memBlock += (i + 1) + '. ' + truncateText(matched[i]['content'], 120) + '\n';
+      }
+      memBlock += '===== 已知信息结束 =====\n';
+      sysPrompt += memBlock;
+    }
+  }
+
+  /* ★ 截断系统提示词（人设保持完整，整体上限 2000 字） */
+  sysPrompt = truncateText(sysPrompt, LIMITS['systemPrompt']);
+
+  /* ★ 最近 6 轮（user+ai 各算 1 条） */
+  var histLimit = LIMITS['historyTurns'] * 2;
+  var recent = state['history']['slice'](-histLimit);
   var messages = [{ role: 'system', content: sysPrompt }];
   for (var i = 0; i < recent['length']; i++) {
     var m = recent[i];
     /* 过滤掉空内容/非法role的消息，避免 API 返回 422 */
     if (m && m['content'] && String(m['content'])['trim']()) {
       var role = (m['role'] === 'assistant' || m['role'] === 'user') ? m['role'] : 'user';
-      messages['push']({ role: role, content: String(m['content'])['trim']() });
+      messages['push']({
+        role: role,
+        content: truncateText(String(m['content'])['trim'](), LIMITS['msgTruncate'])
+      });
     }
   }
 

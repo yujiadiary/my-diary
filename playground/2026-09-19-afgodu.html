@@ -368,6 +368,79 @@ var CONFIG = {
   maxMemoryInPrompt: 20
 };
 
+/* ★★★ API 调用上下文上限（可调）★★★
+   减少 Token 消耗：每次只发限定长度的内容给 AI */
+var LIMITS = {
+  systemPrompt:      2000,  /* 系统提示词上限（字）*/
+  userInput:         1500,  /* 当前用户输入上限（字）*/
+  historyTurns:       6,    /* 保留历史对话轮数（1轮=用户+AI 各1条）*/
+  memoryMatches:     3,    /* 关键词匹配记忆条数 */
+  pageContent:       1500,  /* 发给 AI 的当前页内容上限（字）*/
+  selectionContext:  800,   /* 选中文字提问时附带的当前页上下文上限（字）*/
+  selectionQuote:    200    /* 选中文字本身截断上限（字）*/
+};
+
+/* ----- 通用工具：截断 / 关键词提取 / 记忆匹配（共用）----- */
+function truncateText(s, n) { s = String(s || ''); return s['length'] > n ? s['slice'](0, n) + '…' : s; }
+
+/* 从用户输入里提取关键词（中文 2-4 字词 + 英文单词，不引入外部分词库） */
+function extractKeywords(text) {
+  text = String(text || '');
+  var kws = [];
+  var seen = {};
+  /* 英文单词（2-8 字符）*/
+  var en = text['match'](/[A-Za-z]{2,8}/g);
+  if (en) for (var i = 0; i < en['length']; i++) {
+    var w = en[i]['toLowerCase']();
+    if (!seen[w]) { seen[w] = 1; kws['push'](w); }
+    if (kws['length'] >= 12) break;
+  }
+  /* 中文 2-4 字词（滑窗去空白，先抓长词）*/
+  var clean = text['replace'](/[^\u4e00-\u9fa5]/g, ' ');
+  var tryLens = [4, 3, 2];
+  for (var L = 0; L < tryLens['length']; L++) {
+    var len = tryLens[L];
+    for (var i = 0; i + len <= clean['length']; i++) {
+      var frag = clean['slice'](i, i + len);
+      if (/^\s+$|^\s|\s$/.test(frag)) continue;
+      var frag2 = frag['replace'](/\s/g, '');
+      if (frag2['length'] !== len) continue;
+      if (!seen[frag2]) { seen[frag2] = 1; kws['push'](frag2); }
+      if (kws['length'] >= 12) break;
+    }
+    if (kws['length'] >= 12) break;
+  }
+  return kws['slice'](0, 12);
+}
+
+/* 用关键词从本书记忆库里匹配，最多返回 max 条 */
+function matchMemories(keywords, max) {
+  if (!keywords['length']) return [];
+  var all = getAllMem();
+  /* 只在当前书内匹配 */
+  var pool = [];
+  for (var p = 0; p < all['length']; p++) {
+    if (all[p]['bookId'] === state['bookId']) pool['push'](all[p]);
+  }
+  var scored = [];
+  for (var i = 0; i < pool['length']; i++) {
+    var m = pool[i];
+    var hay = (m['quote'] || '') + ' ' + (m['thought'] || '');
+    var score = 0;
+    for (var k = 0; k < keywords['length']; k++) {
+      if (hay['indexOf'](keywords[k]) !== -1) score++;
+    }
+    if (score > 0) scored['push']({ m: m, score: score, idx: i });
+  }
+  scored['sort'](function (a, b) {
+    if (b['score'] !== a['score']) return b['score'] - a['score'];
+    return b['idx'] - a['idx']; /* 同分时优先最近添加的 */
+  });
+  var out = [];
+  for (var j = 0; j < scored['length'] && j < max; j++) out['push'](scored[j]['m']);
+  return out;
+}
+
 /* 翻页滑动参数（方便修改） */
 var SWIPE = {
   threshold: 40,     /* 滑动超过此距离才翻页(px) */
@@ -431,14 +504,91 @@ function hideSel() { $('raSelMenu')['style']['display'] = 'none'; }
 function callAI(msgs, onDone) { var cfg = loadCfg(); if (!cfg['apiKey'] || !cfg['model']) { onDone('请先在 ⚙ 里填 API Key 和模型名并保存', 'error'); return; } var url = cfg['baseUrl'] + '/chat/completions'; fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg['apiKey'] }, body: JSON['stringify']({ model: cfg['model'], messages: msgs }) })['then'](function (res) { if (!res['ok']) { return res['text']()['then'](function (t) { throw new Error('HTTP ' + res['status'] + ' ' + t['slice'](0, 200)); }); } return res['json'](); })['then'](function (data) { var ans = ''; try { ans = data['choices'][0]['message']['content'] || ''; } catch (e) { ans = '（返回格式异常）'; } onDone(ans); })['catch'](function (err) { onDone('请求失败：' + err['message'], 'error'); }); }
 
 function getVisibleText() { if (!state['text']) return ''; if (state['pages']['length'] === 0) return state['text']['slice'](0, 800); return state['pages'][state['pageIdx']] || ''; }
-function buildMsgs(userText) { var page = getVisibleText(); var bookMem = getRelevantMemories(); var memLines = ''; for (var i = 0; i < bookMem['length'] && i < CONFIG['maxMemoryInPrompt']; i++) { var m = bookMem[bookMem['length'] - 1 - i]; if (m['quote']) memLines += '[记忆] 引用「' + m['quote']['slice'](0, 80) + '」→ ' + m['thought'] + '\n'; else memLines += '[记忆] ' + m['thought'] + '\n'; } var cfg2 = loadCfg();
-var sys = (cfg2['persona'] || CONFIG['defaultPersona']) + '\n\n===== 当前阅读上下文 ====='; sys += '\n当前书：' + (state['title'] || '未载入'); sys += '\n当前进度：约 ' + (state['pages']['length'] > 0 ? Math['round']((state['pageIdx'] + 1) / state['pages']['length'] * 100) : 0) + '%'; sys += '\n本页内容：\n' + page; if (memLines) sys += '\n\n===== 你的记忆库 =====\n' + memLines + '===== 记忆结束 =====\n你可以主动引用这些记忆。'; sys += '\n\n请用简洁中文回答。'; var history = []; for (var j = 0; j < state['chatMsgs']['length']; j++) { var mm = state['chatMsgs'][j]; history['push']({ role: mm['role'], content: mm['content'] }); } var arr = [{ role: 'system', content: sys }]; for (var k = 0; k < history['length']; k++) arr['push'](history[k]); arr['push']({ role: 'user', content: userText }); return arr; }
+
+/* ★ 优化版：只发当前页+选中文字+最近6轮+关键词匹配记忆（最多3条） */
+function buildMsgs(userText) {
+  /* 1. 截断当前用户输入 */
+  userText = truncateText(userText, LIMITS['userInput']);
+
+  /* 2. 当前页内容（最多 1500 字，不发整本书） */
+  var page = truncateText(getVisibleText(), LIMITS['pageContent']);
+
+  /* 3. 用户选中了文字？只发「选中 + 当前页上下文（800字）」 */
+  var selText = state['lastSel'] || '';
+  if (selText) {
+    var selCtx = truncateText(page, LIMITS['selectionContext']);
+    page = '【用户选中】' + truncateText(selText, LIMITS['selectionQuote']) + '\n【当前页上下文】\n' + selCtx;
+  }
+
+  /* 4. 关键词匹配记忆（最多 3 条，不全部塞进去） */
+  var keywords = extractKeywords(userText + (selText ? ' ' + selText : ''));
+  var matched = matchMemories(keywords, LIMITS['memoryMatches']);
+  var memLines = '';
+  if (matched['length']) {
+    memLines = '\n\n===== 已知信息 =====\n';
+    for (var i = 0; i < matched['length']; i++) {
+      var m = matched[i];
+      memLines += (i + 1) + '. ';
+      if (m['quote']) memLines += '「' + truncateText(m['quote'], 80) + '」→ ';
+      memLines += truncateText(m['thought'], 120) + '\n';
+    }
+    memLines += '===== 已知信息结束 =====\n';
+  }
+
+  /* 5. 构建系统提示词（限 2000 字） */
+  var cfg2 = loadCfg();
+  var sys = (cfg2['persona'] || CONFIG['defaultPersona']);
+  sys += '\n\n===== 当前阅读上下文 =====';
+  sys += '\n当前书：' + (state['title'] || '未载入');
+  sys += '\n当前进度：约 ' + (state['pages']['length'] > 0 ? Math['round']((state['pageIdx'] + 1) / state['pages']['length'] * 100) : 0) + '%';
+  sys += '\n本页内容：\n' + page;
+  sys += memLines;
+  sys += '\n\n请用简洁中文回答。';
+  sys = truncateText(sys, LIMITS['systemPrompt']);
+
+  /* 6. 最近 6 轮历史（user+ai 各算 1 条） */
+  var histLimit = LIMITS['historyTurns'] * 2;
+  var recent = state['chatMsgs']['slice'](-histLimit);
+
+  var arr = [{ role: 'system', content: sys }];
+  for (var k = 0; k < recent['length']; k++) {
+    arr['push']({
+      role: recent[k]['role'],
+      content: truncateText(recent[k]['content'], LIMITS['userInput'])
+    });
+  }
+  arr['push']({ role: 'user', content: userText });
+  return arr;
+}
 
 function sendChat(text) { text = (text || '')['trim'](); if (!text) return; state['chatMsgs']['push']({ role: 'user', content: text }); saveChat(); renderChat(); var tmp = document['createElement']('div'); tmp['className'] = 'read-app-msg ai loading'; tmp['textContent'] = 'AI 正在思考…'; $('raChat')['appendChild'](tmp); $('raChat')['scrollTop'] = $('raChat')['scrollHeight']; var msgs = buildMsgs(text); callAI(msgs, function (ans, err) { if (tmp['parentNode']) tmp['parentNode']['removeChild'](tmp); var role = err === 'error' ? 'error' : 'ai'; state['chatMsgs']['push']({ role: role, content: ans }); saveChat(); renderChat(); }); }
 
 function askSel() { var t = state['lastSel']; hideSel(); if (!t) { sendChat('帮我解释一下这句话'); return; } sendChat('帮我解释一下这句话：「' + t + '」'); }
 
-function makeNote() { var t = state['lastSel']; hideSel(); if (!t) return; var loading = document['createElement']('div'); loading['className'] = 'read-app-msg ai loading'; loading['textContent'] = 'AI 正在写批注…'; $('raChat')['appendChild'](loading); var msgs = [{ role: 'system', content: '你是读者的 AI 陪读。请为读者选中的文字写一条简洁的批注（含义解释、背景补充、人物关系、金句点评等），控制在 150 字以内。直接输出批注内容，不要加前后缀。' }, { role: 'user', content: '请为这句话写批注：「' + t + '」' }]; callAI(msgs, function (ans, err) { if (loading['parentNode']) loading['parentNode']['removeChild'](loading); if (err === 'error') { sendChat('（批注生成失败：' + ans + '）'); return; } saveAnn(t, ans); saveMemory(t, ans, { source: 'ai_note' }); switchTab('notes'); }); }
+function makeNote() {
+  var t = state['lastSel'];
+  hideSel();
+  if (!t) return;
+  var loading = document['createElement']('div');
+  loading['className'] = 'read-app-msg ai loading';
+  loading['textContent'] = 'AI 正在写批注…';
+  $('raChat')['appendChild'](loading);
+  /* ★ 只发选中文字（截断）+ 当前页上下文（最多 800 字） */
+  var quote = truncateText(t, LIMITS['selectionQuote']);
+  var pageCtx = truncateText(getVisibleText(), LIMITS['selectionContext']);
+  var userMsg = '请为这句话写批注：「' + quote + '」\n【当前页上下文】\n' + pageCtx;
+  var msgs = [
+    { role: 'system', content: truncateText('你是读者的 AI 陪读。请为读者选中的文字写一条简洁的批注（含义解释、背景补充、人物关系、金句点评等），控制在 150 字以内。直接输出批注内容，不要加前后缀。', LIMITS['systemPrompt']) },
+    { role: 'user', content: truncateText(userMsg, LIMITS['userInput']) }
+  ];
+  callAI(msgs, function (ans, err) {
+    if (loading['parentNode']) loading['parentNode']['removeChild'](loading);
+    if (err === 'error') { sendChat('（批注生成失败：' + ans + '）'); return; }
+    saveAnn(t, ans);
+    saveMemory(t, ans, { source: 'ai_note' });
+    switchTab('notes');
+  });
+}
 
 function saveSelMem() { var t = state['lastSel']; hideSel(); if (!t) return; saveMemory(t, '（手动保存的引用，可在记忆 Tab 查看）', { source: 'manual' }); switchTab('memory'); }
 
