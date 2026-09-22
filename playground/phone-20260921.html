@@ -908,6 +908,7 @@ function updateSelectBar(){
 }
 function batchPin(){
   var idxs=getSelectedIdxs();
+  toast('DEBUG: 选中 idx='+JSON['stringify'](idxs)+' smsMsgs.length='+smsMsgs['length']);
   if(!idxs['length'])return;
   var mem=loadSmsMem(state['contacts'][smsChatIdx]['name']);
   var added=0;
@@ -1164,20 +1165,17 @@ function acceptIncomingCall(){
   $('paCallStatus')['textContent']='通话中 00:00';
   $('paSubtitles')['innerHTML'] = '';
   startCallTimer();
-  /* 关键：在点击事件的同步栈里先预热语音管线（iOS Safari 要求）—— 用短语气词代替突兀台词 */
-  var cfg=state['config'];
-  var warmup = (cfg['callLanguage']||'en')==='zh' ? '嗯哼？' : 'Hmm?';
+  /* 关键：在点击同步栈里先预热语音管线（iOS 要求）—— 用短语气词 */
+  var cfg2=state['config'];
+  var warmup = (cfg2['callLanguage']||'en')==='zh' ? '嗯哼？' : 'Hmm?';
   speak(warmup);
-  /* ⚠️ 必须在 incomingContext=null 之前把需要的值拷出来，否则 setTimeout 里访问崩 */
+  /* 立刻（不额外 setTimeout）调 callAi —— LLM 本身就需要 3-5s 响应，等 API 回来时预热早就播完了 */
   var opener=(incomingContext['openingLine']||'')['replace'](/\s+/g,' ')['trim']();
+  var lang=(cfg2['callLanguage']||'en');
+  var openingPrompt = lang==='zh' ? '（电话接通了，说第一句吧。'+(opener?' 你刚才在短信里说：'+opener:'')+'）' : "(The call is connected. Speak your first line."+(opener?' In the SMS you just said: '+opener:'')+")";
+  state['history']['push']({ role:'user', content: openingPrompt });
+  callAi('');
   incomingContext=null;
-  setTimeout(function(){
-    var lang=(cfg['callLanguage']||'en');
-    var openingPrompt = lang==='zh' ? '（电话接通了，说第一句吧。'+(opener?' 你刚才在短信里说：'+opener:'')+'）' : "(The call is connected. Speak your first line."+(opener?' In the SMS you just said: '+opener:'')+")";
-    /* callAi 从 history 读消息，先把 openingPrompt push 进去 */
-    state['history']['push']({ role:'user', content: openingPrompt });
-    callAi('');
-  },400);
 }
 
 function declineIncomingCall(){
@@ -1699,6 +1697,7 @@ function speakCloud(text, emotion) {
   var audioQueue = [];
   var loadingCount = segs['length'];
   var loadFailed = false;
+  var myAudios = [];  /* 本次 speakCloud 创建的所有 Audio 对象，降级时全 pause */
 
   function loadSeg(idx) {
     if (idx >= segs['length']) return;
@@ -1746,6 +1745,7 @@ function speakCloud(text, emotion) {
       var audio = new window['Audio']();
       audio['src'] = URL['createObjectURL'](blob);
       audioQueue[idx] = audio;
+      myAudios['push'](audio);  /* 记录下来，方便降级时全 pause */
     })['catch'](function (e) {
       loadFailed = true;
       audioQueue[idx] = null;
@@ -1768,6 +1768,11 @@ function speakCloud(text, emotion) {
 
   /* 串行播放队列（_degraded 标记防止同一次 speakCloud 里重复降级） */
   var myToken = (speakCloud['_token'] = (speakCloud['_token'] || 0) + 1);
+  function stopAllMyAudios(){
+    for(var k=0;k<myAudios['length'];k++){
+      try{myAudios[k]['pause']();myAudios[k]['onended']=null;}catch(e){}
+    }
+  }
   function playQueue(queue, i) {
     if (i >= queue['length']) return;
     var a = queue[i];
@@ -1781,15 +1786,13 @@ function speakCloud(text, emotion) {
       var p = a['play']();
       if (p && typeof p['then'] === 'function') {
         p['then'](function () {}, function () {
-          /* play() 被拦截/失败 —— 但只降级一次 */
+          /* play() 被拦截/失败 —— 只降级一次 */
           if (speakCloud['_degraded']) return;
           speakCloud['_degraded'] = true;
           speakCloud['_autoPlayFailed'] = true;
-          /* 让其他段的 onended 检测到 token 过期 */
-          speakCloud['_token']++;
-          try { a['pause'](); } catch (e) {}
-          try { URL['revokeObjectURL'](a['src']); } catch (e) {}
-          speakBrowser(text);
+          speakCloud['_token']++;   /* 让后续 onended 过期 */
+          stopAllMyAudios();        /* 立刻停掉所有已加载的音频，只走 speakBrowser */
+          speakBrowser(text);       /* 读完整原文 */
         });
       }
     } catch (e) {
@@ -1797,6 +1800,7 @@ function speakCloud(text, emotion) {
       speakCloud['_degraded'] = true;
       speakCloud['_autoPlayFailed'] = true;
       speakCloud['_token']++;
+      stopAllMyAudios();
       speakBrowser(text);
     }
   }
