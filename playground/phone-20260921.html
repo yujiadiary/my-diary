@@ -1063,16 +1063,16 @@ function acceptIncomingCall(){
   var cfg=state['config'];
   var warmup = (cfg['callLanguage']||'en')==='zh' ? '嗯哼？' : 'Hmm?';
   speak(warmup);
-  /* 用 callAi 统一链路生成开场白 —— 复用已验证的 system prompt / 错误处理 / TTS */
+  /* ⚠️ 必须在 incomingContext=null 之前把需要的值拷出来，否则 setTimeout 里访问崩 */
+  var opener=(incomingContext['openingLine']||'')['replace'](/\s+/g,' ').trim();
+  incomingContext=null;
   setTimeout(function(){
     var lang=(cfg['callLanguage']||'en');
-    var opener=(incomingContext['openingLine']||'')['replace'](/\s+/g,' ').trim();
     var openingPrompt = lang==='zh' ? '（电话接通了，说第一句吧。'+(opener?' 你刚才在短信里说：'+opener:'')+'）' : "(The call is connected. Speak your first line."+(opener?' In the SMS you just said: '+opener:'')+")";
-    /* 加一条占位 user 消息，LLM 会把它当作"对方刚接电话了"的信号来回应 */
+    /* callAi 从 history 读消息，先把 openingPrompt push 进去 */
     state['history']['push']({ role:'user', content: openingPrompt });
-    callAi(''); /* 空字符串触发，但 history 里已经有 prompt 了 */
+    callAi('');
   },400);
-  incomingContext=null;
 }
 
 function declineIncomingCall(){
@@ -1423,12 +1423,16 @@ function initTts() {
 }
 
 /* 关键：必须在【用户点击事件的同步栈】里调用。
-   只做两件事（持久解锁，一次搞定全程有效）：
-   1. AudioContext.resume()   → 让后续任何时机的 HTML5 Audio.play() 都能正常工作
-   2. speechSynthesis.speak() → 解锁原生朗读 */
+   iOS Safari 的自动播放限制是"两条通路独立锁死"：
+   1. Web Audio API (AudioContext) → resume() 一次，全程有效
+   2. HTML5 Audio (new Audio())     → 必须 play() 一次立即 pause()，全程有效
+   3. speechSynthesis             → speak() 一次后全程有效
+   三者缺一不可，MiniMax 云端 TTS 用的是第 2 条 */
 function unlockAudioInClickStack() {
+  /* 0. 重置"云端TTS被拦截"标记 —— 只要用户又点了一下，就相信能解锁成功 */
+  speakCloud['_autoPlayFailed'] = false;
   try {
-    /* WebAudio 持久解锁（这才是 iOS 上真正有效的方案） */
+    /* 1. Web Audio API 持久解锁 */
     var AC = window['AudioContext'] || window['webkitAudioContext'];
     if (AC && !unlockAudioInClickStack['_ac']) {
       var ctx = new AC();
@@ -1439,7 +1443,18 @@ function unlockAudioInClickStack() {
     }
   } catch (e) {}
   try {
-    /* 原生 speechSynthesis 解锁（说一个不可听的字） */
+    /* 2. HTML5 Audio 解锁（MiniMax 云端 TTS 用的就是这个） */
+    var silentAudio = new window['Audio']();
+    silentAudio['src'] = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+    var p = silentAudio['play']();
+    if (p && typeof p['then'] === 'function') {
+      p['then'](function () { silentAudio['pause'](); silentAudio['currentTime'] = 0; }).catch(function () {});
+    } else {
+      silentAudio['pause']();
+    }
+  } catch (e) {}
+  try {
+    /* 3. speechSynthesis 原生解锁（volume=0 听不到） */
     if (state['synthSupport']) {
       var u = new window['SpeechSynthesisUtterance']('.');
       u['volume'] = 0;
@@ -1646,35 +1661,38 @@ function speakCloud(text, emotion) {
     loadSeg(i);
   }
 
-  /* 串行播放队列 */
+  /* 串行播放队列（_degraded 标记防止同一次 speakCloud 里重复降级） */
+  var myToken = (speakCloud['_token'] = (speakCloud['_token'] || 0) + 1);
   function playQueue(queue, i) {
     if (i >= queue['length']) return;
     var a = queue[i];
     if (!a) { playQueue(queue, i + 1); return; }
-    var token = (speakCloud['_token'] = (speakCloud['_token'] || 0) + 1);
     a['onended'] = function () {
-      if (speakCloud['_token'] !== token) return; /* 已被打断 */
-      /* 播放完这个段后释放 blob URL，避免内存泄漏 */
+      if (speakCloud['_token'] !== myToken) return; /* 已被新 speak 打断 */
       try { URL['revokeObjectURL'](a['src']); } catch (e) {}
       playQueue(queue, i + 1);
     };
-    /* 正确处理 audio.play() 返回的 Promise：iOS 自动播放拦截会 reject */
     try {
       var p = a['play']();
       if (p && typeof p['then'] === 'function') {
         p['then'](function () {}, function () {
-          /* play() 被拦截/失败 → 标记永久降级 */
+          /* play() 被拦截/失败 —— 但只降级一次 */
+          if (speakCloud['_degraded']) return;
+          speakCloud['_degraded'] = true;
           speakCloud['_autoPlayFailed'] = true;
-          /* 立即整体降级：停掉当前队列，用 speakBrowser 读完整文本 */
-          speakCloud['_token']++; /* 让 onended 回调检测到 token 过期 */
+          /* 让其他段的 onended 检测到 token 过期 */
+          speakCloud['_token']++;
           try { a['pause'](); } catch (e) {}
           try { URL['revokeObjectURL'](a['src']); } catch (e) {}
           speakBrowser(text);
         });
       }
     } catch (e) {
+      if (speakCloud['_degraded']) return;
+      speakCloud['_degraded'] = true;
       speakCloud['_autoPlayFailed'] = true;
-      playQueue(queue, i + 1);
+      speakCloud['_token']++;
+      speakBrowser(text);
     }
   }
 }
