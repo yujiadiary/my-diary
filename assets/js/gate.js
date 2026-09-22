@@ -162,6 +162,19 @@ var GATE_THEME = {
     exitWidgetEl = null;
   }
 
+  // ---- 强制兜底：如果 body 还被隐藏了，不管什么原因都强制可见 ----
+  function forceBodyVisible() {
+    // 1. 删掉残留的 hide-style 标签
+    removeHideStyle();
+    // 2. 内联 style 兜底（防止某个 .css 文件或内联 style 设了 visibility）
+    try {
+      if (document['body']) {
+        var cur = document['body']['style']['visibility'];
+        if (cur && cur !== 'visible') document['body']['style']['visibility'] = '';
+      }
+    } catch (e) {}
+  }
+
   // ---- 初始化（带重试，防止 DOM 未就绪） ----
   function init(retry) {
     retry = retry || 0;
@@ -196,4 +209,24 @@ var GATE_THEME = {
   } else {
     init(0);
   }
+
+  // ---- BFCACHE / 页面恢复时重新跑 ----
+  // iOS Safari / Chrome 在历史导航恢复页面时不重跑 DOMContentLoaded，
+  // 但会触发 pageshow。此时可能 hide-style 残留或 body 被意外隐藏。
+  document['addEventListener']('pageshow', function (e) {
+    forceBodyVisible();
+    // 如果有 exit widget 说明已经授权，不需要重新 init
+    // 如果没有，再检查一下
+    if (!document['getElementById']('gate-app-exit-toggle') &&
+        !document['getElementById']('gate-app-submit')) {
+      init(0);
+    }
+  });
+
+  // ---- 页面切回来时（iOS App 切走再回来） ----
+  document['addEventListener']('visibilitychange', function () {
+    if (!document['hidden']) {
+      setTimeout(forceBodyVisible, 50);
+    }
+  });
 })();

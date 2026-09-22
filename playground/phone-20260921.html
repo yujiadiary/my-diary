@@ -1249,6 +1249,10 @@ function hangup() {
       toast('通话已结束，返回短信');
     } else {
       showDial();
+      // 兜底：强制刷最近通话、切到通话 tab
+      try { renderRecents(); } catch (e) {}
+      try { renderContacts(); } catch (e) {}
+      try { switchTab('recents'); } catch (e) {}
     }
   }, 600);
 }
