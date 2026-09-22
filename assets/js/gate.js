@@ -4,7 +4,10 @@
 // ═══════════════════════════════════════════════════════════
 var GATE_ACCESS_CODE = 'jiajiadiary520'; // ← 改成你自己的访问码
 
-// 核心参数（颜色、尺寸，方便统一改）
+// 提示语（方便以后改）
+var GATE_HINT_TEXT = '这是私密页面,请不要转发给他人。如果你没有访问码,请联系站长。';
+
+// 核心参数(颜色、尺寸,方便统一改)
 var GATE_THEME = {
   bg:         '#faf8f4',
   cardBg:     '#ffffff',
@@ -47,7 +50,8 @@ var GATE_THEME = {
     s['textContent'] = [
       '.gate-app-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;background:' + t['bg'] + ';display:flex;align-items:center;justify-content:center;font-family:' + t['fontSans'] + ';visibility:visible!important}',
       '.gate-app-card{background:' + t['cardBg'] + ';border:1px solid ' + t['line'] + ';border-radius:' + t['radius'] + ';box-shadow:' + t['shadow'] + ';padding:36px 32px;width:90%;max-width:360px;text-align:center}',
-      '.gate-app-title{font-size:20px;font-weight:600;color:' + t['text'] + ';margin:0 0 24px}',
+      '.gate-app-title{font-size:20px;font-weight:600;color:' + t['text'] + ';margin:0 0 12px}',
+      '.gate-app-hint{font-size:13px;color:' + t['textMute'] + ';line-height:1.55;margin:0 0 20px}',
       '.gate-app-input{width:100%;padding:12px 14px;font-size:16px;border:1px solid ' + t['line'] + ';border-radius:8px;color:' + t['text'] + ';background:' + t['cardBg'] + ';outline:none;box-sizing:border-box;font-family:inherit}',
       '.gate-app-input:focus{border-color:' + t['accent'] + '}',
       '.gate-app-btn{width:100%;padding:12px;font-size:15px;font-weight:500;border:none;border-radius:8px;background:' + t['accent'] + ';color:#fff;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;font-family:inherit;margin-top:12px}',
@@ -79,6 +83,7 @@ var GATE_THEME = {
     overlayEl['innerHTML'] =
       '<div class="gate-app-card">' +
         '<h2 class="gate-app-title">\u8f93\u5165\u8bbf\u95ee\u7801</h2>' +
+        '<p class="gate-app-hint">' + GATE_HINT_TEXT + '</p>' +
         '<input type="password" class="gate-app-input" id="gate-app-input" placeholder="\u8bbf\u95ee\u7801" autocomplete="off" />' +
         '<button type="button" class="gate-app-btn" id="gate-app-submit">\u786e\u8ba4\u8fdb\u5165</button>' +
         '<div class="gate-app-error" id="gate-app-error">\u8bbf\u95ee\u7801\u4e0d\u6b63\u786e</div>' +
