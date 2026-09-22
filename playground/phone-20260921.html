@@ -997,13 +997,16 @@ function callSmsAi(userText){
   })['then'](function(data){
     var raw=(data['choices']&&data['choices'][0]&&data['choices'][0]['message']&&data['choices'][0]['message']['content']||'')['trim']();
     if(!raw)throw new Error('空回复');
-    /* 检测 [CALL] 标记 */
-    var wantCall=/\[CALL\]/.test(raw);
+    /* 检测 [CALL] 标记 + 关键词兜底（AI 经常忘加标记） */
+    var hasMarker=/\[CALL\]/.test(raw);
     var text=raw['replace'](/\[CALL\]/g,'')['trim']();
+    var lower=text['toLowerCase']();
+    var hasKeyword=/电话|打电话|接电话|call me|call you|i'll call|let me call|给你打|给我打/.test(lower);
+    var wantCall=hasMarker||hasKeyword;
     addSmsBubble('assistant',text);
     if(wantCall){
-      /* 延迟 1.5s 触发来电 */
-      setTimeout(function(){triggerIncomingCall(text);},1500);
+      toast('检测到来电意图 ✓ '+text['slice'](0,20));
+      setTimeout(function(){triggerIncomingCall(text);},800);
     }
   })['catch'](function(e){
     addSmsBubble('assistant','出错了：'+e['message']);
@@ -1055,20 +1058,20 @@ function acceptIncomingCall(){
   $('paCallStatus')['textContent']='通话中 00:00';
   $('paSubtitles')['innerHTML'] = '';
   startCallTimer();
-  /* 关键：在点击事件的同步栈里先预热语音管线（iOS Safari 要求） */
+  /* 关键：在点击事件的同步栈里先预热语音管线（iOS Safari 要求）—— 用短语气词代替突兀台词 */
   var cfg=state['config'];
-  var warmup = (cfg['callLanguage']||'en')==='zh' ? '喂？我在。' : 'Hey, what\'s up?';
+  var warmup = (cfg['callLanguage']||'en')==='zh' ? '嗯哼？' : 'Hmm?';
   speak(warmup);
   /* AI 生成开场白 */
   var opener=(incomingContext['openingLine']||'')['replace'](/\s+/g,' ').trim();
   setTimeout(function(){
     if(!cfg['apiKey']||!cfg['model']){
-      /* 没配 API Key，刚才的预热已经说了兜底 */
+      /* 没配 API Key，就停留在这个语气词即可 */
       return;
     }
     var sysPrompt=callOpeningPrompt(cfg,c['name'],opener);
     var msgs=[{role:'system',content:sysPrompt},{role:'user',content:(cfg['callLanguage']||'en')==='zh'?'电话接通了，说第一句吧。':'The call is connected. Speak your first line.'}];
-    var fallback = (cfg['callLanguage']||'en')==='zh' ? '喂？我在。' : 'Hey, what\'s up?';
+    var fallback = (cfg['callLanguage']||'en')==='zh' ? '嗯哼？' : 'Hmm?';
     fetch(cfg['baseUrl']['replace'](/\/+$/, '')+'/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg['apiKey']},
@@ -1080,7 +1083,7 @@ function acceptIncomingCall(){
       var t=(d['choices']&&d['choices'][0]&&d['choices'][0]['message']&&d['choices'][0]['message']['content']||'')['trim']();
       aiReplied(t||fallback);
     })['catch'](function(){aiReplied(fallback);});
-  },1200);
+  },400);
   incomingContext=null;
 }
 
@@ -1459,7 +1462,7 @@ function callOpeningPrompt(cfg, contactName, opener) {
 /* 根据 callLanguage 生成主动拨号的 aiFirstWord */
 function callFirstWord(cfg) {
   var lang = cfg['callLanguage'] || CONFIG['defaultCallLanguage'];
-  return lang === 'zh' ? '喂？' : 'Hello?';
+  return lang === 'zh' ? '宝贝～' : 'Baby~';
 }
 
 /* 关键词检测文本情绪，返回 MiniMax 支持的 emotion 值 */
