@@ -1014,14 +1014,21 @@ function acceptIncomingCall(){
     av['classList']['remove']('has-img');
   }
   $('paAvatarLetter')['textContent']=c['avatar']||c['name']['charAt'](0);
-  $('paCallStatus')['textContent']='通话中';
+  state['callSeconds'] = 0;
+  state['inCall'] = true;
+  $('paCallStatus')['textContent']='通话中 00:00';
+  $('paSubtitles')['innerHTML'] = '';
   startCallTimer();
-  /* AI 用英文说开场白（opener 只做上下文，不朗读） */
+  /* 关键：在点击事件的同步栈里先预热语音管线（iOS Safari 要求）
+     speak 会先 cancel 任何正在朗读的内容
+     API 很快返回时真正的开场白会 cancel 掉这句，慢返回时兜底也能朗读 */
+  speak('Hey, what\'s up?');
+  /* AI 用英文说开场白（opener 只做上下文） */
   var opener=(incomingContext['openingLine']||'')['replace'](/\s+/g,' ').trim();
   setTimeout(function(){
     var cfg=state['config'];
     if(!cfg['apiKey']||!cfg['model']){
-      aiReplied('Hey, what\'s up?');
+      /* 没配 API Key，刚才的预热已经说了兜底 */
       return;
     }
     var sysPrompt='You are calling 「'+c['name']+'」 on the phone.'+(opener?' In the SMS you just said: '+opener+'.':'')+' Now the call is connected. Please say your opening line in English, natural and conversational, short (no more than 30 words). Reply in English only.';
