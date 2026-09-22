@@ -44,7 +44,7 @@
 
   function excerpt(text, n) {
     if (!text) return '';
-    const t = text.replace(/```[\s\S]*?```/g, '').replace(/[#>*`]/g, '').trim();
+    const t = text.replace(/\[PLAYGROUND_LINK\]/g, '').replace(/```[\s\S]*?```/g, '').replace(/[#>*`]/g, '').trim();
     return t.length > n ? t.slice(0, n) + '…' : t;
   }
 
@@ -247,7 +247,16 @@
       return view().innerHTML = '<p class="empty">文章不存在或已隐藏。</p>';
     }
     const { prev, next } = await store.posts.neighbors(p.slug || p.id);
-    const body = md.render(p.content || '', { fold: p.category !== 'long' });
+    let body = md.render(p.content || '', { fold: p.category !== 'long' });
+    // 替换试玩占位符为点击按钮
+    if (p.playgroundFile) {
+      body = body.replace(
+        /<p>\[PLAYGROUND_LINK\]<\/p>/g,
+        '<p class="playground-link"><a href="../playground/' + encodeURIComponent(p.playgroundFile) + '.html" target="_blank" rel="noopener">点击试玩 →</a></p>'
+      );
+    } else {
+      body = body.replace(/\[PLAYGROUND_LINK\]/g, '');
+    }
     const tags = (p.tags || []).map(t => `<a href="#/tag/${encodeURIComponent(t)}" class="tag">#${h(t)}</a>`).join('');
     const imgs = (p.images || []).map(src => `<a href="${h(src)}" target="_blank" rel="noopener"><img src="${h(src)}" alt="" loading="lazy"></a>`).join('');
 

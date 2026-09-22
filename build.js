@@ -315,7 +315,7 @@ function buildPostHtml(p, prev, next, comments) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(p.title)} · 碎碎念留档</title>
-  <meta name="description" content="${escapeHtml(excerpt(p.content, 160))}">
+  <meta name="description" content="${escapeHtml(p.excerpt || excerpt(p.content.replace(/\[PLAYGROUND_LINK\]/g, ''), 160))}">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#5b6f8a">
   <link rel="canonical" href="${SITE_URL}posts/${encodeURIComponent(p.slug)}.html">
@@ -441,7 +441,17 @@ function buildAllPostsHtml(visiblePosts, commentsByPost) {
 
     // 前 N 篇:完整正文 + 评论
     if (i < FULL_POST_LIMIT) {
-      const body = renderMarkdown(p.content || '');
+      let body = renderMarkdown(p.content || '');
+      // 替换试玩占位符为点击按钮(和 buildPostHtml 一致)
+      if (p.playgroundFile) {
+        const pgHref = `${SITE_URL}playground/${encodeURIComponent(p.playgroundFile)}.html`;
+        body = body.replace(
+          /<p>\[PLAYGROUND_LINK\]<\/p>/g,
+          `<p class="playground-link"><a href="${pgHref}" target="_blank" rel="noopener">点击试玩 →</a></p>`
+        );
+      } else {
+        body = body.replace(/\[PLAYGROUND_LINK\]/g, '');
+      }
       const tags = (p.tags || []).map(t =>
         `<a class="tag" href="#/tag/${encodeURIComponent(t)}">#${escapeHtml(t)}</a>`
       ).join('');
@@ -1184,7 +1194,11 @@ function build() {
       }
     }
     // 摘要从 contentBody 取(已移除 playable 块),避免泄漏原始 HTML/CSS/JS
-    const excerptBody = contentBody.replace(/\[PLAYGROUND_LINK\]/g, '');
+    let excerptBody = contentBody.replace(/\[PLAYGROUND_LINK\]/g, '');
+    // 如果只有 playable 块没正文,给个兜底描述
+    if (!excerptBody.trim() && playgroundFile) {
+      excerptBody = `${fm.title || slug} · ${fm.author || 'yu'} 的试玩小游戏`;
+    }
     return {
       slug,
       title: fm.title || slug,
