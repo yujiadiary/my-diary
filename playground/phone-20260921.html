@@ -1005,7 +1005,6 @@ function callSmsAi(userText){
     var wantCall=hasMarker||hasKeyword;
     addSmsBubble('assistant',text);
     if(wantCall){
-      toast('检测到来电意图 ✓ '+text['slice'](0,20));
       setTimeout(function(){triggerIncomingCall(text);},800);
     }
   })['catch'](function(e){
@@ -1062,27 +1061,14 @@ function acceptIncomingCall(){
   var cfg=state['config'];
   var warmup = (cfg['callLanguage']||'en')==='zh' ? '嗯哼？' : 'Hmm?';
   speak(warmup);
-  /* AI 生成开场白 */
-  var opener=(incomingContext['openingLine']||'')['replace'](/\s+/g,' ').trim();
+  /* 用 callAi 统一链路生成开场白 —— 复用已验证的 system prompt / 错误处理 / TTS */
   setTimeout(function(){
-    if(!cfg['apiKey']||!cfg['model']){
-      /* 没配 API Key，就停留在这个语气词即可 */
-      return;
-    }
-    var sysPrompt=callOpeningPrompt(cfg,c['name'],opener);
-    var msgs=[{role:'system',content:sysPrompt},{role:'user',content:(cfg['callLanguage']||'en')==='zh'?'电话接通了，说第一句吧。':'The call is connected. Speak your first line.'}];
-    var fallback = (cfg['callLanguage']||'en')==='zh' ? '嗯哼？' : 'Hmm?';
-    fetch(cfg['baseUrl']['replace'](/\/+$/, '')+'/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg['apiKey']},
-      body:JSON['stringify']({model:cfg['model'],messages:msgs})
-    })['then'](function(r){
-      if(!r['ok']){return r['json']()['then'](function(err){var m=(err&&err['error']&&(err['error']['message']||err['error']['code']))||('HTTP '+r['status']);throw new Error(m);})['catch'](function(){throw new Error('HTTP '+r['status']);});}
-      return r['json']();
-    })['then'](function(d){
-      var t=(d['choices']&&d['choices'][0]&&d['choices'][0]['message']&&d['choices'][0]['message']['content']||'')['trim']();
-      aiReplied(t||fallback);
-    })['catch'](function(){aiReplied(fallback);});
+    var lang=(cfg['callLanguage']||'en');
+    var opener=(incomingContext['openingLine']||'')['replace'](/\s+/g,' ').trim();
+    var openingPrompt = lang==='zh' ? '（电话接通了，说第一句吧。'+(opener?' 你刚才在短信里说：'+opener:'')+'）' : "(The call is connected. Speak your first line."+(opener?' In the SMS you just said: '+opener:'')+")";
+    /* 加一条占位 user 消息，LLM 会把它当作"对方刚接电话了"的信号来回应 */
+    state['history']['push']({ role:'user', content: openingPrompt });
+    callAi(''); /* 空字符串触发，但 history 里已经有 prompt 了 */
   },400);
   incomingContext=null;
 }
@@ -1434,6 +1420,11 @@ function initTts() {
 
 function speak(text, forceEmotion) {
   var cfg = state['config'];
+  /* iOS Safari 跳过云端 TTS：它的 Audio 自动播放限制极严，很容易静音/乱码；
+     原生 speechSynthesis 中文音色很自然，已经足够好 */
+  var ua = navigator['userAgent'] || '';
+  var isIOS = /iPhone|iPad|iPod|Mac OS X.*Safari/.test(ua);
+  if (isIOS) { speakBrowser(text); return; }
   var emotion = forceEmotion || cfg['ttsEmotion'] || CONFIG['defaultTtsEmotion'];
   if (emotion === 'auto') emotion = detectEmotion(text);
   if (cfg['useCloudTts'] && cfg['ttsUrl']) { speakCloud(text, emotion); return; }
