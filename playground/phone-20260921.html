@@ -977,38 +977,37 @@ function renderSmsMessages(){
     check['className']='pa-checkbox';
     div['appendChild'](check);
 
-    if(smsSelectMode){
-      /* 多选模式：click + touchend 都处理（iOS touchmove 会阻止 click） */
-      (function(el,idx){
-        var lastTouch=0;
-        el['addEventListener']('click',function(e){
-          /* 避免 touchend 刚触发完 click 又来一次 */
-          if(Date['now']()-lastTouch<300)return;
-          toggleSelectOne(idx);
-        });
-        el['addEventListener']('touchend',function(e){
-          e['preventDefault']();
-          lastTouch=Date['now']();
-          toggleSelectOne(idx);
-        });
-      })(div,i);
-    }else{
-      /* 非多选模式：长按 500ms 进入多选并自动选中这条 */
-      (function(el,idx){
-        var t=null;
-        var startTouch=function(){t=setTimeout(function(){
-          enterSmsSelect(idx);
-          if(navigator['vibrate'])navigator['vibrate'](30);
-        },500);};
-        var cancelTouch=function(){if(t){clearTimeout(t);t=null;}};
-        el['addEventListener']('touchstart',startTouch);
-        el['addEventListener']('touchend',cancelTouch);
-        el['addEventListener']('touchmove',cancelTouch);
-        el['addEventListener']('mousedown',function(){t=setTimeout(startTouch,400);});
-        el['addEventListener']('mouseup',cancelTouch);
-        el['addEventListener']('mouseleave',cancelTouch);
-      })(div,i);
-    }
+    /* 不管 smsSelectMode，永远同时绑：长按进多选 + 多选时点击切换选中 */
+    (function(el,idx){
+      var pressTimer=null;
+      var longPressed=false;
+      var skipClickUntil=0;  /* touchend 后 300ms 内 skip click，避免 iOS 双触发 */
+
+      var startPress=function(){longPressed=false;pressTimer=setTimeout(function(){longPressed=true;if(navigator['vibrate'])navigator['vibrate'](30);enterSmsSelect(idx);},500);};
+      var cancelPress=function(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}};
+      el['addEventListener']('touchstart',startPress);
+      el['addEventListener']('touchend',cancelPress);
+      el['addEventListener']('touchmove',cancelPress);
+      el['addEventListener']('mousedown',function(){pressTimer=setTimeout(function(){longPressed=true;enterSmsSelect(idx);},500);});
+      el['addEventListener']('mouseup',cancelPress);
+      el['addEventListener']('mouseleave',cancelPress);
+
+      /* 多选模式：click + touchend 都 toggle，但互相去重 */
+      el['addEventListener']('click',function(){
+        if(!smsSelectMode)return;
+        if(Date['now']()<skipClickUntil)return;  /* 刚被 touchend 处理过 */
+        if(longPressed){longPressed=false;return;}  /* 长按刚触发 enterSmsSelect，跳过第一次 click */
+        toggleSelectOne(idx);
+      });
+      el['addEventListener']('touchend',function(e){
+        if(!smsSelectMode)return;
+        e['preventDefault']();
+        if(longPressed){longPressed=false;skipClickUntil=Date['now']()+300;return;}  /* 长按进多选，跳过这次 touchend（enterSmsSelect 已选） */
+        toggleSelectOne(idx);
+        skipClickUntil=Date['now']()+300;  /* 告诉 click 别再 toggle 了 */
+      });
+    })(div,i);
+
     box['appendChild'](div);
   }
   if(smsMsgs['length']>0&&smsMsgs[smsMsgs['length']-1]['role']==='user'&&!smsSelectMode){
