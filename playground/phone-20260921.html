@@ -201,7 +201,7 @@
 .phone-app-sms-send{width:32px;height:32px;border-radius:50%;background:#0a84ff;border:none;color:#fff;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
 .phone-app-sms-send:active{opacity:.7}
 .phone-app-sms-send svg{width:18px;height:18px}
-.phone-app-sms-bubble{max-width:72%;padding:9px 13px;border-radius:20px;font-size:15px;line-height:1.35;word-break:break-word}
+.phone-app-sms-bubble{max-width:72%;padding:9px 13px;border-radius:20px;font-size:15px;line-height:1.35;word-break:break-word;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .phone-app-sms-bubble.me{align-self:flex-end;background:#007aff;color:#fff;border-bottom-right-radius:6px}
 .phone-app-sms-bubble.other{align-self:flex-start;background:#262628;color:#fff;border-bottom-left-radius:6px}
 .phone-app-sms-bubble.pinned{box-shadow:0 0 0 2px #0a84ff inset}
@@ -837,85 +837,67 @@ function renderSmsList(){
 /* ========== 短信对话页 ========== */
 var smsChatIdx=-1;
 var smsMsgs=[];
-var smsSelectMode=false;    /* 多选模式开关 */
-var smsSelectSet=null;      /* Set，存当前选中的 smsMsgs 数组下标 */
+var smsSelectMode=false;
+
+/* 从 DOM 读当前选中的 idx 数组 —— checkbox .checked class 是唯一真相 */
+function getSelectedIdxs(){
+  var res=[];
+  var cbs=$('paSmsMessages')['querySelectorAll']('.pa-checkbox.checked');
+  for(var i=0;i<cbs['length'];i++){
+    var bubble=cbs[i]['parentNode'];
+    if(bubble&&bubble['dataset']['idx']!==undefined)res['push'](parseInt(bubble['dataset']['idx']));
+  }
+  return res;
+}
 
 function enterSmsSelect(defaultIdx){
   smsSelectMode=true;
-  smsSelectSet=new Set();
-  if(typeof defaultIdx==='number')smsSelectSet['add'](defaultIdx);
   $('paSmsChatView')['classList']['add']('select-mode');
   $('paSmsSelectBar')['classList']['remove']('phone-app-hidden');
   $('paSmsTitle')['textContent']='全选';
   $('paSmsTitle')['style']['cursor']='pointer';
-  $('paSmsTitle')['onclick']=toggleSelectAll;
+  $('paSmsTitle')['onclick']=function(){
+    /* 全选 or 全不选 */
+    var cbs=$('paSmsMessages')['querySelectorAll']('.pa-checkbox');
+    var checked=$('paSmsMessages')['querySelectorAll']('.pa-checkbox.checked');
+    var all=!checked['length']; /* 当前没选中 → 全选；否则全不选 */
+    for(var i=0;i<cbs['length'];i++){
+      if(all)cbs[i]['classList']['add']('checked');
+      else cbs[i]['classList']['remove']('checked');
+    }
+    updateSelectBar();
+  };
   renderSmsMessages();
-  /* render 后给选中的那条打上 checked class */
-  if(smsSelectSet['size']){
-    var box=$('paSmsMessages');
-    var bubbles=box['querySelectorAll']('.phone-app-sms-bubble');
-    for(var b=0;b<bubbles['length'];b++){
-      var idx=parseInt(bubbles[b]['dataset']['idx']);
-      if(smsSelectSet['has'](idx)){
-        var cb=bubbles[b]['querySelector']('.pa-checkbox');
-        if(cb)cb['classList']['add']('checked');
-      }
+  /* render 完给 defaultIdx 那条打 checked */
+  if(typeof defaultIdx==='number'){
+    var cbs2=$('paSmsMessages')['querySelectorAll']('.pa-checkbox');
+    for(var i=0;i<cbs2['length'];i++){
+      var b=cbs2[i]['parentNode'];
+      if(b&&parseInt(b['dataset']['idx'])===defaultIdx){cbs2[i]['classList']['add']('checked');break;}
     }
   }
   updateSelectBar();
 }
 function exitSmsSelect(){
   smsSelectMode=false;
-  smsSelectSet=null;
   $('paSmsChatView')['classList']['remove']('select-mode');
   $('paSmsSelectBar')['classList']['add']('phone-app-hidden');
-  if(smsChatIdx>=0){
-    $('paSmsTitle')['textContent']=state['contacts'][smsChatIdx]['name'];
-  }
+  if(smsChatIdx>=0) $('paSmsTitle')['textContent']=state['contacts'][smsChatIdx]['name'];
   $('paSmsTitle')['style']['cursor']='';
   $('paSmsTitle')['onclick']=null;
   renderSmsMessages();
 }
-function toggleSelectAll(){
-  var total=smsMsgs['length'];
-  var all=!smsSelectSet['size']; /* 当前空就全选，否则全不选 */
-  if(all){
-    for(var i=0;i<total;i++)smsSelectSet['add'](i);
-  }else{
-    smsSelectSet=new Set();
-  }
-  /* 批量改 class，不重建 DOM */
-  var box=$('paSmsMessages');
-  var bubbles=box['querySelectorAll']('.phone-app-sms-bubble');
-  for(var b=0;b<bubbles['length'];b++){
-    var idx=parseInt(bubbles[b]['dataset']['idx']);
-    var cb=bubbles[b]['querySelector']('.pa-checkbox');
-    if(!cb)continue;
-    if(smsSelectSet['has'](idx))cb['classList']['add']('checked');
-    else cb['classList']['remove']('checked');
-  }
-  updateSelectBar();
-}
-/* 切换单条选中（只改 class） */
+/* 点一条气泡：切换对应 checkbox 的 class（DOM 直接操作） */
 function toggleSelectOne(idx){
-  if(smsSelectSet['has'](idx))smsSelectSet['delete'](idx);
-  else smsSelectSet['add'](idx);
-  var box=$('paSmsMessages');
-  var bubbles=box['querySelectorAll']('.phone-app-sms-bubble');
-  for(var b=0;b<bubbles['length'];b++){
-    if(parseInt(bubbles[b]['dataset']['idx'])===idx){
-      var cb=bubbles[b]['querySelector']('.pa-checkbox');
-      if(cb){
-        if(smsSelectSet['has'](idx))cb['classList']['add']('checked');
-        else cb['classList']['remove']('checked');
-      }
-      break;
-    }
+  var cbs=$('paSmsMessages')['querySelectorAll']('.pa-checkbox');
+  for(var i=0;i<cbs['length'];i++){
+    var b=cbs[i]['parentNode'];
+    if(b&&parseInt(b['dataset']['idx'])===idx){cbs[i]['classList']['toggle']('checked');break;}
   }
   updateSelectBar();
 }
 function updateSelectBar(){
-  var n=smsSelectMode&&smsSelectSet?smsSelectSet['size']:0;
+  var n=getSelectedIdxs()['length'];
   var pin=$('paSelectPin');var del=$('paSelectDel');
   pin['textContent']='📌 记住'+(n?'('+n+')':'');
   del['textContent']='🗑 删除'+(n?'('+n+')':'');
@@ -924,27 +906,30 @@ function updateSelectBar(){
   del['style']['opacity']=n?'1':'.4';
 }
 function batchPin(){
-  if(!smsSelectSet||!smsSelectSet['size'])return;
+  var idxs=getSelectedIdxs();
+  if(!idxs['length'])return;
   var mem=loadSmsMem(state['contacts'][smsChatIdx]['name']);
   var added=0;
-  smsSelectSet['forEach'](function(idx){
-    var m=smsMsgs[idx];
-    if(!m)return;
+  for(var i=0;i<idxs['length'];i++){
+    var m=smsMsgs[idxs[i]];
+    if(!m)continue;
     var exists=false;
     for(var k=0;k<mem['length'];k++){if(mem[k]['role']===m['role']&&mem[k]['content']===m['content']){exists=true;break;}}
     if(!exists){mem['push']({role:m['role'],content:m['content'],timestamp:m['timestamp']});added++;}
-  });
+  }
   saveSmsMem(state['contacts'][smsChatIdx]['name'],mem);
   toast('已记住 '+added+' 条');
   exitSmsSelect();
 }
 function batchDelete(){
-  if(!smsSelectSet||!smsSelectSet['size'])return;
-  var sorted=Array['from'](smsSelectSet)['sort'](function(a,b){return b-a;});
-  for(var i=0;i<sorted['length'];i++)smsMsgs['splice'](sorted[i],1);
+  var idxs=getSelectedIdxs();
+  if(!idxs['length'])return;
+  /* 从大到小删避免下标漂移 */
+  idxs['sort'](function(a,b){return b-a;});
+  for(var i=0;i<idxs['length'];i++)smsMsgs['splice'](idxs[i],1);
   saveSmsMem(state['contacts'][smsChatIdx]['name'],smsMsgs);
   renderSmsList();
-  toast('已删除 '+sorted['length']+' 条');
+  toast('已删除 '+idxs['length']+' 条');
   exitSmsSelect();
 }
 
