@@ -1032,6 +1032,8 @@ function triggerIncomingCall(openingLine){
 
 function acceptIncomingCall(){
   if(!incomingContext)return;
+  /* 入口第一行：解锁 iOS 三条播放通路 */
+  unlockAudioInClickStack();
   $('paIncomingView')['classList']['add']('phone-app-hidden');
   var c=incomingContext['contact'];
   state['fromSms']=true;
@@ -1084,6 +1086,8 @@ function declineIncomingCall(){
 
 /* ========== 通话流程 ========== */
 function startCall(contact) {
+  /* 入口第一行：在点击事件同步栈里解锁 iOS 三条播放通路（原生/HTML5 Audio/WebAudio） */
+  unlockAudioInClickStack();
   state['currentContact'] = contact;
   /* 加载该联系人的历史记忆 */
   state['history'] = loadMemory(contact['name']);
@@ -1418,13 +1422,48 @@ function initTts() {
   state['synthSupport'] = typeof window['speechSynthesis'] !== 'undefined';
 }
 
+/* 关键：必须在【用户点击事件的同步栈】里调用。
+   iOS Safari 锁死了三条播放通路，任何一条都必须先在用户手势里"触发一次"才能在后续异步（setTimeout/fetch回调）中正常工作：
+   1. speechSynthesis → 说一两个字解锁原生朗读
+   2. HTML5 Audio     → play() 一次立即 pause() 解锁自动播放（云端 MiniMax TTS 用的就是这个）
+   3. AudioContext    → resume() 兜底（部分 iOS 版本要求） */
+function unlockAudioInClickStack() {
+  try {
+    /* 1. 原生 speechSynthesis 解锁（说一个字立即 cancel，不发出声音） */
+    if (state['synthSupport']) {
+      var u = new window['SpeechSynthesisUtterance']('.');
+      u['volume'] = 0;
+      window['speechSynthesis']['speak'](u);
+      /* 不 cancel，让它完成播放——iOS 有时候 cancel 了就不算数 */
+    }
+  } catch (e) {}
+  try {
+    /* 2. HTML5 Audio 解锁：创建一个静音 data URL 的 audio，play() 后立即 pause */
+    var silentAudio = new window['Audio']();
+    silentAudio['src'] = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+    silentAudio['volume'] = 0;
+    var p = silentAudio['play']();
+    if (p && typeof p['then'] === 'function') {
+      p['then'](function () { silentAudio['pause'](); silentAudio['currentTime'] = 0; }).catch(function () {});
+    } else {
+      silentAudio['pause']();
+    }
+  } catch (e) {}
+  try {
+    /* 3. WebAudio 兜底 */
+    var AC = window['AudioContext'] || window['webkitAudioContext'];
+    if (AC && !unlockAudioInClickStack['_ac']) {
+      var ctx = new AC();
+      ctx['resume']();
+      unlockAudioInClickStack['_ac'] = ctx;
+    } else if (unlockAudioInClickStack['_ac']) {
+      unlockAudioInClickStack['_ac']['resume']();
+    }
+  } catch (e) {}
+}
+
 function speak(text, forceEmotion) {
   var cfg = state['config'];
-  /* iOS Safari 跳过云端 TTS：它的 Audio 自动播放限制极严，很容易静音/乱码；
-     原生 speechSynthesis 中文音色很自然，已经足够好 */
-  var ua = navigator['userAgent'] || '';
-  var isIOS = /iPhone|iPad|iPod|Mac OS X.*Safari/.test(ua);
-  if (isIOS) { speakBrowser(text); return; }
   var emotion = forceEmotion || cfg['ttsEmotion'] || CONFIG['defaultTtsEmotion'];
   if (emotion === 'auto') emotion = detectEmotion(text);
   if (cfg['useCloudTts'] && cfg['ttsUrl']) { speakCloud(text, emotion); return; }
