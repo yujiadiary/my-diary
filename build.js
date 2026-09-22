@@ -322,6 +322,7 @@ function buildPostHtml(p, prev, next, comments) {
   <link rel="alternate" type="application/rss+xml" title="碎碎念留档" href="${SITE_URL}feed.xml">
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/style.css">
+  <script src="../assets/js/gate.js"></script>
 </head>
 <body>
   <header class="site-header">
@@ -496,6 +497,7 @@ function buildAllPostsHtml(visiblePosts, commentsByPost) {
   <link rel="alternate" type="application/rss+xml" title="碎碎念留档" href="${SITE_URL}feed.xml">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/css/style.css">
+  <script src="assets/js/gate.js"></script>
 </head>
 <body>
   <header class="site-header">
@@ -642,6 +644,7 @@ function buildDailyIndex(days) {
   <link rel="alternate" type="application/rss+xml" title="碎碎念留档" href="${SITE_URL}feed.xml">
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/style.css">
+  <script src="../assets/js/gate.js"></script>
 </head>
 <body>
   <header class="site-header">
@@ -742,6 +745,7 @@ function buildArchiveIndex(months) {
   <link rel="alternate" type="application/rss+xml" title="碎碎念留档" href="${SITE_URL}feed.xml">
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/style.css">
+  <script src="../assets/js/gate.js"></script>
 </head>
 <body>
   <header class="site-header">
@@ -802,6 +806,7 @@ function buildArchiveMonth(ym, posts) {
   <link rel="alternate" type="application/rss+xml" title="碎碎念留档" href="${SITE_URL}feed.xml">
   <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../../assets/css/style.css">
+  <script src="../../assets/js/gate.js"></script>
 </head>
 <body>
   <header class="site-header">
@@ -1006,7 +1011,10 @@ function buildPlaygroundPage(playContent, p) {
   // 唯一需要处理的是:如果内容本身不含 <html>/<head>/<body>,我们给它套一层模板
   const hasHtmlTag = /<html[\s>]/i.test(playContent);
   if (hasHtmlTag) {
-    // 内容已经是完整 HTML 文档,直接输出
+    // 内容已经是完整 HTML 文档,注入 gate 脚本后输出
+    if (/<\/head>/i['test'](playContent) && !/gate\.js/i['test'](playContent)) {
+      return playContent.replace(/<\/head>/i, '<script src="../assets/js/gate.js"></script>\n</head>');
+    }
     return playContent;
   }
   const title = escapeHtml(p.title || '试玩');
@@ -1026,6 +1034,7 @@ function buildPlaygroundPage(playContent, p) {
     .pg-canvas { border: 1px solid #e0e0e0; border-radius: 8px; overflow: auto; }
     button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   </style>
+  <script src="../assets/js/gate.js"></script>
 </head>
 <body>
   <a class="pg-back" href="../posts/${encodeURIComponent(p.slug)}.html">← 返回文章</a>
@@ -1061,6 +1070,7 @@ function buildPlaygroundIndex(items) {
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/style.css">
+  <script src="../assets/js/gate.js"></script>
 </head>
 <body>
   <header class="site-header">

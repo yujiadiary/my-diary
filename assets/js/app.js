@@ -2,7 +2,6 @@
 (function () {
   const router = window.DiaryRouter;
   const V = window.DiaryView;
-  const A = window.DiaryAdmin;
   const cfg = window.DiaryConfig;
   const store = window.DiaryStore;
   const md = window.DiaryMD;
@@ -27,11 +26,6 @@
     .on('/post/:id',  V.pagePost)
     .on('/about',     V.pageAbout)
     .on('/search',    V.pageSearch)
-    // 后台(内容管理走 PagesCMS,这里只读 + 引导)
-    .on('/admin',            A.list)
-    .on('/admin/guide',      A.guide)
-    .on('/admin/fields',     A.fields)
-    .on('/admin/settings',   A.settings)
     .notFound(() => {
       document.getElementById('view').innerHTML =
         '<p class="empty">找不到这个页面。<br><a href="#/">回首页</a></p>';
