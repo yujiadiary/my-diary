@@ -852,23 +852,22 @@ function getSelectedIdxs(){
 
 function enterSmsSelect(defaultIdx){
   smsSelectMode=true;
+  /* 注意：checkbox 本来就在 DOM 里，这里只改 class 让它显示，不重建 DOM！ */
   $('paSmsChatView')['classList']['add']('select-mode');
   $('paSmsSelectBar')['classList']['remove']('phone-app-hidden');
   $('paSmsTitle')['textContent']='全选';
   $('paSmsTitle')['style']['cursor']='pointer';
   $('paSmsTitle')['onclick']=function(){
-    /* 全选 or 全不选 */
     var cbs=$('paSmsMessages')['querySelectorAll']('.pa-checkbox');
     var checked=$('paSmsMessages')['querySelectorAll']('.pa-checkbox.checked');
-    var all=!checked['length']; /* 当前没选中 → 全选；否则全不选 */
+    var all=!checked['length'];
     for(var i=0;i<cbs['length'];i++){
       if(all)cbs[i]['classList']['add']('checked');
       else cbs[i]['classList']['remove']('checked');
     }
     updateSelectBar();
   };
-  renderSmsMessages();
-  /* render 完给 defaultIdx 那条打 checked */
+  /* 给 defaultIdx 那条打 checked */
   if(typeof defaultIdx==='number'){
     var cbs2=$('paSmsMessages')['querySelectorAll']('.pa-checkbox');
     for(var i=0;i<cbs2['length'];i++){
@@ -885,7 +884,9 @@ function exitSmsSelect(){
   if(smsChatIdx>=0) $('paSmsTitle')['textContent']=state['contacts'][smsChatIdx]['name'];
   $('paSmsTitle')['style']['cursor']='';
   $('paSmsTitle')['onclick']=null;
-  renderSmsMessages();
+  /* 清空所有 checkbox 的 checked（class 换了就隐藏了，不会残留） */
+  var cbs=$('paSmsMessages')['querySelectorAll']('.pa-checkbox.checked');
+  for(var i=0;i<cbs['length'];i++)cbs[i]['classList']['remove']('checked');
 }
 /* 点一条气泡：切换对应 checkbox 的 class（DOM 直接操作） */
 function toggleSelectOne(idx){
@@ -929,6 +930,7 @@ function batchDelete(){
   for(var i=0;i<idxs['length'];i++)smsMsgs['splice'](idxs[i],1);
   saveSmsMem(state['contacts'][smsChatIdx]['name'],smsMsgs);
   renderSmsList();
+  renderSmsMessages();  /* 重建对话页（idx 已变，checkbox 重新渲染） */
   toast('已删除 '+idxs['length']+' 条');
   exitSmsSelect();
 }
@@ -970,9 +972,9 @@ function renderSmsMessages(){
     div['textContent']=m['content'];
     div['dataset']['idx']=i;
 
-    /* 勾选圆圈（多选模式显示） */
+    /* 勾选圆圈（始终渲染，CSS 控制显隐） */
     var check=document['createElement']('div');
-    check['className']='pa-checkbox'+(smsSelectMode&&smsSelectSet['has'](i)?' checked':'');
+    check['className']='pa-checkbox';
     div['appendChild'](check);
 
     if(smsSelectMode){
