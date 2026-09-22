@@ -840,23 +840,35 @@ var smsMsgs=[];
 var smsSelectMode=false;    /* 多选模式开关 */
 var smsSelectSet=null;      /* Set，存当前选中的 smsMsgs 数组下标 */
 
-function enterSmsSelect(){
+function enterSmsSelect(defaultIdx){
   smsSelectMode=true;
   smsSelectSet=new Set();
+  if(typeof defaultIdx==='number')smsSelectSet['add'](defaultIdx);
   $('paSmsChatView')['classList']['add']('select-mode');
   $('paSmsSelectBar')['classList']['remove']('phone-app-hidden');
-  /* 顶部标题换成可点击的全选 */
   $('paSmsTitle')['textContent']='全选';
   $('paSmsTitle')['style']['cursor']='pointer';
   $('paSmsTitle')['onclick']=toggleSelectAll;
   renderSmsMessages();
+  /* render 后给选中的那条打上 checked class */
+  if(smsSelectSet['size']){
+    var box=$('paSmsMessages');
+    var bubbles=box['querySelectorAll']('.phone-app-sms-bubble');
+    for(var b=0;b<bubbles['length'];b++){
+      var idx=parseInt(bubbles[b]['dataset']['idx']);
+      if(smsSelectSet['has'](idx)){
+        var cb=bubbles[b]['querySelector']('.pa-checkbox');
+        if(cb)cb['classList']['add']('checked');
+      }
+    }
+  }
+  updateSelectBar();
 }
 function exitSmsSelect(){
   smsSelectMode=false;
   smsSelectSet=null;
   $('paSmsChatView')['classList']['remove']('select-mode');
   $('paSmsSelectBar')['classList']['add']('phone-app-hidden');
-  /* 恢复顶部标题 */
   if(smsChatIdx>=0){
     $('paSmsTitle')['textContent']=state['contacts'][smsChatIdx]['name'];
   }
@@ -865,18 +877,45 @@ function exitSmsSelect(){
   renderSmsMessages();
 }
 function toggleSelectAll(){
-  /* 如果全选了就全不选，否则全选 */
   var total=smsMsgs['length'];
-  if(!smsSelectSet['size']){
+  var all=!smsSelectSet['size']; /* 当前空就全选，否则全不选 */
+  if(all){
     for(var i=0;i<total;i++)smsSelectSet['add'](i);
   }else{
     smsSelectSet=new Set();
   }
-  renderSmsMessages();
+  /* 批量改 class，不重建 DOM */
+  var box=$('paSmsMessages');
+  var bubbles=box['querySelectorAll']('.phone-app-sms-bubble');
+  for(var b=0;b<bubbles['length'];b++){
+    var idx=parseInt(bubbles[b]['dataset']['idx']);
+    var cb=bubbles[b]['querySelector']('.pa-checkbox');
+    if(!cb)continue;
+    if(smsSelectSet['has'](idx))cb['classList']['add']('checked');
+    else cb['classList']['remove']('checked');
+  }
+  updateSelectBar();
+}
+/* 切换单条选中（只改 class） */
+function toggleSelectOne(idx){
+  if(smsSelectSet['has'](idx))smsSelectSet['delete'](idx);
+  else smsSelectSet['add'](idx);
+  var box=$('paSmsMessages');
+  var bubbles=box['querySelectorAll']('.phone-app-sms-bubble');
+  for(var b=0;b<bubbles['length'];b++){
+    if(parseInt(bubbles[b]['dataset']['idx'])===idx){
+      var cb=bubbles[b]['querySelector']('.pa-checkbox');
+      if(cb){
+        if(smsSelectSet['has'](idx))cb['classList']['add']('checked');
+        else cb['classList']['remove']('checked');
+      }
+      break;
+    }
+  }
   updateSelectBar();
 }
 function updateSelectBar(){
-  var n=smsSelectSet? smsSelectSet['size']:0;
+  var n=smsSelectMode&&smsSelectSet?smsSelectSet['size']:0;
   var pin=$('paSelectPin');var del=$('paSelectDel');
   pin['textContent']='📌 记住'+(n?'('+n+')':'');
   del['textContent']='🗑 删除'+(n?'('+n+')':'');
@@ -901,7 +940,6 @@ function batchPin(){
 }
 function batchDelete(){
   if(!smsSelectSet||!smsSelectSet['size'])return;
-  /* 从 smsMsgs 里移除选中下标（从大到小删以免下标漂移） */
   var sorted=Array['from'](smsSelectSet)['sort'](function(a,b){return b-a;});
   for(var i=0;i<sorted['length'];i++)smsMsgs['splice'](sorted[i],1);
   saveSmsMem(state['contacts'][smsChatIdx]['name'],smsMsgs);
@@ -953,23 +991,26 @@ function renderSmsMessages(){
     div['appendChild'](check);
 
     if(smsSelectMode){
-      /* 多选模式：点击气泡切换选中 */
-      div['addEventListener']('click',function(){
-        var idx=parseInt(div['dataset']['idx']);
-        if(smsSelectSet['has'](idx))smsSelectSet['delete'](idx);
-        else smsSelectSet['add'](idx);
-        renderSmsMessages();
-        updateSelectBar();
-      });
+      /* 多选模式：click + touchend 都处理（iOS touchmove 会阻止 click） */
+      (function(el,idx){
+        var lastTouch=0;
+        el['addEventListener']('click',function(e){
+          /* 避免 touchend 刚触发完 click 又来一次 */
+          if(Date['now']()-lastTouch<300)return;
+          toggleSelectOne(idx);
+        });
+        el['addEventListener']('touchend',function(e){
+          e['preventDefault']();
+          lastTouch=Date['now']();
+          toggleSelectOne(idx);
+        });
+      })(div,i);
     }else{
-      /* 非多选模式：长按进入多选 */
+      /* 非多选模式：长按 500ms 进入多选并自动选中这条 */
       (function(el,idx){
         var t=null;
         var startTouch=function(){t=setTimeout(function(){
-          enterSmsSelect();
-          smsSelectSet['add'](idx);
-          renderSmsMessages();
-          updateSelectBar();
+          enterSmsSelect(idx);
           if(navigator['vibrate'])navigator['vibrate'](30);
         },500);};
         var cancelTouch=function(){if(t){clearTimeout(t);t=null;}};
