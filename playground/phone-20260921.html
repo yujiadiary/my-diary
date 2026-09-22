@@ -444,6 +444,7 @@
       <div class="phone-app-settings-row">
         <label>情感</label>
         <select id="paTtsEmotion" style="width:100%;background:rgba(0,0,0,.3);border:1px solid var(--pa-border);border-radius:10px;padding:10px 12px;color:#fff;font-size:14px;outline:none">
+          <option value="auto">自动（AI 回复自动判断）</option>
           <option value="neutral">中性 neutral</option>
           <option value="happy">开心 happy</option>
           <option value="sad">悲伤 sad</option>
@@ -506,7 +507,13 @@ var CONFIG = {
   defaultTtsGroupId: '210158230773437642',              /* MiniMax Group ID */
   defaultTtsVoiceId: 'male-qn-qingse',                  /* MiniMax 音色 ID */
   defaultTtsSpeed: 0.9,                                 /* 默认语速 */
-  defaultTtsEmotion: 'neutral',                         /* 默认情感 */
+  defaultTtsEmotion: 'auto',                              /* auto=自动检测，或 neutral/happy/sad/angry */
+  /* 情绪关键词表：用于自动检测 AI 回复的情绪 */
+  emotionKeywords: {
+    happy:   ['哈哈','嘻嘻','嘿嘿','太棒了','开心','高兴','喜欢','可爱','好呀','好呀','嘿嘿嘿','真的吗','太好了','爱你','mua','😆','😁','😄','😆','哇','哦耶','yeah','awesome','great','love','happy','haha','lol','yay','sweet'],
+    sad:     ['难过','伤心','哭','委屈','呜…','呜呜','不想','唉','唉…','好烦','太累了','好难','对不起','我错了','可怜','失望','sad','sorry','miss','cry','lonely','tired','😭','😢','💔','😔'],
+    angry:   ['生气','讨厌','滚','闭嘴','烦不烦','你敢','不行','别碰','出去','混蛋','可恶','哼！','气死','讨厌鬼','angry','hate','shut up','damn','hell','😠','😡','💢','👊']
+  },
   ttsModel: 'speech-2.8-hd',                            /* MiniMax TTS 模型 */
   maxHistory: 8,          /* 发给 AI 的最近对话轮数 */
   memoryKey: 'phone_app_memory', /* 通话联系人记忆库 localStorage 键名 */
@@ -1411,10 +1418,34 @@ function initTts() {
   state['synthSupport'] = typeof window['speechSynthesis'] !== 'undefined';
 }
 
-function speak(text) {
+function speak(text, forceEmotion) {
   var cfg = state['config'];
-  if (cfg['useCloudTts'] && cfg['ttsUrl']) { speakCloud(text); return; }
+  var emotion = forceEmotion || cfg['ttsEmotion'] || CONFIG['defaultTtsEmotion'];
+  if (emotion === 'auto') emotion = detectEmotion(text);
+  if (cfg['useCloudTts'] && cfg['ttsUrl']) { speakCloud(text, emotion); return; }
   speakBrowser(text);
+}
+
+/* 关键词检测文本情绪，返回 MiniMax 支持的 emotion 值 */
+function detectEmotion(text) {
+  if (!text) return 'neutral';
+  var kw = CONFIG['emotionKeywords'];
+  var scores = { happy: 0, sad: 0, angry: 0 };
+  var lower = text['toLowerCase']();
+  for (var e in kw) {
+    for (var i = 0; i < kw[e]['length']; i++) {
+      if (lower['indexOf'](kw[e][i]['toLowerCase']()) >= 0) scores[e]++;
+    }
+  }
+  /* 找最高分的情绪，0 分或并列都返回 neutral */
+  var best = 'neutral', maxScore = 0;
+  var keys = ['happy', 'sad', 'angry'];
+  for (var j = 0; j < keys['length']; j++) {
+    if (scores[keys[j]] > maxScore) { maxScore = scores[keys[j]]; best = keys[j]; }
+  }
+  /* 生气只要有 1 个关键词就足够强触发 */
+  if (scores['angry'] >= 1 && scores['angry'] >= scores['happy'] && scores['angry'] >= scores['sad']) best = 'angry';
+  return best;
 }
 
 /* 浏览器原生 TTS */
@@ -1477,13 +1508,14 @@ function splitTextForTTS(text) {
 }
 
 /* 云端 TTS（MiniMax T2A V2），支持语速/情感，自动按标点停顿，失败降级到浏览器朗读 */
-function speakCloud(text) {
+function speakCloud(text, emotion) {
   var cfg = state['config'];
   var key = cfg['ttsApiKey'] || cfg['apiKey']; /* MiniMax key，没填就用聊天的 key */
   if (!key) { toast('TTS 需要 API Key，请在设置里填写'); speakBrowser(text); return; }
 
   var speed = cfg['ttsSpeed'] || CONFIG['defaultTtsSpeed'];
-  var emotion = cfg['ttsEmotion'] || CONFIG['defaultTtsEmotion'];
+  emotion = emotion || cfg['ttsEmotion'] || CONFIG['defaultTtsEmotion'];
+  if (emotion === 'auto') emotion = detectEmotion(text);
   var segs = splitTextForTTS(text);
 
   /* 播放完所有段落的串行播放 */
