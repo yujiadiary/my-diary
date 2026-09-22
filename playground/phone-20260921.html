@@ -438,6 +438,19 @@
         <input type="text" id="paTtsVoiceId" placeholder="例如 male-qn-qingse" />
       </div>
       <div class="phone-app-settings-row">
+        <label>语速 <span id="paTtsSpeedLabel" style="color:var(--pa-accent)">0.9</span></label>
+        <input type="range" id="paTtsSpeed" min="0.5" max="1.5" step="0.05" value="0.9" style="width:100%;accent-color:var(--pa-accent)" />
+      </div>
+      <div class="phone-app-settings-row">
+        <label>情感</label>
+        <select id="paTtsEmotion" style="width:100%;background:rgba(0,0,0,.3);border:1px solid var(--pa-border);border-radius:10px;padding:10px 12px;color:#fff;font-size:14px;outline:none">
+          <option value="neutral">中性 neutral</option>
+          <option value="happy">开心 happy</option>
+          <option value="sad">悲伤 sad</option>
+          <option value="angry">生气 angry</option>
+        </select>
+      </div>
+      <div class="phone-app-settings-row">
         <label style="display:flex;align-items:center;gap:8px">
           <input type="checkbox" id="paAutoTrans" style="width:auto" checked />
           <span>英文回复自动显示中文翻译</span>
@@ -483,7 +496,7 @@
 
 /* ============================================================
    核心配置（都在这里改）
-   localStorage 键名：phone_app_config，存 { baseUrl, apiKey, model, sysPrompt, useCloudTts, ttsApiKey, ttsUrl, ttsGroupId, ttsVoiceId, autoTrans }
+   localStorage 键名：phone_app_config，存 { baseUrl, apiKey, model, sysPrompt, useCloudTts, ttsApiKey, ttsUrl, ttsGroupId, ttsVoiceId, ttsSpeed, ttsEmotion, autoTrans }
    ============================================================ */
 var CONFIG = {
   defaultBaseUrl: 'https://token.sensenova.cn/v1',
@@ -492,6 +505,8 @@ var CONFIG = {
   defaultTtsBackupUrl: 'https://api-bj.minimaxi.com/v1/t2a_v2', /* MiniMax 备用接口 */
   defaultTtsGroupId: '210158230773437642',              /* MiniMax Group ID */
   defaultTtsVoiceId: 'male-qn-qingse',                  /* MiniMax 音色 ID */
+  defaultTtsSpeed: 0.9,                                 /* 默认语速 */
+  defaultTtsEmotion: 'neutral',                         /* 默认情感 */
   ttsModel: 'speech-2.8-hd',                            /* MiniMax TTS 模型 */
   maxHistory: 8,          /* 发给 AI 的最近对话轮数 */
   memoryKey: 'phone_app_memory', /* 通话联系人记忆库 localStorage 键名 */
@@ -558,6 +573,8 @@ function loadConfig() {
       ttsUrl: CONFIG['defaultTtsUrl'],
       ttsGroupId: CONFIG['defaultTtsGroupId'],
       ttsVoiceId: CONFIG['defaultTtsVoiceId'],
+      ttsSpeed: CONFIG['defaultTtsSpeed'],
+      ttsEmotion: CONFIG['defaultTtsEmotion'],
       autoTrans: false
     };
   }
@@ -566,6 +583,8 @@ function loadConfig() {
   state['config']['ttsUrl'] = state['config']['ttsUrl'] || CONFIG['defaultTtsUrl'];
   state['config']['ttsGroupId'] = state['config']['ttsGroupId'] || CONFIG['defaultTtsGroupId'];
   state['config']['ttsVoiceId'] = state['config']['ttsVoiceId'] || CONFIG['defaultTtsVoiceId'];
+  state['config']['ttsSpeed'] = typeof state['config']['ttsSpeed'] === 'number' ? state['config']['ttsSpeed'] : CONFIG['defaultTtsSpeed'];
+  state['config']['ttsEmotion'] = state['config']['ttsEmotion'] || CONFIG['defaultTtsEmotion'];
   if (typeof state['config']['useCloudTts'] !== 'boolean') state['config']['useCloudTts'] = false;
   if (typeof state['config']['autoTrans'] !== 'boolean') state['config']['autoTrans'] = false;
 }
@@ -1410,49 +1429,95 @@ function speakBrowser(text) {
   } catch (e) {}
 }
 
-/* 云端 TTS（MiniMax T2A V2），失败时自动降级到浏览器朗读 */
+/* 把长句按标点拆成短句，保留语气词原样，用于 TTS 停顿 */
+function splitTextForTTS(text) {
+  if (!text) return [];
+  /* 保留语气词：（xxx）括号内容、嗯、噗、呃、啊、哦、唔、嘿、哎、欸、哈哈、嘻嘻 */
+  /* 先把语气词替换成占位，避免被标点拆分误伤 */
+  var preserved = [];
+  var tmp = text['replace'](/（[^）]*）/g, function(m){ preserved['push'](m); return '\u0001P'+(preserved['length']-1)+'\u0001'; });
+  tmp = tmp['replace'](/[嗯噗呃啊哦唔嘿哎欸哈嘻呜喔]/g, function(m){ preserved['push'](m); return '\u0001P'+(preserved['length']-1)+'\u0001'; });
+  tmp = tmp['replace'](/[.]{3,}|…+/g, function(m){ preserved['push']('…'); return '\u0001P'+(preserved['length']-1)+'\u0001'; });
+
+  /* 按句号、逗号、问号、感叹号、分号、冒号拆 */
+  var rawParts = tmp['split'](/([。！？!?；;\n,.])/g);
+  /* 重新配对：把标点附加到前一段 */
+  var segs = [];
+  for (var i = 0; i < rawParts['length']; i++) {
+    var s = rawParts[i]['trim']();
+    if (!s) continue;
+    /* 如果是标点，附到上一个 seg */
+    if (/^[。！？!?；;\n,.]$/['test'](s)) {
+      if (segs['length'] > 0) segs[segs['length'] - 1] += s;
+      else segs['push'](s);
+    } else {
+      segs['push'](s);
+    }
+  }
+  /* 合并短段（<3字且无标点的） */
+  var merged = [];
+  for (var j = 0; j < segs['length']; j++) {
+    var cur = segs[j]['trim'];
+    if (!cur) continue;
+    if (merged['length'] > 0 && cur['length'] < 3 && !/[。！？!?；;]$/['test'](merged[merged['length'] - 1])) {
+      merged[merged['length'] - 1] += cur;
+    } else {
+      merged['push'](cur);
+    }
+  }
+  /* 恢复占位符 → 原样文本 */
+  var final = [];
+  for (var k = 0; k < merged['length']; k++) {
+    var seg = merged[k]['replace'](/\u0001P(\d+)\u0001/g, function(_, idx) { return preserved[parseInt(idx)] || ''; });
+    seg = seg['trim']();
+    if (seg) final['push'](seg);
+  }
+  /* 如果没拆出任何段落，返回原文本 */
+  return final['length'] > 0 ? final : [text];
+}
+
+/* 云端 TTS（MiniMax T2A V2），支持语速/情感，自动按标点停顿，失败降级到浏览器朗读 */
 function speakCloud(text) {
   var cfg = state['config'];
   var key = cfg['ttsApiKey'] || cfg['apiKey']; /* MiniMax key，没填就用聊天的 key */
   if (!key) { toast('TTS 需要 API Key，请在设置里填写'); speakBrowser(text); return; }
 
-  var body = JSON['stringify']({
-    model: CONFIG['ttsModel'],
-    text: text,
-    stream: false,
-    output_format: 'hex',
-    language_boost: 'auto',
-    voice_setting: {
-      voice_id: cfg['ttsVoiceId'],
-      speed: 1,
-      vol: 1,
-      pitch: 0
-    },
-    audio_setting: {
-      sample_rate: 32000,
-      bitrate: 128000,
-      format: 'mp3',
-      channel: 1
-    }
-  });
+  var speed = cfg['ttsSpeed'] || CONFIG['defaultTtsSpeed'];
+  var emotion = cfg['ttsEmotion'] || CONFIG['defaultTtsEmotion'];
+  var segs = splitTextForTTS(text);
 
-  /* 主接口 + 备用接口，主接口失败自动试备用 */
-  var urls = [cfg['ttsUrl']];
-  if (cfg['ttsUrl'] !== CONFIG['defaultTtsBackupUrl']) {
-    urls['push'](CONFIG['defaultTtsBackupUrl']);
-  }
+  /* 播放完所有段落的串行播放 */
+  var audioQueue = [];
+  var loadingCount = segs['length'];
+  var loadFailed = false;
 
-  function tryTts(idx, lastErr) {
-    if (idx >= urls['length']) {
-      var errMsg = lastErr || '未知错误';
-      if (errMsg['indexOf']('Failed to fetch') >= 0 || errMsg['indexOf']('NetworkError') >= 0) {
-        errMsg = '网络或跨域(CORS)错误，浏览器无法直连 MiniMax';
+  function loadSeg(idx) {
+    if (idx >= segs['length']) return;
+    var seg = segs[idx];
+    var body = JSON['stringify']({
+      model: CONFIG['ttsModel'],
+      text: seg,
+      stream: false,
+      output_format: 'hex',
+      language_boost: 'auto',
+      voice_setting: {
+        voice_id: cfg['ttsVoiceId'],
+        speed: speed,
+        vol: 1,
+        pitch: 0
+      },
+      emotion_setting: {
+        emotion: emotion
+      },
+      audio_setting: {
+        sample_rate: 32000,
+        bitrate: 128000,
+        format: 'mp3',
+        channel: 1
       }
-      toast('MiniMax TTS 失败：' + errMsg);
-      speakBrowser(text); /* 自动降级 */
-      return;
-    }
-    var url = urls[idx] + '?GroupId=' + encodeURIComponent(cfg['ttsGroupId']);
+    });
+
+    var url = cfg['ttsUrl'] + '?GroupId=' + encodeURIComponent(cfg['ttsGroupId']);
     fetch(url, {
       method: 'POST',
       headers: {
@@ -1461,38 +1526,50 @@ function speakCloud(text) {
       },
       body: body
     })['then'](function (resp) {
-      if (!resp['ok']) {
-        return resp['text']()['then'](function (body) {
-          var msg = 'HTTP ' + resp['status'];
-          try {
-            var j = JSON['parse'](body);
-            if (j && j['base_resp']) msg += '：' + (j['base_resp']['status_msg'] || j['base_resp']['status_code']);
-          } catch (e) { msg += '：' + body['slice'](0, 80); }
-          throw new Error(msg);
-        });
-      }
+      if (!resp['ok']) return resp['text']()['then'](function(b){throw new Error('HTTP '+resp['status']+': '+b['slice'](0,80));});
       return resp['json']();
     })['then'](function (data) {
-      /* MiniMax 即使业务错误也返回 HTTP 200，需检查 base_resp.status_code */
       var base = data && data['base_resp'];
-      if (base && base['status_code'] !== 0) {
-        throw new Error('业务错误 ' + base['status_code'] + '：' + (base['status_msg'] || '未知'));
-      }
+      if (base && base['status_code'] !== 0) throw new Error('业务错误：' + (base['status_msg'] || base['status_code']));
       var hex = data && data['data'] && data['data']['audio'];
-      if (!hex) {
-        /* 调试：把完整响应打出来 */
-        var dump = JSON['stringify'](data)['slice'](0, 200);
-        throw new Error('未返回音频数据，响应：' + dump);
-      }
+      if (!hex) throw new Error('未返回音频');
       var blob = hexToBlob(hex, 'audio/mpeg');
       var audio = new window['Audio']();
       audio['src'] = URL['createObjectURL'](blob);
-      audio['play']();
+      audioQueue[idx] = audio;
     })['catch'](function (e) {
-      tryTts(idx + 1, e['message'] || String(e)); /* 主接口失败，试备用 */
+      loadFailed = true;
+      audioQueue[idx] = null;
+    })['then'](function () {
+      loadingCount--;
+      if (loadingCount === 0) {
+        if (loadFailed && audioQueue['every'](function(a){return !a;})) {
+          /* 全部失败，降级浏览器 */
+          speakBrowser(text);
+          return;
+        }
+        playQueue(audioQueue, 0);
+      }
     });
   }
-  tryTts(0);
+
+  for (var i = 0; i < segs['length']; i++) {
+    loadSeg(i);
+  }
+
+  /* 串行播放队列 */
+  function playQueue(queue, i) {
+    if (i >= queue['length']) return;
+    var a = queue[i];
+    if (!a) { playQueue(queue, i + 1); return; }
+    /* 任何新 speak 进来时 cancel 旧的：给全局变量一个标记 */
+    var token = (speakCloud['_token'] = (speakCloud['_token'] || 0) + 1);
+    a['onended'] = function () {
+      if (speakCloud['_token'] !== token) return; /* 已被打断 */
+      playQueue(queue, i + 1);
+    };
+    try { a['play'](); } catch (e) { playQueue(queue, i + 1); }
+  }
 }
 
 /* hex 字符串转 Blob */
@@ -1506,6 +1583,13 @@ function hexToBlob(hex, mimeType) {
 
 function stopSpeaking() {
   if (state['synthSupport']) { try { window['speechSynthesis']['cancel'](); } catch (e) {} }
+  /* 中断云端 TTS 队列 */
+  speakCloud['_token'] = (speakCloud['_token'] || 0) + 1;
+  /* 停止所有正在播放的 audio 元素 */
+  var allAudios = document['querySelectorAll']('audio');
+  for (var i = 0; i < allAudios['length']; i++) {
+    try { allAudios[i]['pause'](); allAudios[i]['currentTime'] = 0; } catch (e) {}
+  }
 }
 
 /* ========== 头像编辑 ========== */
@@ -1675,6 +1759,9 @@ function openSettings() {
   $('paTtsApiKey')['value'] = cfg['ttsApiKey'] || '';
   $('paTtsGroupId')['value'] = cfg['ttsGroupId'];
   $('paTtsVoiceId')['value'] = cfg['ttsVoiceId'];
+  $('paTtsSpeed')['value'] = cfg['ttsSpeed'];
+  $('paTtsSpeedLabel')['textContent'] = cfg['ttsSpeed'];
+  $('paTtsEmotion')['value'] = cfg['ttsEmotion'];
   $('paAutoTrans')['checked'] = cfg['autoTrans'];
   $('paSettingsMask')['classList']['remove']('phone-app-hidden');
 }
@@ -1691,6 +1778,8 @@ function saveSettings() {
   state['config']['ttsApiKey'] = $('paTtsApiKey')['value']['trim']();
   state['config']['ttsGroupId'] = $('paTtsGroupId')['value']['trim']();
   state['config']['ttsVoiceId'] = $('paTtsVoiceId')['value']['trim']();
+  state['config']['ttsSpeed'] = parseFloat($('paTtsSpeed')['value']);
+  state['config']['ttsEmotion'] = $('paTtsEmotion')['value'];
   state['config']['autoTrans'] = $('paAutoTrans')['checked'];
   saveConfig();
   toast('已保存');
@@ -1750,6 +1839,10 @@ function boot() {
   $('paAddContactBtn')['addEventListener']('click', function () { openContactEdit(-1); });
   $('paCloseSettings')['addEventListener']('click', closeSettings);
   $('paSaveSettings')['addEventListener']('click', saveSettings);
+  /* 语速滑块实时更新 */
+  $('paTtsSpeed')['addEventListener']('input', function () {
+    $('paTtsSpeedLabel')['textContent'] = parseFloat(this['value']).toFixed(2);
+  });
   $('paSettingsMask')['addEventListener']('click', function (e) {
     if (e['target'] === $('paSettingsMask')) closeSettings();
   });
