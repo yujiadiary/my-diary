@@ -909,7 +909,6 @@ function updateSelectBar(){
 }
 function batchPin(){
   var idxs=getSelectedIdxs();
-  toast('DEBUG: 选中 idx='+JSON['stringify'](idxs)+' smsMsgs.length='+smsMsgs['length']);
   if(!idxs['length'])return;
   var mem=loadSmsMem(state['contacts'][smsChatIdx]['name']);
   var added=0;
@@ -1335,36 +1334,70 @@ function removeFromMemory(name, idx) {
 /* 渲染记忆库页面 */
 function renderMemory() {
   var list = $('paMemoryList');
-  var all = {};
-  try { all = JSON['parse'](localStorage['getItem'](CONFIG['memoryKey']) || '{}'); } catch (e) {}
+  /* 读取通话记忆 + 短信记忆，合并显示 */
+  var callMem = {};
+  var smsMem = {};
+  try { callMem = JSON['parse'](localStorage['getItem'](CONFIG['memoryKey']) || '{}'); } catch (e) {}
+  try { smsMem = JSON['parse'](localStorage['getItem'](CONFIG['smsMemoryKey']) || '{}'); } catch (e) {}
   var hasAny = false;
   var html = '';
-  for (var name in all) {
-    if (!all['hasOwnProperty'](name) || !all[name]['length']) continue;
+  /* 先渲染通话记忆 */
+  for (var name in callMem) {
+    if (!callMem['hasOwnProperty'](name) || !callMem[name]['length']) continue;
     hasAny = true;
-    html += '<div class="phone-app-mem-contact"><div class="phone-app-mem-contact-name">' + name + '</div>';
-    for (var i = 0; i < all[name]['length']; i++) {
-      var item = all[name][i];
+    html += '<div class="phone-app-mem-contact"><div class="phone-app-mem-contact-name">' + name + ' <span style="font-size:11px;opacity:.5">通话</span></div>';
+    for (var i = 0; i < callMem[name]['length']; i++) {
+      var item = callMem[name][i];
       var roleLabel = item['role'] === 'user' ? '我' : 'AI';
       html += '<div class="phone-app-mem-item"><span class="pa-mem-role">' + roleLabel + '</span>'
         + item['content']
-        + ' <span class="pa-pin-btn" style="font-size:11px;background:rgba(255,59,48,.15);color:#ff453a;border-radius:6px;padding:2px 6px" data-del="' + name + '|' + i + '">删除</span></div>';
+        + ' <span class="pa-pin-btn" style="font-size:11px;background:rgba(255,59,48,.15);color:#ff453a;border-radius:6px;padding:2px 6px" data-del="call|' + name + '|' + i + '">删除</span></div>';
     }
     html += '</div>';
   }
-  if (!hasAny) html = '<div class="phone-app-mem-empty">还没有记忆。<br>通话时长按消息可以记住它。</div>';
+  /* 再渲染短信记忆 */
+  for (var sname in smsMem) {
+    if (!smsMem['hasOwnProperty'](sname) || !smsMem[sname]['length']) continue;
+    hasAny = true;
+    html += '<div class="phone-app-mem-contact"><div class="phone-app-mem-contact-name">' + sname + ' <span style="font-size:11px;opacity:.5">短信</span></div>';
+    for (var j = 0; j < smsMem[sname]['length']; j++) {
+      var sitem = smsMem[sname][j];
+      var sRole = sitem['role'] === 'user' ? '我' : 'AI';
+      html += '<div class="phone-app-mem-item"><span class="pa-mem-role">' + sRole + '</span>'
+        + sitem['content']
+        + ' <span class="pa-pin-btn" style="font-size:11px;background:rgba(255,59,48,.15);color:#ff453a;border-radius:6px;padding:2px 6px" data-del="sms|' + sname + '|' + j + '">删除</span></div>';
+    }
+    html += '</div>';
+  }
+  if (!hasAny) html = '<div class="phone-app-mem-empty">还没有记忆。<br>通话或短信时长按消息可以记住它。</div>';
   list['innerHTML'] = html;
   /* 绑定删除按钮 */
   var dels = list['querySelectorAll']('[data-del]');
-  for (var j = 0; j < dels['length']; j++) {
+  for (var k = 0; k < dels['length']; k++) {
     (function (btn) {
       btn['addEventListener']('click', function (e) {
         e['stopPropagation']();
         var parts = btn['getAttribute']('data-del')['split']('|');
-        removeFromMemory(parts[0], parseInt(parts[1]));
+        var type = parts[0];
+        var dname = parts[1];
+        var di = parseInt(parts[2]);
+        if (type === 'call') {
+          removeFromMemory(dname, di);
+        } else {
+          /* 删除短信记忆 */
+          var sm = {};
+          try { sm = JSON['parse'](localStorage['getItem'](CONFIG['smsMemoryKey']) || '{}'); } catch (err) {}
+          if (sm[dname] && sm[dname]['length']) {
+            sm[dname]['splice'](di, 1);
+            if (!sm[dname]['length']) delete sm[dname];
+            try { localStorage['setItem'](CONFIG['smsMemoryKey'], JSON['stringify'](sm)); } catch (err2) {}
+            smsMemCache = sm;
+          }
+        }
         toast('已删除');
+        renderMemory();
       });
-    })(dels[j]);
+    })(dels[k]);
   }
 }
 
