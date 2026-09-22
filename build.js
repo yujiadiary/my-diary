@@ -1197,7 +1197,7 @@ function build() {
     let excerptBody = contentBody.replace(/\[PLAYGROUND_LINK\]/g, '');
     // 如果只有 playable 块没正文,给个兜底描述
     if (!excerptBody.trim() && playgroundFile) {
-      excerptBody = `${fm.title || slug} · ${fm.author || 'yu'} 的试玩小游戏`;
+      excerptBody = `${fm.title || slug} · ${authorName(fm.author || 'yu')} 的试玩小游戏`;
     }
     return {
       slug,
