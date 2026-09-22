@@ -115,8 +115,8 @@ content:
         label: 评论人
         type: string
         required: true
-        default: 于加
-        description: 评论人名字,如:于加 / 江予朔 / 周叙
+        default: 加加
+        description: 评论人名字,如:加加 / 江予朔 / 周叙
 
       # 日期字段已从 CMS 移除,同文章一样由文件名决定
 

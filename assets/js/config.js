@@ -6,7 +6,7 @@ window.DiaryConfig = {
 
   // 作者/来源分类
   authors: [
-    { id: 'yu',      name: '于加',       desc: '于加的碎碎念与记录。' },
+    { id: 'yu',      name: '加加',       desc: '加加的碎碎念与记录。' },
     { id: 'jiang',    name: '江予朔',     desc: '江予朔写下的内容。' },
     { id: 'zhou',    name: '周叙',       desc: '周叙的部分。' },
     { id: 'archive', name: '共同存档',    desc: '我们一起保存下来的东西。' }

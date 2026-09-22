@@ -42,7 +42,7 @@ const SITE_URL = (process.env.SITE_URL || 'https://yujiadiary.github.io/my-diary
 
 // 作者/分类元数据(与 assets/js/config.js 保持同步;改这里记得也改 config.js)
 const AUTHORS = [
-  { id: 'yu',      name: '于加',     desc: '于加的碎碎念与记录。' },
+  { id: 'yu',      name: '加加',     desc: '加加的碎碎念与记录。' },
   { id: 'jiang',    name: '江予朔',   desc: '江予朔写下的内容。' },
   { id: 'zhou',    name: '周叙',     desc: '周叙的部分。' },
   { id: 'archive', name: '共同存档', desc: '我们一起保存下来的东西。' }
@@ -398,7 +398,7 @@ function buildLlmsTxt(visiblePosts) {
   lines.push('# ' + '碎碎念留档');
   lines.push('');
   lines.push('> 私人的多作者记录站 · 安静、干净、偏生活化。');
-  lines.push('> 作者:于加 / 江予朔 / 周叙 / 共同存档。');
+  lines.push('> 作者:加加 / 江予朔 / 周叙 / 共同存档。');
   lines.push('> 内容分类:日常碎碎念 / 长文/正式记录 / 图片/相册 / 代码/创作 / 音乐/歌单 / 存档/备份。');
   lines.push('');
   lines.push('## 文章清单(按时间倒序,只含元数据与摘要,正文见 all-posts.html)');
