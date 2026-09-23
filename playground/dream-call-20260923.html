@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="color-scheme" content="dark">
+<title>梦幻蓝色声波电话</title>
+<style>
+/* 规范：所有选择器以根类 .dream-call 开头；不用 html/body/* 全局选择器 */
+.dream-call{position:fixed;top:0;left:0;right:0;bottom:0;overflow:auto;
+  font-family:"Georgia","Noto Serif SC","Songti SC","Times New Roman",serif;
+  color:#D6E8FF;background:radial-gradient(circle at 50% 38%,#0A1B3F 0%,#030614 80%);
+  -webkit-font-smoothing:antialiased;letter-spacing:.02em;
+  user-select:none;-webkit-user-select:none;touch-action:manipulation;}
+.dream-call *{box-sizing:border-box;margin:0;padding:0;}
+.dream-call button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent;border:0;cursor:pointer;background:none;color:inherit;}
+.dream-call input,.dream-call textarea{font-family:inherit;-webkit-appearance:none;}
+
+/* ---------- 顶部：居中大标题 + 极小副标题 ---------- */
+.dream-call-topbar{position:absolute;top:0;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:6px;padding:34px 22px 0;z-index:5;text-align:center;}
+.dream-call-topbar .dc-title{font-size:clamp(20px,5.2vw,30px);font-weight:400;color:#A8D8FF;letter-spacing:.14em;font-family:"Georgia","Times New Roman",serif;}
+.dream-call-topbar .dc-subtitle{font-size:9px;color:#6B9ACD;letter-spacing:.55em;text-transform:uppercase;text-indent:.55em;font-family:"Helvetica Neue",Arial,sans-serif;font-weight:400;}
+.dream-call-topbar .dc-meta{display:flex;align-items:center;gap:8px;margin-top:2px;font-size:10px;color:#8BA6C9;letter-spacing:.25em;font-family:"Helvetica Neue",Arial,sans-serif;}
+.dream-call-topbar .dc-status{color:#8BA6C9;}
+.dream-call-topbar .dc-timer{color:#8BA6C9;font-variant-numeric:tabular-nums;}
+
+/* ---------- 中央声波台 ---------- */
+.dream-call-stage{position:absolute;top:20%;left:0;right:0;bottom:34%;display:flex;align-items:center;justify-content:center;}
+.dream-call-stage canvas{width:min(62vw,330px);height:min(62vw,330px);}
+.dream-call-stage .dc-state{position:absolute;width:100%;text-align:center;font-size:12px;letter-spacing:.5em;color:#7FC4FF;text-indent:.5em;pointer-events:none;font-weight:400;font-family:"Helvetica Neue",Arial,sans-serif;text-shadow:0 0 14px rgba(127,196,255,.45);}
+.dream-call-stage .dc-state.dim{color:#4A6A8F;text-shadow:none;}
+
+/* ---------- 字幕区（台词式，无气泡） ---------- */
+.dream-call-captions{position:absolute;left:0;right:0;bottom:24%;height:18%;overflow:hidden;padding:0 34px;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;z-index:4;}
+.dream-call-captions .cap{font-size:14px;line-height:1.75;color:#D6E8FF;letter-spacing:.02em;animation:capIn .5s ease;max-width:100%;font-family:"Georgia","Noto Serif SC","Songti SC",serif;}
+.dream-call-captions .cap::before{content:"JiaJia — ";font-size:11px;color:#6B9ACD;letter-spacing:.18em;font-family:"Helvetica Neue",Arial,sans-serif;}
+.dream-call-captions .cap.me{align-self:flex-end;text-align:right;color:#E9F4FF;}
+.dream-call-captions .cap.me::before{content:"Me — ";font-size:11px;color:#6B9ACD;letter-spacing:.18em;}
+@keyframes capIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ---------- 控制栏（极简，融背景） ---------- */
+.dream-call-controls{position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:14px;padding:18px 20px calc(18px + env(safe-area-inset-bottom));z-index:6;background:linear-gradient(transparent,rgba(2,5,14,.92));}
+.dream-call-round{flex:0 0 auto;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .25s;color:#8FC8FF;}
+.dream-call-controls .dc-mic{border:1px solid rgba(93,168,255,.35);background:rgba(10,27,63,.35);color:#8FC8FF;}
+.dream-call-controls .dc-mic.on{background:#3D7EFF;color:#fff;box-shadow:0 0 14px rgba(61,126,255,.6);}
+.dream-call-ctl{flex:0 1 220px;background:transparent;border:none;border-bottom:1px solid #3D7EFF;border-radius:0;color:#D6E8FF;font-size:14px;padding:9px 2px;outline:none;text-align:center;font-family:"Georgia","Noto Serif SC","Songti SC",serif;}
+.dream-call-ctl::placeholder{color:#6B8EBA;}
+.dream-call-controls .dc-send{color:#8FC8FF;}
+.dream-call-controls .dc-send:active{color:#fff;}
+.dream-call-controls .dc-hang{width:54px;height:54px;background:#FF4B4B;color:#fff;box-shadow:0 0 12px rgba(61,126,255,.45),0 4px 18px rgba(255,75,75,.35);}
+.dream-call-controls .dc-start{flex:0 0 auto;height:54px;padding:0 26px;border-radius:30px;display:flex;align-items:center;background:linear-gradient(135deg,#3D7EFF,#1E4DBF);color:#fff;font-weight:400;font-size:13px;letter-spacing:.28em;text-indent:.28em;font-family:"Helvetica Neue",Arial,sans-serif;box-shadow:0 4px 18px rgba(61,126,255,.4);}
+.dream-call-controls .dc-start svg{margin-right:8px;}
+.dream-call-controls .dc-upload{color:#8FC8FF;}
+
+
+/* ---------- 设置（深色蓝） ---------- */
+.dream-call-gear{position:absolute;top:16px;right:16px;z-index:8;width:42px;height:42px;border-radius:50%;color:#6B9ACD;display:flex;align-items:center;justify-content:center;transition:transform .3s,background .2s;}
+.dream-call-gear:hover{background:rgba(93,168,255,.1);transform:rotate(30deg);}
+.dream-call-shade{position:absolute;inset:0;background:rgba(1,3,10,.6);backdrop-filter:blur(4px);z-index:20;opacity:0;pointer-events:none;transition:opacity .25s;}
+.dream-call-shade.show{opacity:1;pointer-events:auto;}
+.dream-call-panel{position:absolute;top:0;right:0;bottom:0;width:min(88vw,380px);z-index:21;overflow:auto;background:#081226;border-left:1px solid rgba(93,168,255,.12);padding:20px 18px calc(20px + env(safe-area-inset-bottom));transform:translateX(100%);transition:transform .28s;box-shadow:-12px 0 40px rgba(0,0,0,.4);}
+.dream-call-panel.open{transform:translateX(0);}
+.dream-call-panel h3{font-size:14px;color:#A8D8FF;margin-bottom:6px;letter-spacing:.18em;font-weight:400;font-family:"Helvetica Neue",Arial,sans-serif;}
+.dream-call-panel label{display:block;font-size:11px;color:#6B9ACD;margin:14px 0 6px;letter-spacing:.12em;font-family:"Helvetica Neue",Arial,sans-serif;}
+.dream-call-panel input,.dream-call-panel textarea{width:100%;background:rgba(10,27,63,.5);border:1px solid rgba(93,168,255,.2);border-radius:8px;color:#D6E8FF;font-size:13px;padding:9px 11px;outline:none;line-height:1.5;}
+.dream-call-panel textarea{min-height:110px;resize:vertical;}
+.dream-call-panel .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;}
+.dream-call-panel .row label{margin:0;flex:1;}
+.dream-call-panel .switch{position:relative;width:40px;height:22px;flex:0 0 auto;}
+.dream-call-panel .switch input{opacity:0;width:0;height:0;position:absolute;}
+.dream-call-panel .switch .slider{position:absolute;inset:0;background:#2A3F66;border-radius:22px;transition:.2s;}
+.dream-call-panel .switch .slider::before{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#8FC8FF;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+.dream-call-panel .switch input:checked+.slider{background:#3D7EFF;}
+.dream-call-panel .switch input:checked+.slider::before{transform:translateX(18px);background:#fff;}
+.dream-call-panel .savebtn{width:100%;margin-top:20px;padding:11px;border-radius:10px;background:linear-gradient(135deg,#3D7EFF,#1E4DBF);color:#fff;font-size:13px;font-weight:400;letter-spacing:.2em;font-family:"Helvetica Neue",Arial,sans-serif;}
+.dream-call-hint{font-size:11px;color:#5A7BA6;line-height:1.7;margin-top:14px;font-family:"Helvetica Neue",Arial,sans-serif;}
+</style>
+</head>
+<body>
+<div class="dream-call" id="dream-call-app">
+
+  <div class="dream-call-topbar">
+    <h1 class="dc-title" id="dc-name-txt">JiaJia with DeepseekV4</h1>
+    <p class="dc-subtitle">SOUND VISUALIZER</p>
+    <p class="dc-meta"><span class="dc-status" id="dc-status-text">待机</span><span>·</span><span class="dc-timer" id="dc-timer-text">00:00</span></p>
+  </div>
+
+  <div class="dream-call-stage">
+    <canvas id="dc-canvas"></canvas>
+    <div class="dc-state" id="dc-state-text">点击开始通话</div>
+  </div>
+
+  <div class="dream-call-captions" id="dc-captions"></div>
+
+  <div class="dream-call-controls">
+    <button class="dc-start" id="dc-startbtn">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>开始通话
+    </button>
+    <button class="dc-round dc-mic" id="dc-micbtn" title="语音输入">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+    </button>
+    <input class="dream-call-ctl" id="dc-input" placeholder="说点什么…" type="text">
+    <button class="dc-round dc-send" id="dc-sendbtn" title="发送">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+    <button class="dc-round dc-hang" id="dc-hangbtn" title="挂断" style="display:none">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C7 3 3.5 4.2 1 6.5c-.4.4-.6 1-.4 1.6L2 11c.2.7.9 1.1 1.6.9l3.2-1.1c.5-.2.8-.6.9-1.1V7c1.4-.5 2.9-.7 4.3-.7s2.9.2 4.3.7v2.7c0 .5.4.9.9 1.1l3.2 1.1c.7.2 1.4-.2 1.6-.9l1.4-2.4c.2-.6 0-1.2-.4-1.6C20.5 4.2 17 3 12 3z"/></svg>
+    </button>
+    <label class="dc-round dc-upload" id="dc-upload" title="上传音频">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0l-4 4m4-4l4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      <input type="file" id="dc-file" accept="audio/*,.mp3,.wav,.m4a" style="display:none">
+    </label>
+  </div>
+
+  <button class="dream-call-gear" id="dc-gear" title="设置">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10l2.1 2.1m0-14.2l-2.1 2.1m-10 10l-2.1 2.1"/></svg>
+  </button>
+
+  <div class="dream-call-shade" id="dc-shade"></div>
+  <div class="dream-call-panel" id="dc-panel">
+    <h3>对话设置</h3>
+    <label>API Base URL</label>
+    <input id="cfg-base" spellcheck="false">
+    <label>API Key</label>
+    <input id="cfg-key" type="password" placeholder="sk-..." spellcheck="false">
+    <label>模型名称</label>
+    <input id="cfg-model" spellcheck="false">
+    <label>系统提示词</label>
+    <textarea id="cfg-prompt"></textarea>
+    <div class="row">
+      <label for="cfg-cloudtts">使用 MiniMax 云端 TTS</label>
+      <div class="switch"><input type="checkbox" id="cfg-cloudtts"><span class="slider"></span></div>
+    </div>
+    <label>MiniMax TTS 接口地址</label>
+    <input id="cfg-ttsurl" spellcheck="false" placeholder="https://api.minimaxi.com/v1/t2a_v2">
+    <label>MiniMax API Key</label>
+    <input id="cfg-mmkey" type="password" spellcheck="false" placeholder="eyJ...">
+    <label>GroupId</label>
+    <input id="cfg-mmgroup" spellcheck="false" placeholder="18xxxxx">
+    <label>VoiceId</label>
+    <input id="cfg-mmvoice" spellcheck="false" placeholder="male-qn-qingse">
+    <button class="savebtn" id="cfg-save">保存</button>
+    <div class="dream-call-hint" id="dc-cfgmsg">配置仅保存在你的浏览器本地，他人访问看不到。</div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* =====================================================
+   顶部参数区（颜色/地址/模型/提示词改这里）
+   ===================================================== */
+var CFG={
+  'name':'JiaJia with DeepseekV4',
+  'apiBase':'https://api.deepseek.com/v1',
+  'model':'deepseek-chat',
+  'key':'',
+  'prompt':'你是江予朔，是她的丈夫。说话清冷、低沉、克制，但对她藏着黏腻。语气短促，多用反问和停顿。说话用省略号（...）制造停顿，问句结尾用问号（?）上扬，命令句用感叹号（!）。每次回复不超过50字，像在耳边说话。',
+  'cloudTTS':false,
+  'ttsUrl':'https://api.minimaxi.com/v1/t2a_v2',
+  'mmKey':'',
+  'mmGroup':'',
+  'ttsVoice':'male-qn-qingse',
+  'maxRounds':8
+};
+var STORE_KEY='dream_call_config';
+
+/* 视觉参数（改这里调样式） */
+var VIZ={
+  'lines':130,                        /* 放射线数量 */
+  'lineColor':'rgba(93,168,255,0.35)',/* 放射线颜色（蓝） */
+  'ringRGB':'61,126,255',             /* 扩散环 RGB（#3D7EFF） */
+  'coreColor':'rgba(91,168,255,0.85)',/* 中心虚线圈颜色（发光淡蓝） */
+  'glow':'rgba(93,168,255,0.55)',     /* 发光颜色 */
+  'radius':0.42                       /* 中心圈相对半径 */
+};
+
+/* 中文注释：所有 对象.属性 一律写 对象['属性']，防 Pages CMS 自动链接化崩脚本 */
+
+function el(id){return document['getElementById'](id);}
+var canvas=el('dc-canvas'),ctx=canvas['getContext']('2d');
+var stateText=el('dc-state-text'),statusText=el('dc-status-text'),timerText=el('dc-timer-text');
+var captions=el('dc-captions'),inputEl=el('dc-input');
+var startBtn=el('dc-startbtn'),micBtn=el('dc-micbtn'),sendBtn=el('dc-sendbtn'),hangBtn=el('dc-hangbtn');
+var shade=el('dc-shade'),panel=el('dc-panel'),gear=el('dc-gear');
+
+var state='idle';      /* idle 待机 | active 通话中 */
+var secs=0,timerId=null;
+var history=[];        /* 对话历史 */
+var voiceOn=false;     /* 是否有声音（驱动可视化） */
+var t=0;               /* 动画时间（秒） */
+
+/* ================= 配置读写（localStorage） ================= */
+function loadCfg(){try{var raw=window['localStorage']['getItem'](STORE_KEY);if(raw){var o=JSON['parse'](raw);for(var k in o){if(CFG['hasOwnProperty'](k))CFG[k]=o[k];}}}catch(e){}}
+function saveCfg(){try{window['localStorage']['setItem'](STORE_KEY,JSON['stringify'](CFG));}catch(e){}}
+function populatePanel(){el('cfg-base')['value']=CFG['apiBase'];el('cfg-model')['value']=CFG['model'];el('cfg-key')['value']=CFG['key'];el('cfg-prompt')['value']=CFG['prompt'];el('cfg-cloudtts')['checked']=CFG['cloudTTS'];el('cfg-ttsurl')['value']=CFG['ttsUrl'];el('cfg-mmkey')['value']=CFG['mmKey'];el('cfg-mmgroup')['value']=CFG['mmGroup'];el('cfg-mmvoice')['value']=CFG['ttsVoice'];}
+function saveFromPanel(){
+  CFG['apiBase']=el('cfg-base')['value']['trim']();CFG['model']=el('cfg-model')['value']['trim']();
+  CFG['key']=el('cfg-key')['value']['trim']();CFG['prompt']=el('cfg-prompt')['value'];
+  CFG['cloudTTS']=el('cfg-cloudtts')['checked'];CFG['ttsUrl']=el('cfg-ttsurl')['value']['trim']();
+  CFG['mmKey']=el('cfg-mmkey')['value']['trim']();CFG['mmGroup']=el('cfg-mmgroup')['value']['trim']();
+  CFG['ttsVoice']=el('cfg-mmvoice')['value']['trim']();saveCfg();
+  el('dc-cfgmsg')['textContent']='已保存 ✓';
+  setTimeout(function(){el('dc-cfgmsg')['textContent']='配置仅保存在你的浏览器本地，他人访问看不到。';},2500);
+}
+
+/* ================= 顶层显示 ================= */
+function setName(){el('dc-name-txt')['textContent']=CFG['name'];}
+function setStatus(s){statusText['textContent']=s;}
+function setCenter(txt,dim){stateText['textContent']=txt;stateText['className']='dc-state'+(dim?' dim':'');}
+function fmtNum(n){return (n<10?'0':'')+n;}
+function startTimer(){secs=0;timerText['textContent']='00:00';timerId=setInterval(function(){secs++;timerText['textContent']=fmtNum(Math['floor'](secs/60))+':'+fmtNum(secs%60);},1000);}
+function stopTimer(){if(timerId){clearInterval(timerId);timerId=null;}}
+function addCap(who,txt){
+  var d=document['createElement']('div');
+  d['className']='cap'+(who==='me'?' me':'');
+  d['textContent']=txt;
+  captions['appendChild'](d);
+  while(captions['children']['length']>4)captions['removeChild'](captions['firstChild']);
+}
+
+/* ================= 通话状态机 ================= */
+function startCall(){
+  state='active';
+  startBtn['style']['display']='none';
+  hangBtn['style']['display']='flex';
+  setStatus('通话中');setCenter('LISTENING',false);
+  startTimer();startViz();
+  sendText(null);   /* AI 先开口 */
+}
+function hangup(){
+  stopTimer();stopViz();stopSpeak();stopRec();
+  state='idle';
+  startBtn['style']['display']='flex';
+  hangBtn['style']['display']='none';
+  setStatus('已挂断');setCenter('点击开始通话',true);
+  timerText['textContent']='00:00';history=[];
+}
+
+/* ================= 语音识别（interim 实时显示） ================= */
+var SR=window['SpeechRecognition']||window['webkitSpeechRecognition'];
+var recog=null,micOn=false;
+function setMic(on){micOn=on;micBtn['className']='dc-round dc-mic'+(on?' on':'');}
+function stopRec(){if(recog&&micOn){try{recog['stop']();}catch(e){}setMic(false);}}
+function toggleMic(){
+  if(!SR){addCap(null,'本机不支持语音识别，请用文字。');return;}
+  if(micOn){stopRec();return;}
+  if(state!=='active'){addCap(null,'先点开始通话，再说话。');return;}
+  if(recog===null){
+    recog=new SR();
+    recog['lang']='zh-CN';recog['interimResults']=true;recog['continuous']=true;
+    recog['onresult']=function(e){
+      var interim='',fin='';
+      for(var i=0;i<e['results']['length'];i++){
+        if(e['results'][i]['isFinal']){fin+=e['results'][i][0]['transcript'];}
+        else{interim+=e['results'][i][0]['transcript'];}
+      }
+      inputEl['value']=fin+interim;
+      if(fin){inputEl['value']='';sendText(fin);}
+    };
+    recog['onend']=function(){setMic(false);};
+  }
+  try{recog['start']();setMic(true);}catch(e){}
+}
+
+/* ================= 语音合成 TTS（分段队列，可中断） ================= */
+var synth=window['speechSynthesis'];
+var ttsQueue=[],ttsBusy=false;
+var cloudAudio=document['createElement']('audio');
+function stopSpeak(){
+  ttsQueue=[];
+  if(ttsBusy){try{synth['cancel']();}catch(e){}}
+  try{cloudAudio['pause']();cloudAudio['src']='';}catch(e){}
+  ttsBusy=false;setVoice(false);
+}
+function speakText(txt){
+  if(!txt||!txt['trim']())return;
+  ttsQueue['push'](txt['trim']());
+  tickTTS();
+}
+function tickTTS(){
+  if(ttsBusy||ttsQueue['length']===0)return;
+  if(state!=='active')return;
+  ttsBusy=true;setVoice(true);
+  var chunk=ttsQueue['shift']();
+  if(CFG['cloudTTS']&&CFG['ttsUrl']){playCloudChunk(chunk);}
+  else{
+    try{
+      var u=new SpeechSynthesisUtterance(chunk);
+      u['lang']='zh-CN';u['rate']=1;u['pitch']=1;
+      u['onend']=function(){ttsBusy=false;tickTTS();};
+      u['onerror']=function(){ttsBusy=false;tickTTS();};
+      synth['speak'](u);
+    }catch(e){ttsBusy=false;tickTTS();}
+  }
+}
+function playCloudChunk(chunk){
+  /* MiniMax t2a_v2：POST + Bearer 认证 + base64 音频解码 */
+  var url=CFG['ttsUrl']+'?GroupId='+encodeURIComponent(CFG['mmGroup']||'');
+  var body={'model':'speech-02-hd','text':chunk,'stream':false,
+    'voice_setting':{'voice_id':CFG['ttsVoice']||'male-qn-qingse','speed':1.0,'vol':1.0,'pitch':0},
+    'audio_setting':{'sample_rate':32000,'bitrate':128000,'format':'mp3','channel':1}};
+  var headers={'Content-Type':'application/json','Authorization':'Bearer '+CFG['mmKey']};
+  fetch(url,{'method':'POST','headers':headers,'body':JSON['stringify'](body)})
+  ['then'](function(res){return res['json']();})
+  ['then'](function(j){
+    var audio=j['data']&&j['data']['audio'];
+    if(!audio){ttsBusy=false;tickTTS();return;}
+    var bin=atob(audio);
+    var arr=new Uint8Array(bin['length']);
+    for(var i=0;i<bin['length'];i++){arr[i]=bin['charCodeAt'](i);}
+    var blob=new Blob([arr],{'type':'audio/mp3'});
+    cloudAudio['src']=window['URL']['createObjectURL'](blob);
+    cloudAudio['onended']=function(){ttsBusy=false;tickTTS();};
+    cloudAudio['onerror']=function(){ttsBusy=false;tickTTS();};
+    cloudAudio['play']()['catch'](function(){ttsBusy=false;tickTTS();});
+  })['catch'](function(){ttsBusy=false;tickTTS();});
+}
+function speakInPieces(full){
+  var parts=full['split'](/[。！？!?\n]+/);
+  for(var i=0;i<parts['length'];i++){
+    var p=parts[i]['trim']();
+    if(p)speakText(p);
+  }
+}
+
+/* ================= 上传音频（独立播放，走可视化） ================= */
+var fileAudio=document['createElement']('audio');
+var fileHooked=false;
+function onFile(ev){
+  var f=ev['target']['files'][0];if(!f)return;
+  ensureAC();hookFile();
+  fileAudio['src']=window['URL']['createObjectURL'](f);
+  fileAudio['loop']=false;
+  fileAudio['addEventListener']('play',function(){setVoice(true);startViz();setCenter('播放中',false);});
+  fileAudio['addEventListener']('ended',function(){setVoice(false);setCenter('点击开始通话',true);});
+  addCap('me','⬆️ '+f['name']);
+  fileAudio['play']();
+}
+
+/* ================= 声波可视化（AudioContext + Analyser + Canvas） ================= */
+var AC=window['AudioContext']||window['webkitAudioContext'];
+var ac=null,analyser=null,rafId=null,lastTs=0;
+function ensureAC(){
+  if(!ac&&AC){ac=new AC();analyser=ac['createAnalyser']();analyser['fftSize']=128;analyser['smoothingTimeConstant']=0.7;}
+}
+function hookFile(){
+  if(fileHooked||!ac)return;
+  try{var n=ac['createMediaElementSource'](fileAudio);n['connect'](analyser);analyser['connect'](ac['destination']);fileHooked=true;}catch(e){}
+}
+function setVoice(on){voiceOn=on;}
+function startViz(){
+  if(rafId!=null)return;
+  lastTs=performance['now']();
+  var loop=function(tt){
+    rafId=requestAnimationFrame(loop);
+    t+=(tt-lastTs)/1000;lastTs=tt;
+    draw();
+  };
+  rafId=requestAnimationFrame(loop);
+}
+function stopViz(){if(rafId!=null){cancelAnimationFrame(rafId);rafId=null;}}
+function sizeCanvas(){
+  var w=canvas['clientWidth']||300,h=canvas['clientHeight']||300;
+  canvas['width']=w;canvas['height']=h;
+}
+function draw(){
+  var cx=canvas['width']/2,cy=canvas['height']/2;
+  var R=Math['min'](cx,cy)*VIZ['radius'];
+  ctx['clearRect'](0,0,canvas['width'],canvas['height']);
+  /* 振幅：有声音才有能量；安静时回到最短 */
+  var amp=0;
+  if(analyser&&voiceOn){
+    var fr=new Uint8Array(analyser['frequencyBinCount']);
+    analyser['getByteFrequencyData'](fr);
+    var s=0;for(var i=0;i<fr['length'];i++)s+=fr[i];
+    amp=Math['min'](1,(s/(fr['length']||1))/255*2.4);
+  }else if(voiceOn){
+    amp=0.35+0.3*Math['sin'](t*5)+0.18*Math['sin'](t*11);
+    amp=Math['max'](0.06,amp);
+  }
+  /* 细密放射线：随振幅变长，发声时微微发光 */
+  var n=VIZ['lines'];
+  var len=R*0.55*(0.05+amp*0.6);
+  ctx['strokeStyle']=VIZ['lineColor'];
+  ctx['lineWidth']=1;
+  if(amp>0.12){ctx['shadowBlur']=6+amp*10;ctx['shadowColor']='rgba(93,168,255,0.8)';}
+  for(var i=0;i<n;i++){
+    var a=i/n*Math['PI']*2;
+    var r0=R;
+    ctx['beginPath']();
+    ctx['moveTo'](cx+Math['cos'](a)*r0,cy+Math['sin'](a)*r0);
+    ctx['lineTo'](cx+Math['cos'](a)*(r0+len),cy+Math['sin'](a)*(r0+len));
+    ctx['stroke']();
+  }
+  ctx['shadowBlur']=0;
+  /* 中心虚线圈（发光淡蓝） */
+  ctx['save']();
+  ctx['setLineDash']([2,6]);
+  ctx['strokeStyle']=VIZ['coreColor'];
+  ctx['lineWidth']=1;
+  ctx['shadowBlur']=10;ctx['shadowColor']='rgba(91,168,255,0.9)';
+  ctx['beginPath']();ctx['arc'](cx,cy,R,0,Math['PI']*2);ctx['stroke']();
+  ctx['restore']();
+  /* 同心扩散环：淡蓝，透明度 0.4 渐隐至 0 */
+  for(var j=0;j<3;j++){
+    var ph=((t*0.10)+j/3)%1;
+    var rr=R*(1+ph*1.9);
+    ctx['beginPath']();ctx['arc'](cx,cy,rr,0,Math['PI']*2);
+    ctx['strokeStyle']='rgba('+VIZ['ringRGB']+','+(0.4*(1-ph)).toFixed(2)+')';
+    ctx['lineWidth']=1;
+    ctx['stroke']();
+  }
+}
+
+/* ================= 对话逻辑（OpenAI 兼容 + SSE 流式） ================= */
+var liveCap=null;           /* 流式字幕元素 */
+var liveText='';            /* 流式已累积文本 */
+var lastSpeakPos=0;         /* 已送去朗读的位置 */
+
+function resetLive(){
+  liveCap=null;liveText='';lastSpeakPos=0;
+}
+function sendText(txt){
+  if(state!=='active')return;
+  if(txt){history['push']({'role':'user','content':txt});addCap('me',txt);}
+  setStatus('思考中…');setCenter('LISTENING',false);
+  var hist=history['slice'](-CFG['maxRounds']*2);
+  var msgs=[{'role':'system','content':CFG['prompt']}]['concat'](hist);
+  var body={'model':CFG['model'],'messages':msgs,'stream':true};
+  var url=CFG['apiBase']['replace'](/\/+$/,'')+'/chat/completions';
+  var headers={'Content-Type':'application/json'};
+  if(CFG['key']){headers['Authorization']='Bearer '+CFG['key'];}
+  resetLive();
+  fetch(url,{'method':'POST','headers':headers,'body':JSON['stringify'](body)})
+  ['then'](function(res){
+    if(!res['ok']||!res['body']){throw new Error('HTTP '+res['status']);}
+    var reader=res['body']['getReader']();
+    var decoder=new TextDecoder('utf-8');
+    var buffer='';
+    function pump(){
+      return reader['read']()['then'](function(r){
+        if(r['done']){finishReply();return;}
+        buffer+=decoder['decode'](r['value'],{'stream':true});
+        var blocks=buffer['split']('\n\n');
+        buffer=blocks['pop']();
+        for(var i=0;i<blocks['length'];i++){handleSSE(blocks[i]);}
+        return pump();
+      })['catch'](function(e){finishReply();});
+    }
+    return pump();
+  })['catch'](function(e){
+    setStatus('通话中');finishLive();
+    addCap(null,'（请求失败：'+e['message']+'）');
+  });
+}
+function handleSSE(block){
+  var lines=block['split']('\n');
+  for(var i=0;i<lines['length'];i++){
+    var line=lines[i];
+    if(line['indexOf']('data:')!==0)continue;
+    var data=line['slice'](5)['trim']();
+    if(data==='[DONE]'){finishReply();return;}
+    var obj=null;
+    try{obj=JSON['parse'](data);}catch(e){continue;}
+    var delta=obj['choices']&&obj['choices'][0]&&obj['choices'][0]['delta'];
+    if(!delta)continue;
+    var piece=delta['content'];
+    if(!piece)continue;
+    liveText+=piece;
+    if(liveCap===null){liveCap=document['createElement']('div');liveCap['className']='cap';captions['appendChild'](liveCap);}
+    liveCap['textContent']=liveText;
+    /* 按标点切句，立即送去朗读（文字语音同步） */
+    var m=liveText['match'](/[^。！？!?\n]*[。！？!?\n]/g);
+    if(m&&m['length']>0){
+      var last=m[m['length']-1];
+      var usedPos=liveText['indexOf'](last);
+      if(usedPos>=lastSpeakPos){
+        speakText(last);
+        lastSpeakPos=usedPos+last['length'];
+      }
+    }
+  }
+}
+function finishReply(){
+  if(liveText){history['push']({'role':'assistant','content':liveText});}
+  setStatus('通话中');
+  if(voiceOn===false&&ttsQueue['length']===0)setVoice(false);
+}
+function finishLive(){if(liveCap){liveCap['style']['opacity']='0.5';}resetLive();}
+
+/* ================= 初始化（含 DOM 重试机制） ================= */
+function bindEvents(){
+  micBtn['addEventListener']('click',toggleMic);
+  sendBtn['addEventListener']('click',function(){var v=inputEl['value']['trim']();if(!v)return;inputEl['value']='';sendText(v);});
+  inputEl['addEventListener']('keydown',function(e){if(e['key']==='Enter'){var v=inputEl['value']['trim']();if(!v)return;inputEl['value']='';sendText(v);}});
+  startBtn['addEventListener']('click',startCall);
+  hangBtn['addEventListener']('click',hangup);
+  gear['addEventListener']('click',function(){panel['classList']['toggle']('open');shade['classList']['toggle']('show');populatePanel();});
+  shade['addEventListener']('click',function(){panel['classList']['remove']('open');shade['classList']['remove']('show');});
+  el('cfg-save')['addEventListener']('click',saveFromPanel);
+  el('dc-file')['addEventListener']('change',onFile);
+  /* 页面失焦/隐藏时停掉动画循环，省电 */
+  document['addEventListener']('visibilitychange',function(){
+    if(document['hidden']){stopViz();}else if(state==='active'||voiceOn){startViz();}
+  });
+}
+function init(){
+  loadCfg();setName();setStatus('待机');setCenter('点击开始通话',true);
+  bindEvents();sizeCanvas();
+}
+/* 重试：若 DOM 未就绪则每 100ms 重试，最多 50 次 */
+var tries=0;
+function boot(){
+  if(document['getElementById']('dc-canvas')){init();}
+  else if(tries<50){tries++;setTimeout(boot,100);}
+}
+if(document['readyState']==='loading'){
+  document['addEventListener']('DOMContentLoaded',boot);
+}else{boot();}
+
+})();
+</script>
+</body>
+</html>
