@@ -1,0 +1,55 @@
+name: Build static pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'posts/**'
+      - 'comments/**'
+      - 'build.js'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-static-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run build.js
+        run: node build.js
+
+      - name: Commit generated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # 暂存 build.js 生成物 + 自动重命名的 .md 源文件
+          git add posts/index.json sitemap.xml llms.txt all-posts.html feed.xml
+          git add 'posts/*.html'
+          git add 'posts/*.md'
+          git add 'archives/'
+          git add 'daily/'
+          git add 'playground/'
+          if git diff --cached --quiet; then
+            echo "生成物无变化,跳过提交"
+          else
+            git commit -m "chore: 自动重建/重命名 [skip ci]"
+            git push
+            echo "已提交生成物"
+          fi

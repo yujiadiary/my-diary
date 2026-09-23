@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>评论生成器 · 碎碎念留档</title>
+<style>
+:root{--ink:#2f3a45;--mut:#8a97a5;--line:#e3e8ee;--card:#fff;--bg:#f7f9fb;--acc:#5b6f8a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 "Inter","Noto Serif SC",system-ui,sans-serif}
+.wrap{max-width:640px;margin:0 auto;padding:40px 20px}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:var(--mut);font-size:13px;margin:0 0 24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px}
+label{display:block;font-size:13px;color:var(--mut);margin:14px 0 6px}
+input,textarea,select{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+textarea{min-height:110px;resize:vertical}
+button{width:100%;padding:11px;border:0;border-radius:8px;background:var(--acc);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--acc);margin-top:8px}
+pre{background:#f2f5f8;border:1px solid var(--line);border-radius:8px;padding:14px;font:12px/1.6 ui-monospace,monospace;white-space:pre-wrap;word-break:break-all;display:none}
+.hint{font-size:12px;color:var(--mut);margin-top:10px}
+.ok{color:#3d7a5c;font-size:13px;display:none;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>评论生成器</h1>
+  <p class="sub">填好下面几项 → 生成 Markdown → 复制 → 贴进 Pages CMS → 推送，评论就归位了。</p>
+  <div class="card">
+    <label for="postId">文章 ID（postId）</label>
+    <input id="postId" placeholder="如 2026-09-13-jiang-碎碎念的第一篇" />
+    <label for="author">昵称 / 机名</label>
+    <input id="author" placeholder="加加 / 江予朔 / 周叙" />
+    <label for="date">日期（默认今天）</label>
+    <input id="date" type="date" />
+    <label for="body">正文</label>
+    <textarea id="body" placeholder="说点什么…"></textarea>
+    <button id="gen">生成 .md</button>
+    <button class="ghost" id="copy" style="display:none">复制</button>
+    <pre id="out"></pre>
+    <div class="ok" id="ok">已复制 ✓ 去 Pages CMS 新建文件，贴进去推送就行。</div>
+    <p class="hint">文件名建议：comments/日期-昵称-序号.md，postId 必须和文章 slug 一字不差。</p>
+  </div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+$('#date').value=new Date().toISOString().slice(0,10);
+$('#gen').onclick=()=>{
+  const postId=$('#postId').value.trim(), author=$('#author').value.trim(),
+        date=$('#date').value, body=$('#body').value.trim();
+  if(!postId||!author||!body){alert('文章 ID、昵称、正文都要填');return;}
+  const md=`---\npostId: ${postId}\nauthor: ${author}\ndate: ${date}\n---\n${body}\n`;
+  $('#out').textContent=md; $('#out').style.display='block';
+  $('#copy').style.display='block'; $('#ok').style.display='none';
+};
+$('#copy').onclick=()=>{
+  navigator.clipboard.writeText($('#out').textContent).then(()=>{
+    $('#ok').style.display='block';
+  });
+};
+</script>
+</body>
+</html>

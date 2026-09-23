@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# 允许 DeepSeekBot 抓取
+User-agent: DeepSeekBot
+Allow: /
+
+Sitemap: https://yujiadiary.github.io/my-diary/sitemap.xml

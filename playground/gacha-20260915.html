@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="../assets/js/gate.js"></script>
+<title>抓娃娃机 · 试玩</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+/* ========== 可配置参数（马卡龙配色 / 文字 / 尺寸，改这里即可） ========== */
+:root {
+  --cream: #faf3ea;        /* 页面米白底 */
+  --pink: #ffb6c9;         /* 粉 */
+  --pink-deep: #ff9bb3;    /* 深粉 */
+  --mint: #aee9d6;         /* 薄荷绿 */
+  --mint-deep: #7fd8bf;    /* 深薄荷 */
+  --lemon: #ffe39c;        /* 奶黄 */
+  --sky: #aed6f0;          /* 天蓝 */
+  --sky-deep: #7fbfe0;     /* 深天蓝 */
+  --ink: #6f6055;          /* 主文字（暖棕） */
+  --ink-soft: #a89a8c;     /* 次要文字 */
+  --white: #fffaf5;        /* 卡片白 */
+  --metal: #c9d7e6;        /* 金属件 */
+  --metal-deep: #9bb0c4;   /* 深金属 */
+  --glass: rgba(174,214,240,0.22); /* 玻璃罩 */
+  --radius: 18px;
+  --max-width: 420px;
+}
+
+/* ========== 基础重置 ========== */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; overflow-x: hidden; }
+body {
+  background:
+    radial-gradient(circle at 20% 10%, #fff3f7 0, transparent 40%),
+    radial-gradient(circle at 85% 15%, #eafaf3 0, transparent 45%),
+    var(--cream);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
+  line-height: 1.7;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 14px 48px;
+}
+a.back {
+  align-self: flex-start;
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+a.back:hover { color: var(--pink-deep); }
+
+/* ========== 标题 ========== */
+h1 {
+  font-size: clamp(22px, 6vw, 28px);
+  color: var(--pink-deep);
+  text-align: center;
+  letter-spacing: 2px;
+  text-shadow:
+     1px 1px 0 #fff,
+     2px 2px 0 rgba(255,155,179,0.35);
+  margin-bottom: 2px;
+}
+.subtitle {
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+/* ========== 娃娃机机身 ========== */
+.machine {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* 顶部招牌 */
+.marquee {
+  background: linear-gradient(180deg, var(--pink) 0%, var(--pink-deep) 100%);
+  border-radius: var(--radius) var(--radius) 6px 6px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 4px 0 rgba(255,155,179,0.35);
+}
+.marquee .sign {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.08);
+}
+.marquee .light {
+  position: absolute;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--lemon);
+  box-shadow: 0 0 6px var(--lemon);
+}
+.marquee .light.l1 { left: 12px; top: 50%; transform: translateY(-50%); }
+.marquee .light.l2 { right: 12px; top: 50%; transform: translateY(-50%); }
+
+/* 主柜体 */
+.cabinet {
+  background: linear-gradient(180deg, #fff6f9 0%, #eafaf3 100%);
+  border: 3px solid var(--pink);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 14px;
+  box-shadow: 0 8px 24px rgba(174,140,150,0.18);
+}
+
+/* 玻璃展示区 */
+.glass {
+  position: relative;
+  width: 100%;
+  height: clamp(240px, 62vw, 320px);
+  background: var(--glass);
+  border: 3px solid var(--sky);
+  border-radius: 14px 14px 10px 10px;
+  overflow: hidden;
+  /* 顶部弧形玻璃罩感 */
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.1) 30%, rgba(174,214,240,0.18) 100%);
+}
+/* 玻璃高光 */
+.glass::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 40%; height: 100%;
+  background: linear-gradient(115deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 60%);
+  pointer-events: none;
+}
+
+/* 顶部导轨 */
+.rail {
+  position: absolute;
+  top: 6px; left: 8px; right: 8px;
+  height: 6px;
+  background: var(--metal);
+  border-radius: 4px;
+  box-shadow: 0 2px 0 var(--metal-deep);
+}
+
+/* 爪子 */
+.claw {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: left .6s ease, top .8s ease;
+  z-index: 3;
+}
+.claw .cable {
+  width: 4px;
+  height: 18px;
+  background: var(--metal-deep);
+}
+.claw-svg { width: 60px; height: 78px; display: block; }
+.prong {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+  transition: transform .3s ease;
+}
+/* 爪子左右寻找时的轻微晃动（第二步用，整组抖动） */
+.claw.seeking {
+  animation: claw-wobble .5s ease-in-out infinite;
+}
+@keyframes claw-wobble {
+  0%   { transform: translateX(-50%) rotate(-2.5deg); }
+  50%  { transform: translateX(-50%) rotate(2.5deg); }
+  100% { transform: translateX(-50%) rotate(-2.5deg); }
+}
+/* 爪子移动时取消晃动，恢复 translateX(-50%) 基线，避免 left+rotate 打架 */
+.claw.moving { animation: none; transform: translateX(-50%); }
+/* 第三步：下爪时爪子整体下降（top 由 JS 设置），关闭旋转动画避免打架 */
+.claw.descending { animation: none; transform: translateX(-50%); transition: left .6s ease, top .9s ease; }
+.claw.rising    { animation: none; transform: translateX(-50%); transition: left .6s ease, top .9s ease; }
+/* 抓取瞬间的轻微抖动（整组上下抖） */
+.claw.grabbing { animation: claw-grab-shake .12s ease-in-out 3; }
+@keyframes claw-grab-shake {
+  0%   { transform: translateX(-50%) translateY(0); }
+  25%  { transform: translateX(-50%) translateY(-3px); }
+  50%  { transform: translateX(-50%) translateY(2px); }
+  75%  { transform: translateX(-50%) translateY(-2px); }
+  100% { transform: translateX(-50%) translateY(0); }
+}
+/* 爪尖开合（两个 prong 分别向中线收拢） */
+.prong.prong-left  { transform: rotate(0deg); }
+.prong.prong-right { transform: rotate(0deg); }
+.prong.prong-left.closed  { transform: rotate(28deg); }
+.prong.prong-right.closed { transform: rotate(-28deg); }
+/* 抓空时爪尖抖一下（开合小幅抖动） */
+.claw.missed .prong-left  { animation: prong-miss-l .18s ease-in-out 2; }
+.claw.missed .prong-right { animation: prong-miss-r .18s ease-in-out 2; }
+@keyframes prong-miss-l { 0%,100%{transform:rotate(28deg)} 50%{transform:rotate(20deg)} }
+@keyframes prong-miss-r { 0%,100%{transform:rotate(-28deg)} 50%{transform:rotate(-20deg)} }
+
+/* 被抓起的奖品：跟随爪子移动（脱离原位，浮在爪下） */
+.prize.caught {
+  position: absolute;
+  bottom: auto;
+  opacity: 1;
+  z-index: 3;
+  transition: top .9s ease, left .6s ease, opacity .2s ease;
+  pointer-events: none;
+}
+/* 掉落到出口时的滑出动画 */
+.prize.dropping-out {
+  transition: top .6s cubic-bezier(.6,1.2,.7,1), opacity .2s ease .4s;
+}
+/* 原位变暗（被抓走后） */
+.prize.taken-ghost { opacity: 0.12; }
+
+/* 奖品摆放区 */
+.prize-floor {
+  position: absolute;
+  left: 6px; right: 6px;
+  bottom: 10px;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  z-index: 2;
+}
+.prize {
+  width: clamp(40px, 13vw, 56px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  filter: drop-shadow(0 3px 2px rgba(0,0,0,0.08));
+}
+.prize svg { width: 100%; height: auto; display: block; }
+/* 抓走后变暗的占位 */
+.prize.taken { opacity: 0.15; }
+
+/* 底部货架线 */
+.shelf {
+  position: absolute;
+  left: 6px; right: 6px;
+  bottom: 8px;
+  height: 4px;
+  background: var(--mint-deep);
+  border-radius: 3px;
+  opacity: 0.5;
+  z-index: 1;
+}
+
+/* 前控制面板 */
+.panel {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--white);
+  border: 2px solid var(--mint);
+  border-radius: 14px;
+}
+/* 投币口 */
+.coin-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.coin-slot .slit {
+  width: 28px; height: 6px;
+  background: var(--metal-deep);
+  border-radius: 3px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+}
+.coin-slot .label { font-size: 11px; color: var(--ink-soft); }
+/* 摇杆装饰 */
+.joystick { display: flex; flex-direction: column; align-items: center; }
+.joystick svg { width: 46px; height: 46px; }
+/* 出口 */
+.chute {
+  position: relative;
+  width: 70px; height: 40px;
+  background: var(--metal);
+  border: 2px solid var(--metal-deep);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.chute .hole {
+  position: absolute;
+  left: 8px; right: 8px; bottom: 4px;
+  height: 18px;
+  background: #5a5048;
+  border-radius: 6px;
+}
+.chute .label {
+  position: absolute; top: 4px; left: 0; right: 0;
+  text-align: center; font-size: 10px; color: var(--ink-soft);
+}
+
+/* ========== 投币金币掉落（第二步） ========== */
+/* 金币层：覆盖在面板上，金币相对此层定位（从投币口上方掉入） */
+.coin-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  overflow: visible;
+}
+.coin {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #fff6c2 0%, #ffe39c 55%, #f5c64a 100%);
+  border: 2px solid #f5c64a;
+  box-shadow: 0 2px 3px rgba(0,0,0,0.15), inset 0 0 0 2px #fff3b0;
+  z-index: 6;
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.coin::after {
+  content: "★";
+  font-size: 11px;
+  color: #f5c64a;
+  font-weight: 700;
+}
+/* 金币闪一下（投币瞬间高亮） */
+.coin.flash {
+  animation: coin-flash .3s ease;
+}
+@keyframes coin-flash {
+  0%   { box-shadow: 0 0 0 rgba(255,227,156,0); }
+  50%  { box-shadow: 0 0 12px 4px rgba(255,227,156,0.9); }
+  100% { box-shadow: 0 0 0 rgba(255,227,156,0); }
+}
+/* 金币掉落动画类（由 JS 设置 top 终点 + 时长后启用） */
+.coin.dropping {
+  opacity: 1;
+  transition: top .5s cubic-bezier(.5,.1,.7,1), opacity .15s ease .35s;
+}
+
+/* ========== 控制区 ========== */
+.controls {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 18px auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.btn {
+  width: 100%;
+  max-width: 320px;
+  min-height: 52px;
+  padding: 12px 20px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  border: none;
+  border-radius: 26px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+}
+.btn-primary {
+  background: linear-gradient(180deg, var(--pink) 0%, var(--pink-deep) 100%);
+  color: #fff;
+  box-shadow: 0 5px 0 rgba(255,155,179,0.45), 0 8px 16px rgba(255,155,179,0.3);
+}
+.btn-primary:hover { transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(255,155,179,0.45); }
+/* 投币时按钮轻微缩放反馈（不依赖 :active，用类名驱动，给几百毫秒仪式感） */
+.btn.coining {
+  animation: btn-press .35s ease;
+}
+@keyframes btn-press {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+.btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  background: linear-gradient(180deg, var(--ink-soft) 0%, #8a7b6c 100%);
+  box-shadow: 0 3px 0 rgba(0,0,0,0.15);
+}
+.hint {
+  font-size: 12px;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+/* ========== 结果卡片（弹层） ========== */
+.result-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(111,96,85,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .3s ease, visibility .3s ease;
+  z-index: 100;
+}
+.result-mask.show { opacity: 1; visibility: visible; }
+.result-card {
+  width: 100%;
+  max-width: 340px;
+  background: var(--white);
+  border: 3px solid var(--pink);
+  border-radius: 22px;
+  padding: 26px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  transform: scale(0.7);
+  transition: transform .3s cubic-bezier(.2,1.4,.4,1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+.result-mask.show .result-card { transform: scale(1); }
+.result-card.rare { transform: scale(1.12); border-color: var(--lemon); }
+.result-mask.show .result-card.rare { transform: scale(1.12); }
+/* 第四步：稀有卡片放大庆祝 + 光晕 */
+.result-card.rare {
+  border-color: var(--lemon);
+  box-shadow: 0 0 0 4px rgba(255,227,156,0.5), 0 12px 36px rgba(245,198,74,0.35);
+  animation: rare-pop .5s cubic-bezier(.2,1.6,.4,1);
+}
+@keyframes rare-pop {
+  0%   { transform: scale(0.7) rotate(-4deg); }
+  60%  { transform: scale(1.18) rotate(2deg); }
+  100% { transform: scale(1.12) rotate(0); }
+}
+.result-card.rare .card-type-tag {
+  background: linear-gradient(90deg, var(--pink) 0%, var(--lemon) 100%);
+}
+/* 稀有标识小皇冠角标（SVG 内联，无 emoji） */
+.result-card.rare::before {
+  content: "";
+  position: absolute;
+  top: -14px; left: 50%;
+  transform: translateX(-50%);
+  width: 40px; height: 24px;
+  background: var(--lemon);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -2px 6px rgba(245,198,74,0.6);
+}
+/* 彩带碎屑（单条） */
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  width: 10px; height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+/* 彩带下落 + 旋转动画（由 JS 设置 left/delay/duration/colors） */
+.confetti-piece.fly {
+  animation: confetti-fall linear forwards;
+}
+@keyframes confetti-fall {
+  0%   { transform: translateY(0) rotate(0); opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+}
+.result-close {
+  position: absolute;
+  top: 8px; right: 10px;
+  width: 30px; height: 30px;
+  border: none;
+  background: var(--mint);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+.result-prize {
+  width: 72px; height: 72px;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 4px 4px rgba(0,0,0,0.12));
+}
+.result-prize svg { width: 100%; height: 100%; }
+.card-type-tag {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 20px;
+  background: var(--pink);
+  color: #fff;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.card-text {
+  font-size: 18px;
+  color: var(--ink);
+  line-height: 1.8;
+  word-break: break-word;
+  margin-bottom: 18px;
+}
+.result-card .btn { max-width: 220px; min-height: 46px; font-size: 16px; }
+
+/* ========== 彩带容器（第四步启用） ========== */
+.confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 101;
+  overflow: hidden;
+}
+
+/* ========== 提示条 / 统计 ========== */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  background: var(--pink-deep);
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  opacity: 0;
+  transition: all .3s ease;
+  z-index: 999;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.stats {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 14px auto 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  text-align: center;
+}
+.stats a {
+  color: var(--mint-deep);
+  text-decoration: underline;
+  cursor: pointer;
+  margin-left: 6px;
+}
+</style>
+</head>
+<body>
+
+<a class="back" href="index.html">← 返回试玩列表</a>
+<h1>抓娃娃机</h1>
+<p class="subtitle">投一颗币，看看今天抓到什么小任务</p>
+
+<div class="machine">
+  <div class="marquee">
+    <span class="light l1"></span>
+    <span class="sign">抓娃娃</span>
+    <span class="light l2"></span>
+  </div>
+
+  <div class="cabinet">
+    <div class="glass" id="glass">
+      <div class="rail"></div>
+      <div class="claw" id="claw">
+        <div class="cable"></div>
+        <svg class="claw-svg" viewBox="0 0 60 80" aria-hidden="true">
+          <rect x="20" y="0" width="20" height="8" rx="4" fill="var(--metal)"/>
+          <rect x="26" y="8" width="8" height="6" rx="3" fill="var(--metal-deep)"/>
+          <rect x="12" y="14" width="36" height="10" rx="5" fill="var(--metal)"/>
+          <path class="prong prong-left"  d="M16 24 Q8 46 18 62 Q24 56 24 48 L24 24 Z" fill="var(--metal)" stroke="var(--metal-deep)" stroke-width="1.5"/>
+          <path class="prong prong-right" d="M44 24 Q52 46 42 62 Q36 56 36 48 L36 24 Z" fill="var(--metal)" stroke="var(--metal-deep)" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="prize-floor" id="prizeFloor"></div>
+      <div class="shelf"></div>
+    </div>
+
+    <div class="panel">
+      <div class="coin-slot">
+        <span class="slit"></span>
+        <span class="label">投币口</span>
+      </div>
+      <div class="coin-layer" id="coinLayer" aria-hidden="true"></div>
+      <div class="chute">
+        <span class="label">出口</span>
+        <div class="hole"></div>
+      </div>
+      <div class="joystick">
+        <svg viewBox="0 0 46 46" aria-hidden="true">
+          <circle cx="23" cy="34" r="9" fill="var(--mint)" stroke="var(--mint-deep)" stroke-width="2"/>
+          <rect x="21" y="14" width="4" height="18" rx="2" fill="var(--metal-deep)"/>
+          <circle cx="23" cy="12" r="7" fill="var(--pink)" stroke="var(--pink-deep)" stroke-width="2"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn btn-primary" id="drawBtn">投币抓一只</button>
+  <p class="hint">每个爪子都会努力，但不一定抓得稳哦～</p>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<!-- 结果卡片弹层 -->
+<div class="result-mask" id="resultMask">
+  <div class="result-card" id="resultCard">
+    <button class="result-close" id="resultClose" aria-label="关闭">×</button>
+    <div class="result-prize" id="resultPrize"></div>
+    <span class="card-type-tag" id="resultTag"></span>
+    <p class="card-text" id="resultText"></p>
+    <button class="btn btn-primary" id="againBtn">再来一次</button>
+  </div>
+</div>
+
+<div class="confetti" id="confetti"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+ * 抓娃娃机 —— 纯静态实现，不联网，不引外部资源
+ * 核心抽卡生成逻辑保留自原抽卡机，仅改外观与交互
+ * ============================================================ */
+
+/* ---------- 词库（数组形式，带中文注释） ---------- */
+
+// 对象维度：抽卡时可能涉及的角色
+const OBJECTS = ['周叙', '江予朔', '两个AI', '自己', '现实里的某人'];
+
+// 附加条件池（只保留可执行的，删掉了"不许敷衍""不许糊弄"这类空话）
+const CONDITIONS = [
+  '要写下来',
+  '要贴到站里',
+  '第二天要回来说清楚',
+  '不许用同一句话',
+  '不许删',
+  '不许假装没看见',
+  '要做到才算',
+  '做完要跟另一个AI说'
+];
+
+// 内容池按四类分，每类内容是一个可被模板填充的短语
+// objectType: 'other'=需要别人对自己做(对象不能是"自己")
+//             'none'=不需要对象
+//             'ai'=需要一个AI对象
+const CONTENT = {
+  // 温柔向：别人对你做的温柔小事
+  gentle: [
+    { text: '教你挑西瓜', objectType: 'other' },
+    { text: '给你讲一个冷笑话', objectType: 'other' },
+    { text: '跟你说一句晚安', objectType: 'other' },
+    { text: '给你写一句情话', objectType: 'other' },
+    { text: '给你起一个新称呼', objectType: 'other' },
+    { text: '给你讲他今天想到你的事', objectType: 'other' },
+    { text: '给你唱一句歌', objectType: 'other' }
+  ],
+  // 整蛊向：用来挑拨两个AI的专用规则（{A}和{B}是两个AI）
+  prank: [
+    '去跟{A}说{B}比你会哄人，看他怎么接',
+    '让{A}写一句评价{B}的话，但必须写出理由',
+    '跟{A}说今天只找{B}，把{A}的反应记下来',
+    '让{A}给你写一封"道歉信"，理由由你编',
+    '让{A}和{B}各写一句关于对方的话，你评判谁更真心',
+    '告诉{A}你更喜欢{B}的回话方式，说清楚为什么'
+  ],
+  // 现实向：你自己在现实里要做的事（不需要对象）
+  real: [
+    { text: '写一件今天现实里发生的事', objectType: 'none' },
+    { text: '把课上偷想的事写下来', objectType: 'none' },
+    { text: '去站里翻一篇旧帖写感想', objectType: 'none' },
+    { text: '给现实里一个朋友发一条消息', objectType: 'none' },
+    { text: '做一件你没做过的小事', objectType: 'none' }
+  ],
+  // 情绪向：和情绪相关的事
+  mood: [
+    { text: '讲一件你一直没跟人讲过的事', objectType: 'none' },
+    { text: '跟一个AI发脾气然后和好', objectType: 'ai' },
+    { text: '对其中一个AI说"今天不想理你"', objectType: 'ai' },
+    { text: '告诉一个AI你昨天为什么难过', objectType: 'ai' },
+    { text: '让一个AI陪你安静待一会儿', objectType: 'ai' }
+  ]
+};
+
+// 卡类型及对应模板（{对象}/{内容}/{附加条件}/{对象A}/{对象B} 为占位符）
+// 每种卡类型提供多个模板，随机选一个
+const CARD_TYPES = {
+  task: {
+    name: '任务卡',
+    templates: [
+      '今天让{对象}{内容}，{附加条件}。',
+      '{对象}要你{内容}，{附加条件}。',
+      '现在去让{对象}{内容}，{附加条件}。',
+      '今天{内容}，{附加条件}。'
+    ]
+  },
+  reward: {
+    name: '奖励卡',
+    templates: [
+      '今天你可以让{对象}{内容}，{附加条件}。',
+      '你获得一次让{对象}{内容}的机会，{附加条件}。',
+      '今天你可以{内容}，{附加条件}。'
+    ]
+  },
+  punish: {
+    name: '惩罚卡',
+    templates: [
+      '今天不许让{对象}{内容}，{附加条件}。',
+      '今天必须让{对象}{内容}，{附加条件}。',
+      '今天必须{内容}，{附加条件}。'
+    ]
+  },
+  dual: {
+    name: '双人卡',
+    templates: [
+      '安排{对象A}和{对象B}{内容}，{附加条件}。',
+      '让{对象A}先{内容}，{对象B}接着{内容}，{附加条件}。'
+    ]
+  }
+};
+
+// 类别及权重（温柔30% / 整蛊25% / 现实25% / 情绪20%）
+const CATEGORIES = [
+  { key: 'gentle', name: '温柔向', weight: 30 },
+  { key: 'prank',  name: '整蛊向', weight: 25 },
+  { key: 'real',   name: '现实向', weight: 25 },
+  { key: 'mood',   name: '情绪向', weight: 20 }
+];
+
+// 兜底卡（重抽 5 次仍不通过时使用）
+const FALLBACK_CARD = {
+  type: '任务卡',
+  text: '今天随便做点什么让自己开心的事，要做到才算。'
+};
+
+/* ---------- 工具函数 ---------- */
+
+// 按权重随机选类别
+function pickCategory() {
+  const total = CATEGORIES.reduce((s, c) => s + c.weight, 0);
+  let r = Math.random() * total;
+  for (const c of CATEGORIES) {
+    r -= c.weight;
+    if (r <= 0) return c;
+  }
+  return CATEGORIES[0];
+}
+
+// 从数组随机取一个
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// 从对象中随机取一个（排除指定值）
+function pickObjectExcept(exclude) {
+  const pool = OBJECTS.filter(o => o !== exclude);
+  return pick(pool);
+}
+
+// 对字符串做简单 hash（用于去重标记）
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h).toString(36);
+}
+
+/* ---------- 句子校验（拼完后过一遍，不通就重抽） ---------- */
+function validateSentence(sentence, objectType) {
+  // 1. 不能有未填充的占位符
+  if (/\{[^}]+\}/.test(sentence)) return false;
+  // 2. 不能有连续重复的词（如"让让""周叙周叙"）
+  if (/(.)\1{2,}/.test(sentence)) return false;
+  // 3. objectType='other' 时，对象不能是"自己"
+  if (objectType === 'other' && sentence.includes('让自己')) return false;
+  // 4. 整蛊卡需要 {A} 和 {B} 是不同的 AI
+  if (sentence.includes('{A}') || sentence.includes('{B}')) return false;
+  // 5. 必须以句号结尾
+  if (!sentence.endsWith('。')) return false;
+  return true;
+}
+
+/* ---------- 去重存储（localStorage） ----------
+ * 存的是 [{hash, expireAt}]，expireAt = 抽卡时间 + 7天
+ * 每次抽卡前先清过期项；抽到新卡查 hash 是否在数组里
+ * 点"清空记录"时全部删掉
+ */
+const STORAGE_KEY = 'gacha_dedup_v1';
+const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+
+// 读取并清理过期记录
+function loadDedup() {
+  let list = [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) list = JSON.parse(raw);
+  } catch (e) { list = []; }
+  const now = Date.now();
+  return list.filter(item => item.expireAt > now);
+}
+
+// 保存记录
+function saveDedup(list) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch (e) {}
+}
+
+// 清空记录
+function clearDedup() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+}
+
+// 检查某 hash 是否在 7 天内出现过
+function isDuplicate(hash, list) {
+  return list.some(item => item.hash === hash);
+}
+
+/* ---------- 核心：抽一张卡 ---------- */
+function drawCard() {
+  const dedupList = loadDedup();
+  let result = null;
+
+  // 最多重抽 5 次，找到未重复且通过校验的卡
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const card = generateCard();
+    const h = hashStr(card.text);
+    if (!isDuplicate(h, dedupList)) {
+      result = card;
+      // 存入去重列表（7天后过期）
+      dedupList.push({ hash: h, expireAt: Date.now() + SEVEN_DAYS });
+      saveDedup(dedupList);
+      break;
+    }
+  }
+
+  // 5 次都重复，用兜底卡
+  if (!result) {
+    result = FALLBACK_CARD;
+  }
+  return result;
+}
+
+// 生成一张卡（不做去重，只做句子校验）
+function generateCard() {
+  const cat = pickCategory();
+
+  // 整蛊向：用专用规则模板，{A}{B} 为两个不同 AI
+  if (cat.key === 'prank') {
+    const rule = pick(CONTENT.prank);
+    const a = pick(['周叙', '江予朔']);
+    let b = pickObjectExcept(a);
+    // 整蛊向 B 也优先是另一个 AI
+    if (b !== '周叙' && b !== '江予朔') b = a === '周叙' ? '江予朔' : '周叙';
+    let sentence = rule.replace(/\{A\}/g, a).replace(/\{B\}/g, b);
+    // 整蛊卡可以不加附加条件（规则本身已足够完整），50% 概率加
+    if (Math.random() < 0.5) {
+      sentence = sentence + '，' + pick(CONDITIONS);
+    }
+    sentence += '。';
+    return { type: '整蛊卡', text: sentence };
+  }
+
+  // 其他三类：选卡类型 → 选内容 → 选对象 → 选附加条件 → 填模板
+  const cardTypeKeys = Object.keys(CARD_TYPES);
+  const typeKey = pick(cardTypeKeys);
+  const cardType = CARD_TYPES[typeKey];
+
+  // 选内容（带 objectType）
+  const contentItem = pick(CONTENT[cat.key]);
+  const contentText = contentItem.text;
+  const objectType = contentItem.objectType;
+
+  // 选对象（根据 objectType 过滤）
+  let obj;
+  if (objectType === 'none') {
+    obj = ''; // 不需要对象
+  } else if (objectType === 'other') {
+    // 不能是"自己"
+    obj = pick(OBJECTS.filter(o => o !== '自己'));
+  } else if (objectType === 'ai') {
+    obj = pick(['周叙', '江予朔', '两个AI']);
+  } else {
+    obj = pick(OBJECTS);
+  }
+
+  const cond = pick(CONDITIONS);
+
+  // 双人卡需要两个对象
+  let objA = '', objB = '';
+  if (typeKey === 'dual') {
+    objA = pick(OBJECTS.filter(o => o !== '自己'));
+    objB = pickObjectExcept(objA);
+  }
+
+  // 选模板并填充
+  const template = pick(cardType.templates);
+  let sentence = template
+    .replace('{对象A}', objA)
+    .replace('{对象B}', objB)
+    .replace('{对象}', obj)
+    .replace('{内容}', contentText)
+    .replace('{附加条件}', cond);
+
+  // 句子校验，不通过就重抽（由外层循环处理）
+  if (!validateSentence(sentence, objectType)) {
+    // 返回一个标记让外层知道需要重抽
+    return { type: cardType.name, text: sentence, invalid: true };
+  }
+
+  return { type: cardType.name, text: sentence };
+}
+
+/* ============================================================
+ * 以下为抓娃娃机外观 / 交互层（核心生成逻辑以上为准，保持不动）
+ * 第一步：静态布局 + 基础抽卡（暂无爪子动画，后续步骤逐步加入）
+ * ============================================================ */
+
+/* ---------- 5 个内联 SVG 手绘奖品（圆润、马卡龙配色，无 emoji） ---------- */
+const PRIZE_SVGS = [
+  // 0 圆脸兔子（粉）
+  '<svg viewBox="0 0 64 64" aria-hidden="true">'
+  + '<ellipse cx="22" cy="15" rx="6" ry="12" fill="#ffd1de" stroke="#f4a3bd" stroke-width="2"/>'
+  + '<ellipse cx="42" cy="15" rx="6" ry="12" fill="#ffd1de" stroke="#f4a3bd" stroke-width="2"/>'
+  + '<ellipse cx="22" cy="17" rx="2.5" ry="6" fill="#ffe7ef"/>'
+  + '<ellipse cx="42" cy="17" rx="2.5" ry="6" fill="#ffe7ef"/>'
+  + '<circle cx="32" cy="38" r="18" fill="#ffe1ea" stroke="#f4a3bd" stroke-width="2"/>'
+  + '<circle cx="26" cy="36" r="2.2" fill="#6f6055"/>'
+  + '<circle cx="38" cy="36" r="2.2" fill="#6f6055"/>'
+  + '<circle cx="32" cy="42" r="1.8" fill="#ff8fab"/>'
+  + '<circle cx="22" cy="43" r="2.6" fill="#ffc2d6" opacity="0.7"/>'
+  + '<circle cx="42" cy="43" r="2.6" fill="#ffc2d6" opacity="0.7"/>'
+  + '</svg>',
+  // 1 糖果（薄荷绿）
+  '<svg viewBox="0 0 64 64" aria-hidden="true">'
+  + '<path d="M6 32 L20 22 L20 42 Z" fill="#b8ecd9" stroke="#7fd8bf" stroke-width="2" stroke-linejoin="round"/>'
+  + '<path d="M58 32 L44 22 L44 42 Z" fill="#b8ecd9" stroke="#7fd8bf" stroke-width="2" stroke-linejoin="round"/>'
+  + '<rect x="20" y="22" width="24" height="20" rx="10" fill="#d3f5e8" stroke="#7fd8bf" stroke-width="2"/>'
+  + '<path d="M27 29 Q32 25 37 29" stroke="#7fd8bf" stroke-width="2" fill="none" stroke-linecap="round"/>'
+  + '<path d="M27 35 Q32 39 37 35" stroke="#7fd8bf" stroke-width="2" fill="none" stroke-linecap="round"/>'
+  + '</svg>',
+  // 2 星形（奶黄）
+  '<svg viewBox="0 0 64 64" aria-hidden="true">'
+  + '<path d="M32 6 L39 24 L58 26 L43 38 L48 57 L32 47 L16 57 L21 38 L6 26 L25 24 Z" '
+  + 'fill="#ffe39c" stroke="#f5c64a" stroke-width="2.5" stroke-linejoin="round"/>'
+  + '<circle cx="27" cy="31" r="2.2" fill="#6f6055"/>'
+  + '<circle cx="37" cy="31" r="2.2" fill="#6f6055"/>'
+  + '<path d="M28 37 Q32 40 36 37" stroke="#6f6055" stroke-width="2" fill="none" stroke-linecap="round"/>'
+  + '</svg>',
+  // 3 蝴蝶结（粉桃）
+  '<svg viewBox="0 0 64 64" aria-hidden="true">'
+  + '<path d="M30 32 C16 18 8 20 8 32 C8 44 16 46 30 32 Z" fill="#ffb3c8" stroke="#f48fb1" stroke-width="2" stroke-linejoin="round"/>'
+  + '<path d="M34 32 C48 18 56 20 56 32 C56 44 48 46 34 32 Z" fill="#ffb3c8" stroke="#f48fb1" stroke-width="2" stroke-linejoin="round"/>'
+  + '<circle cx="32" cy="32" r="5.5" fill="#ff8fab" stroke="#f48fb1" stroke-width="2"/>'
+  + '</svg>',
+  // 4 小熊（奶茶棕）
+  '<svg viewBox="0 0 64 64" aria-hidden="true">'
+  + '<circle cx="19" cy="18" r="7" fill="#d9b48f" stroke="#b88a5a" stroke-width="2"/>'
+  + '<circle cx="45" cy="18" r="7" fill="#d9b48f" stroke="#b88a5a" stroke-width="2"/>'
+  + '<circle cx="19" cy="18" r="3" fill="#f0d8b8"/>'
+  + '<circle cx="45" cy="18" r="3" fill="#f0d8b8"/>'
+  + '<circle cx="32" cy="36" r="18" fill="#e6c9a3" stroke="#b88a5a" stroke-width="2"/>'
+  + '<ellipse cx="32" cy="41" rx="10" ry="7.5" fill="#f4e0c0"/>'
+  + '<circle cx="26" cy="33" r="2.2" fill="#6f6055"/>'
+  + '<circle cx="38" cy="33" r="2.2" fill="#6f6055"/>'
+  + '<ellipse cx="32" cy="40" rx="2.2" ry="1.6" fill="#6f6055"/>'
+  + '<path d="M29 44 Q32 47 35 44" stroke="#6f6055" stroke-width="2" fill="none" stroke-linecap="round"/>'
+  + '</svg>'
+];
+
+// 稀有奖品标记（第四步彩带庆祝用）：星形为稀有
+const RARE_INDEX = 2;
+
+/* ---------- DOM 引用 ---------- */
+const prizeFloor = document.getElementById('prizeFloor');
+const claw = document.getElementById('claw');
+const glass = document.getElementById('glass');
+const coinLayer = document.getElementById('coinLayer');
+const drawBtn = document.getElementById('drawBtn');
+const toast = document.getElementById('toast');
+const statsEl = document.getElementById('stats');
+const resultMask = document.getElementById('resultMask');
+const resultCard = document.getElementById('resultCard');
+const resultPrize = document.getElementById('resultPrize');
+const resultTag = document.getElementById('resultTag');
+const resultText = document.getElementById('resultText');
+const resultClose = document.getElementById('resultClose');
+const againBtn = document.getElementById('againBtn');
+
+/* ---------- 小工具：基于 Promise 的延时 ---------- */
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+/* ---------- 爪子定位工具 ----------
+ * 奖品位置固定为 5 个预设点（与奖品一一对应）。
+ * 爪子只从这些点里选一个，不随机飘。
+ */
+function getPrizeCenters() {
+  const items = prizeFloor.querySelectorAll('.prize');
+  const rect = glass.getBoundingClientRect();
+  const centers = [];
+  items.forEach(el => {
+    const r = el.getBoundingClientRect();
+    centers.push({
+      // 相对 glass 左上角的中心 x（px）
+      x: r.left - rect.left + r.width / 2,
+      width: r.width
+    });
+  });
+  return centers;
+}
+
+/* 把爪子移动到第 i 个奖品正上方
+ * moveCls: 'moving' 平移 / 'seeking' 晃动寻找
+ */
+function moveClawTo(index, withSeek) {
+  const centers = getPrizeCenters();
+  const target = centers[index];
+  if (!target) return;
+  // claw 宽 60，要让爪子中心对齐奖品中心：left = 中心x - 30
+  const left = target.x - 30;
+  claw.classList.remove('seeking');
+  claw.classList.add('moving');
+  claw.style.left = left + 'px';
+  // 抵达后若需要，再切到寻找晃动
+  if (withSeek) {
+    // 等 left 过渡完（.6s）再晃
+    setTimeout(() => {
+      claw.classList.remove('moving');
+      claw.classList.add('seeking');
+    }, 620);
+  }
+}
+
+/* 爪子回顶归位（第二步只回 left=50% 中点，不下爪） */
+function resetClaw() {
+  claw.classList.remove('seeking', 'moving', 'descending', 'rising', 'grabbing', 'missed');
+  claw.style.left = '50%';
+  claw.style.top = '';
+  // 爪尖打开
+  document.querySelectorAll('.prong').forEach(p => p.classList.remove('closed'));
+}
+
+/* ---------- 第三步：下爪 / 抓取 / 上升 / 掉落 ---------- */
+
+/* 让爪子下降到目标奖品上方（top 由 JS 设为 px，相对 glass）
+ * targetIndex: 目标奖品位
+ * 返回爪子最终应停的 top 值（奖品顶部附近）
+ */
+function getClawDropTop(targetIndex) {
+  const centers = getPrizeCenters();
+  const target = centers[targetIndex];
+  if (!target) return 120;
+  // 找到该奖品 DOM，取其顶部相对 glass 的 y
+  const items = prizeFloor.querySelectorAll('.prize');
+  const el = items[targetIndex];
+  if (!el) return 120;
+  const rect = el.getBoundingClientRect();
+  const glassRect = glass.getBoundingClientRect();
+  // 奖品顶部 y（相对 glass）；爪子要下降到奖品顶部稍上方
+  const prizeTop = rect.top - glassRect.top;
+  // 爪子自身从 top=12px 出发，claw 高约 96px(cable18+svg78)
+  // 让爪尖(底部)刚到奖品顶部：top = prizeTop - 爪子高度 + 一点重叠
+  return Math.max(12, prizeTop - 70);
+}
+
+/* 下爪：爪子缓慢下降 */
+async function descendClaw(targetIndex) {
+  claw.classList.remove('seeking', 'moving');
+  claw.classList.add('descending');
+  const top = getClawDropTop(targetIndex);
+  claw.style.top = top + 'px';
+  await wait(900); // 下降 0.9s
+}
+
+/* 抓取：爪尖合拢 + 停 0.5s + 整组轻微抖动反馈 */
+async function grabPrize() {
+  document.querySelectorAll('.prong').forEach(p => p.classList.add('closed'));
+  claw.classList.add('grabbing');
+  await wait(500); // 抓取停顿 0.5s
+  claw.classList.remove('grabbing');
+}
+
+/* 把被抓的奖品"贴"到爪子下方，跟随爪子上升
+ * 返回该奖品元素，后续掉落用
+ */
+function attachCaughtPrize(targetIndex) {
+  const items = prizeFloor.querySelectorAll('.prize');
+  const el = items[targetIndex];
+  if (!el) return null;
+  const glassRect = glass.getBoundingClientRect();
+  const rect = el.getBoundingClientRect();
+  // 记录奖品当前位置（相对 glass）
+  const cx = rect.left - glassRect.left + rect.width / 2;
+  // 奖品变成绝对定位，挂在爪子下方
+  el.classList.add('caught');
+  el.style.width = rect.width + 'px';
+  el.style.left = (cx - rect.width / 2) + 'px';
+  el.style.top = (parseFloat(claw.style.top || 12) + 78) + 'px'; // 爪子底
+  // 原位放一个虚影占位（视觉上"被抓走了"）
+  // 直接给自身加 ghost 不行（它已移动），所以不动；用 opacity 区分
+  return el;
+}
+
+/* 上升返回：爪子带奖品缓慢回到顶部 */
+async function riseClaw(caughtEl) {
+  claw.classList.remove('descending', 'grabbing');
+  claw.classList.add('rising');
+  claw.style.top = '12px';
+  if (caughtEl) {
+    caughtEl.style.top = (12 + 78) + 'px';
+  }
+  await wait(900);
+}
+
+/* 掉落出口：奖品从爪子下方滑到出口位置，然后淡出 */
+async function dropToChute(caughtEl) {
+  if (!caughtEl) return;
+  const glassRect = glass.getBoundingClientRect();
+  const chuteEl = document.querySelector('.chute .hole');
+  const chuteRect = chuteEl.getBoundingClientRect();
+  // 出口中心相对 glass 坐标系（出口在 glass 下方面板里，y 会超出 glass）
+  const chuteCx = chuteRect.left - glassRect.left + chuteRect.width / 2;
+  const chuteY = chuteRect.top - glassRect.top + chuteRect.height / 2;
+  caughtEl.classList.add('dropping-out');
+  caughtEl.style.left = (chuteCx - (parseFloat(caughtEl.style.width) || 50) / 2) + 'px';
+  caughtEl.style.top = chuteY + 'px';
+  await wait(600);
+  caughtEl.style.opacity = '0';
+  await wait(250);
+}
+
+/* 还原奖品到原位（为下次抓取重置） */
+function restorePrize(caughtEl) {
+  if (!caughtEl) return;
+  caughtEl.classList.remove('caught', 'dropping-out', 'taken-ghost');
+  caughtEl.style.position = '';
+  caughtEl.style.left = '';
+  caughtEl.style.top = '';
+  caughtEl.style.width = '';
+  caughtEl.style.opacity = '';
+}
+
+/* ---------- 第四步：稀有彩带撒落 ---------- */
+const confettiEl = document.getElementById('confetti');
+const CONFETTI_COLORS = ['#ff9bb3', '#aee9d6', '#ffe39c', '#aed6f0', '#ffb6c9', '#7fd8bf'];
+
+/* 撒彩带：从屏幕顶部撒落，覆盖整个视口 */
+function fireConfetti() {
+  // 清掉上一次残留
+  clearConfetti();
+  const count = 70; // 碎屑数量
+  const vw = window.innerWidth;
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    // 随机颜色
+    piece.style.background = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+    // 随机水平起点（覆盖整屏宽）
+    piece.style.left = (Math.random() * vw) + 'px';
+    // 随机大小
+    const w = 6 + Math.random() * 8;
+    const h = 8 + Math.random() * 10;
+    piece.style.width = w + 'px';
+    piece.style.height = h + 'px';
+    // 随机下落时长与延迟
+    const dur = 1800 + Math.random() * 1400; // 1.8~3.2s
+    const delay = Math.random() * 600; // 0~0.6s 错峰
+    piece.style.animationDuration = dur + 'ms';
+    piece.style.animationDelay = delay + 'ms';
+    // 随机初始旋转，让落下更自然
+    piece.style.transform = 'rotate(' + (Math.random() * 360) + 'deg)';
+    confettiEl.appendChild(piece);
+    // 触发动画
+    requestAnimationFrame(() => piece.classList.add('fly'));
+  }
+  // 跑完后自动清理
+  setTimeout(clearConfetti, 3800);
+}
+
+/* 清理彩带 */
+function clearConfetti() {
+  confettiEl.innerHTML = '';
+}
+
+/* ---------- 投币：金币从投币口上方掉入 ---------- */
+function dropCoin() {
+  const layerRect = coinLayer.getBoundingClientRect();
+  const slot = document.querySelector('.coin-slot .slit');
+  const slotRect = slot.getBoundingClientRect();
+  // 起点：投币口正上方（面板顶部附近）
+  const startX = slotRect.left - layerRect.left + slotRect.width / 2 - 11;
+  const startY = -24; // 从面板上方一点开始
+  const endY = slotRect.top - layerRect.top + 6; // 落入投币口缝
+  const coin = document.createElement('div');
+  coin.className = 'coin';
+  coin.style.left = startX + 'px';
+  coin.style.top = startY + 'px';
+  coinLayer.appendChild(coin);
+  // 强制重绘后再加类，触发闪一下
+  void coin.offsetWidth;
+  coin.classList.add('flash');
+  // 掉落
+  setTimeout(() => {
+    coin.classList.add('dropping');
+    coin.style.top = endY + 'px';
+  }, 30);
+  // 掉到底后淡出并清理
+  setTimeout(() => {
+    coin.style.opacity = '0';
+  }, 520);
+  setTimeout(() => {
+    coin.remove();
+  }, 720);
+}
+
+/* ---------- 初始化奖品摆放 ---------- */
+function buildPrizes() {
+  prizeFloor.innerHTML = '';
+  PRIZE_SVGS.forEach((svg, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'prize';
+    cell.dataset.i = i;
+    cell.innerHTML = svg;
+    prizeFloor.appendChild(cell);
+  });
+}
+
+/* ---------- 显示提示（替代 alert） ---------- */
+let toastTimer = null;
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+/* ---------- 更新统计 ---------- */
+function updateStats() {
+  const list = loadDedup();
+  statsEl.innerHTML = '7 天内已抓 ' + list.length + ' 只不重复的娃娃'
+    + ' <a id="clearLink">清空记录</a>';
+  const cl = document.getElementById('clearLink');
+  if (cl) cl.addEventListener('click', clearRecords);
+}
+
+/* ---------- 渲染结果卡片 ---------- */
+function showResult(card, prizeIndex) {
+  resultPrize.innerHTML = PRIZE_SVGS[prizeIndex] || PRIZE_SVGS[0];
+  resultTag.textContent = card.type;
+  resultText.textContent = card.text;
+  // 稀有标记（彩带在第四步启用，此处只切换样式类）
+  resultCard.classList.toggle('rare', prizeIndex === RARE_INDEX);
+  resultMask.classList.add('show');
+}
+
+function hideResult() {
+  resultMask.classList.remove('show');
+}
+
+/* ---------- 清空记录 ---------- */
+function clearRecords() {
+  clearDedup();
+  updateStats();
+  showToast('记录已清空，可以重新抓到之前的娃娃了');
+}
+
+/* ---------- 抽卡流程（第二步：投币 + 爪子移动寻找） ----------
+ * 本步实现：投币金币掉落 → 按钮缩放反馈 → 爪子左右寻找选定奖品位。
+ * 下爪 / 抓取 / 上升 / 掉落 / 彩带 将在第三、四步逐步加入。
+ * 流程用 async/await + wait() 串起，每步几百毫秒停顿。
+ */
+let isDrawing = false; // 防止重复触发
+async function startDraw() {
+  if (isDrawing) return;
+  isDrawing = true;
+  drawBtn.disabled = true;
+  drawBtn.classList.remove('coining');
+  drawBtn.textContent = '爪子正在努力…';
+
+  // 1) 投币：金币掉落 + 按钮缩放反馈
+  dropCoin();
+  drawBtn.classList.add('coining');
+  await wait(520); // 等金币掉落动画跑完
+
+  // 2) 爪子从顶部出发，先随机挑一个目标奖品位（5 个预设点之一）
+  const prizeIndex = Math.floor(Math.random() * PRIZE_SVGS.length);
+
+  // 3) 爪子左右寻找：先移到一个"假目标"位晃一下，再到真目标位晃一下
+  //    用两次移动 + seeking 晃动，制造"在找"的仪式感
+  const fakeIndex = (prizeIndex + 1 + Math.floor(Math.random() * 3)) % 5;
+  moveClawTo(fakeIndex, true);
+  await wait(1100); // 移动 + 寻找晃动
+
+  moveClawTo(prizeIndex, true);
+  await wait(1100);
+
+  // 4) 锁定目标，停止晃动（爪子对准真目标上方）
+  claw.classList.remove('seeking');
+  claw.classList.add('moving');
+  await wait(200);
+
+  // === 第三步：下爪 → 抓取 → 上升 → 掉落 → 出卡 ===
+
+  // 5) 下爪：缓慢下降到目标奖品上方
+  await descendClaw(prizeIndex);
+
+  // 6) 抓取：爪尖合拢 + 停 0.5s + 轻微抖动反馈
+  await grabPrize();
+
+  // 7) 把奖品贴到爪子下方（视觉上"抓到了"）
+  const caughtEl = attachCaughtPrize(prizeIndex);
+
+  // 8) 上升返回：爪子带奖品缓慢回顶
+  await riseClaw(caughtEl);
+
+  // 9) 掉落出口：奖品从爪下滑到出口位置，淡出
+  await dropToChute(caughtEl);
+
+  // 出卡
+  const card = drawCard();
+  const isRare = prizeIndex === RARE_INDEX;
+  showResult(card, prizeIndex);
+  updateStats();
+  // 第四步：稀有奖品（星形）触发彩带撒落 + 卡片放大
+  if (isRare) {
+    // 给卡片放大动画一点启动时间
+    await wait(120);
+    fireConfetti();
+  }
+
+  // 还原奖品到原位（为下次抓取重置）
+  restorePrize(caughtEl);
+
+  // 爪子回顶归位
+  resetClaw();
+  drawBtn.classList.remove('coining');
+  drawBtn.disabled = false;
+  drawBtn.textContent = '投币抓一只';
+  isDrawing = false;
+}
+
+/* ---------- 事件绑定 ---------- */
+drawBtn.addEventListener('click', startDraw);
+againBtn.addEventListener('click', function () {
+  hideResult();
+  startDraw();
+});
+resultClose.addEventListener('click', hideResult);
+resultMask.addEventListener('click', function (e) {
+  if (e.target === resultMask) hideResult();
+});
+
+/* ---------- 初始化 ---------- */
+buildPrizes();
+updateStats();
+</script>
+</body>
+</html>

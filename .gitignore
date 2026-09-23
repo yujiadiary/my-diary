@@ -1,0 +1,11 @@
+.DS_Store
+node_modules/
+.vercel/
+.env
+.env.local
+*.log
+.trae-html-share-packages/
+
+# posts/index.json 由 build.js 生成,纳入版本控制
+# GitHub Pages 无构建步骤,必须把生成的索引提交进仓库才能在线上访问
+# .github/workflows/build.yml 会在每次 push 时自动重新生成并提交,保持与 .md 同步

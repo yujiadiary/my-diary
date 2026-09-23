@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="assets/js/gate.js"></script>
+  <title>404 · 碎碎念留档</title>
+  <script>
+    // 把所有路径交回 SPA 处理,避免 #/ 路由被 404 截断
+    // 用当前路径所在目录(支持 GitHub Pages 子路径部署),拼上 hash 回首页
+    var path = location.pathname;
+    var dir = path.substring(0, path.lastIndexOf('/') + 1) || '/';
+    if (path && !/\/404(\.html)?$/.test(path)) {
+      location.replace(dir + (location.hash || '#/'));
+    } else if (location.hash) {
+      // 直接访问 404.html 本身但带 hash 时,也跳回目录
+      location.replace(dir + location.hash);
+    }
+  </script>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <main class="wrap" style="text-align:center;padding-top:80px">
+    <h1 class="block-title" style="font-size:22px">这里什么都没有</h1>
+    <p class="empty">可能链接已失效,或者内容被隐藏了。<br><a href="#/" class="btn primary" style="margin-top:16px">回首页</a></p>
+  </main>
+</body>
+</html>

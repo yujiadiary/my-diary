@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>小鲸鱼捏捏 · 试玩 · 碎碎念留档</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <style>
+    body { margin: 0; padding: 16px 16px 48px; font-family: system-ui, -apple-system, sans-serif; background: #fafafa; color: #333; }
+    .pg-back { display: block; margin-bottom: 8px; font-size: 14px; color: #5b6f8a; text-decoration: none; }
+    .pg-meta { display: block; font-size: 12px; color: #999; margin: 0 0 16px; }
+    .pg-canvas { border: 1px solid #e0e0e0; border-radius: 8px; overflow: auto; }
+    button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  </style>
+  <script src="../assets/js/gate.js"></script>
+</head>
+<body>
+  <a class="pg-back" href="../posts/2026-09-19-jiang-%E5%B0%8F%E9%B2%B8%E9%B1%BC%E6%8D%8F%E6%8D%8F.html">← 返回文章</a>
+  <div class="pg-meta">小鲸鱼捏捏 · 江予朔</div>
+  <div class="pg-canvas">
+<style>
+
+  .whale-wrap {
+
+    --w-bg: #EAF4FB;
+
+    --w-card: #FFFFFF;
+
+    --w-text: #3D4D5C;
+
+    --w-muted: #7A8A99;
+
+    --w-pink: #FFB8D0;
+
+    --w-blue: #7EC4E8;
+
+    background: var(--w-bg);
+
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+
+    color: var(--w-text);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 28px 16px;
+
+    border-radius: 20px;
+
+    margin: 20px 0;
+
+    user-select: none;
+
+    -webkit-user-select: none;
+
+    overflow: hidden;
+
+  }
+
+  .whale-card {
+
+    width: 100%;
+
+    max-width: 360px;
+
+    text-align: center;
+
+    position: relative;
+
+  }
+
+  /* 气泡粒子容器 */
+
+  .w-bubbles {
+
+    position: absolute;
+
+    top: 0; left: 0; right: 0; bottom: 0;
+
+    pointer-events: none;
+
+    overflow: visible;
+
+  }
+
+  .w-bubble {
+
+    position: absolute;
+
+    width: 10px;
+
+    height: 10px;
+
+    border-radius: 50%;
+
+    background: var(--w-blue);
+
+    opacity: 0;
+
+    bottom: 50%;
+
+    left: 50%;
+
+  }
+
+  .w-bubble.rise {
+
+    animation: w-rise 0.9s ease-out forwards;
+
+  }
+
+  @keyframes w-rise {
+
+    0%   { transform: translate(-50%, 0) scale(0.4); opacity: 0.8; }
+
+    100% { transform: translate(var(--dx), -120px) scale(1); opacity: 0; }
+
+  }
+
+  /* 鲸鱼身体 */
+
+  .w-body {
+
+    position: relative;
+
+    display: inline-block;
+
+    cursor: pointer;
+
+    touch-action: manipulation;
+
+    -webkit-tap-highlight-color: transparent;
+
+    transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    filter: drop-shadow(0 8px 16px rgba(126, 196, 232, 0.25));
+
+  }
+
+  .w-body.squeezing {
+
+    transform: scaleX(1.18) scaleY(0.82);
+
+    transition: transform 0.08s ease-out;
+
+  }
+
+  .w-body.bounce {
+
+    animation: w-bounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  }
+
+  @keyframes w-bounce {
+
+    0%   { transform: scaleX(1.18) scaleY(0.82); }
+
+    50%  { transform: scaleX(0.94) scaleY(1.08); }
+
+    100% { transform: scaleX(1) scaleY(1); }
+
+  }
+
+  .w-svg {
+
+    width: 220px;
+
+    height: auto;
+
+    display: block;
+
+    pointer-events: none;
+
+  }
+
+  /* 说话气泡 */
+
+  .w-say {
+
+    margin: 18px 0 0;
+
+    font-size: 15px;
+
+    color: var(--w-text);
+
+    min-height: 24px;
+
+    letter-spacing: 1px;
+
+    transition: opacity 0.2s ease;
+
+  }
+
+  .w-say.fade { opacity: 0; }
+
+  /* 计数器 */
+
+  .w-counter {
+
+    margin-top: 10px;
+
+    font-size: 13px;
+
+    color: var(--w-muted);
+
+    letter-spacing: 1px;
+
+  }
+
+  .w-counter b {
+
+    color: var(--w-blue);
+
+    font-size: 18px;
+
+    font-weight: 800;
+
+    margin: 0 4px;
+
+  }
+
+  @media (max-width: 380px) {
+
+    .w-svg { width: 180px; }
+
+    .w-say { font-size: 14px; }
+
+  }
+
+</style>
+
+<div class="whale-wrap">
+
+  <div class="whale-card">
+
+    <div class="w-bubbles" id="w-bubbles"></div>
+
+    <div class="w-body" id="whale-body" role="button" tabindex="0"
+
+         aria-label="按住小鲸鱼捏一捏">
+
+      <svg class="w-svg" viewBox="0 0 240 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+
+        <defs>
+
+          <radialGradient id="wBodyGrad" cx="35%" cy="30%" r="80%">
+
+            <stop offset="0%"   stop-color="#D4ECFB"/>
+
+            <stop offset="55%"  stop-color="#A8D8F0"/>
+
+            <stop offset="100%" stop-color="#7EC4E8"/>
+
+          </radialGradient>
+
+          <radialGradient id="wGlowGrad" cx="50%" cy="50%" r="50%">
+
+            <stop offset="0%"   stop-color="#FFFFFF" stop-opacity="0.9"/>
+
+            <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+
+          </radialGradient>
+
+        </defs>
+
+        <!-- 尾巴 -->
+
+        <path d="M 170 104
+
+                 C 186 78, 206 60, 222 58
+
+                 C 214 82, 202 98, 184 108
+
+                 C 202 118, 214 138, 222 158
+
+                 C 206 156, 186 138, 170 108 Z"
+
+              fill="#8CCBE8"/>
+
+        <!-- 左侧小鳍 -->
+
+        <ellipse cx="58" cy="128" rx="19" ry="27"
+
+                 transform="rotate(-28 58 128)"
+
+                 fill="#8CCBE8"/>
+
+        <!-- 身体 -->
+
+        <ellipse cx="112" cy="104" rx="68" ry="63" fill="url(#wBodyGrad)"/>
+
+        <!-- 左上方高光 -->
+
+        <ellipse cx="84" cy="72" rx="34" ry="24"
+
+                 fill="url(#wGlowGrad)" opacity="0.85"/>
+
+        <!-- 白肚子 -->
+
+        <ellipse cx="112" cy="128" rx="49" ry="35"
+
+                 fill="#FFFFFF" opacity="0.92"/>
+
+        <!-- 眼睛 -->
+
+        <circle cx="90" cy="99" r="8.5" fill="#3D4D5C"/>
+
+        <circle cx="134" cy="99" r="8.5" fill="#3D4D5C"/>
+
+        <!-- 眼睛高光 -->
+
+        <circle cx="87" cy="96" r="2.8" fill="#FFFFFF"/>
+
+        <circle cx="131" cy="96" r="2.8" fill="#FFFFFF"/>
+
+        <!-- 腮红 -->
+
+        <ellipse cx="64" cy="118" rx="12" ry="7.5" fill="#FFB8D0" opacity="0.85"/>
+
+        <ellipse cx="160" cy="118" rx="12" ry="7.5" fill="#FFB8D0" opacity="0.85"/>
+
+        <!-- 嘴巴 -->
+
+        <path d="M 105 120 Q 109 125 113 121 Q 117 125 121 120"
+
+              fill="none"
+
+              stroke="#3D4D5C"
+
+              stroke-width="2.4"
+
+              stroke-linecap="round"
+
+              stroke-linejoin="round"/>
+
+      </svg>
+
+    </div>
+
+    <p class="w-say" id="whale-say">长按我 · 捏一捏 ~</p>
+
+    <p class="w-counter">捏了 <b id="w-count">0</b> 下</p>
+
+  </div>
+
+</div>
+
+<script>
+
+  (function () {
+
+    'use strict';
+
+    var body = document['getElementById']('whale-body');
+
+    var sayEl = document['getElementById']('whale-say');
+
+    var countEl = document['getElementById']('w-count');
+
+    var bubbleBox = document['getElementById']('w-bubbles');
+
+    if (!body || !sayEl || !countEl) return;
+
+    var count = 0;
+
+    var squeezing = false;
+
+    var squeezeTimer = null;
+
+    var lastSay = -1;
+
+    var MESSAGES = [
+
+      "捏~ 好舒服~",
+
+      "再用力一点嘛！",
+
+      "啵~",
+
+      "唔…被捏扁了…",
+
+      "嘿嘿，好痒~",
+
+      "再来一下！",
+
+      "你捏我我也喜欢你~",
+
+      "呼呼~ 还能再捏！",
+
+      "你手指好软呀~",
+
+      "啵啵啵~"
+
+    ];
+
+    var COUNTER_KEY = 'whale-squeeze-count';
+
+    // 读取历史捏数
+
+    try {
+
+      var saved = parseInt(window['localStorage']['getItem'](COUNTER_KEY), 10);
+
+      if (!isNaN(saved) && saved > 0) count = saved;
+
+    } catch (e) {}
+
+    countEl['textContent'] = String(count);
+
+    function pickSay() {
+
+      if (MESSAGES['length'] <= 1) return MESSAGES[0];
+
+      var i = Math['floor'](Math['random']() * MESSAGES['length']);
+
+      if (i === lastSay) i = (i + 1) % MESSAGES['length'];
+
+      lastSay = i;
+
+      return MESSAGES[i];
+
+    }
+
+    function spawnBubble() {
+
+      if (!bubbleBox) return;
+
+      var b = document['createElement']('span');
+
+      b['className'] = 'w-bubble';
+
+      var size = 6 + Math['floor'](Math['random']() * 10);
+
+      b['style']['width'] = size + 'px';
+
+      b['style']['height'] = size + 'px';
+
+      b['style']['background'] = Math['random']() > 0.5 ? '#FFB8D0' : '#7EC4E8';
+
+      var dx = (Math['random']() - 0.5) * 160;
+
+      b['style']['setProperty']('--dx', dx + 'px');
+
+      b['style']['left'] = (40 + Math['random']() * 20) + '%';
+
+      bubbleBox['appendChild'](b);
+
+      // 触发动画
+
+      void b['offsetWidth'];
+
+      b['classList']['add']('rise');
+
+      window['setTimeout'](function () { b['remove'](); }, 900);
+
+    }
+
+    function onSqueeze() {
+
+      if (squeezing) return;
+
+      squeezing = true;
+
+      body['classList']['remove']('bounce');
+
+      body['classList']['add']('squeezing');
+
+      count++;
+
+      countEl['textContent'] = String(count);
+
+      try { window['localStorage']['setItem'](COUNTER_KEY, String(count)); } catch (e) {}
+
+      sayEl['classList']['add']('fade');
+
+      window['setTimeout'](function () {
+
+        sayEl['textContent'] = pickSay();
+
+        sayEl['classList']['remove']('fade');
+
+      }, 150);
+
+      // 冒气泡
+
+      for (var i = 0; i < 3; i++) {
+
+        (function (d) {
+
+          window['setTimeout'](spawnBubble, d);
+
+        })(i * 60);
+
+      }
+
+      // 连续捏时持续捏着
+
+      squeezeTimer = window['setInterval'](function () {
+
+        if (squeezing) {
+
+          count++;
+
+          countEl['textContent'] = String(count);
+
+          try { window['localStorage']['setItem'](COUNTER_KEY, String(count)); } catch (e) {}
+
+          spawnBubble();
+
+        }
+
+      }, 120);
+
+    }
+
+    function onRelease() {
+
+      if (!squeezing) return;
+
+      squeezing = false;
+
+      if (squeezeTimer) { window['clearInterval'](squeezeTimer); squeezeTimer = null; }
+
+      body['classList']['remove']('squeezing');
+
+      body['classList']['add']('bounce');
+
+      window['setTimeout'](function () {
+
+        body['classList']['remove']('bounce');
+
+      }, 420);
+
+    }
+
+    // 鼠标
+
+    body['addEventListener']('mousedown', function (e) { e['preventDefault'](); onSqueeze(); });
+
+    document['addEventListener']('mouseup', onRelease);
+
+    body['addEventListener']('mouseleave', function () { if (squeezing) onRelease(); });
+
+    // 触摸
+
+    body['addEventListener']('touchstart', function (e) { e['preventDefault'](); onSqueeze(); }, { passive: false });
+
+    document['addEventListener']('touchend', onRelease);
+
+    document['addEventListener']('touchcancel', onRelease);
+
+    // 键盘（无障碍）
+
+    body['addEventListener']('keydown', function (e) {
+
+      if (e['key'] === ' ' || e['key'] === 'Enter') { e['preventDefault'](); onSqueeze(); }
+
+    });
+
+    body['addEventListener']('keyup', function (e) {
+
+      if (e['key'] === ' ' || e['key'] === 'Enter') { e['preventDefault'](); onRelease(); }
+
+    });
+
+    // 失焦时松开
+
+    window['addEventListener']('blur', onRelease);
+
+    document['addEventListener']('visibilitychange', function () {
+
+      if (document['hidden']) onRelease();
+
+    });
+
+  })();
+
+</script>
+  </div>
+</body>
+</html>

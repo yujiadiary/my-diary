@@ -1,0 +1,8 @@
+{
+  "name": "my-diary",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node build.js && npx wrangler pages dev ."
+  }
+}

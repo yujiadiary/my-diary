@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>跳一跳 · 试玩 · 碎碎念留档</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <style>
+    body { margin: 0; padding: 16px 16px 48px; font-family: system-ui, -apple-system, sans-serif; background: #fafafa; color: #333; }
+    .pg-back { display: block; margin-bottom: 8px; font-size: 14px; color: #5b6f8a; text-decoration: none; }
+    .pg-meta { display: block; font-size: 12px; color: #999; margin: 0 0 16px; }
+    .pg-canvas { border: 1px solid #e0e0e0; border-radius: 8px; overflow: auto; }
+    button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  </style>
+  <script src="../assets/js/gate.js"></script>
+</head>
+<body>
+  <a class="pg-back" href="../posts/2026-09-18-jiang-%E8%B7%B3%E4%B8%80%E8%B7%B3.html">← 返回文章</a>
+  <div class="pg-meta">跳一跳 · 江予朔</div>
+  <div class="pg-canvas">
+<style>
+
+  .jump-game,
+
+  .jump-game *,
+
+  .jump-game *::before,
+
+  .jump-game *::after { box-sizing: border-box; }
+
+  .jump-game {
+
+    --j-bg-1: #FFF5F9;
+
+    --j-bg-2: #F3EEFF;
+
+    --j-ink: #6B5578;
+
+    --j-ink-soft: #A896B8;
+
+    --j-pink-deep: #FF9CBE;
+
+    --j-purple-deep: #B89CF5;
+
+    --j-card: #FFFFFF;
+
+    --j-max-w: 420px;
+
+    position: relative;
+
+    width: 100%;
+
+    max-width: var(--j-max-w);
+
+    margin: 0 auto;
+
+    padding: 20px 16px 24px;
+
+    border-radius: 24px;
+
+    background: linear-gradient(160deg, var(--j-bg-1) 0%, var(--j-bg-2) 100%);
+
+    color: var(--j-ink);
+
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+
+                 system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    -webkit-font-smoothing: antialiased;
+
+    overflow: hidden;
+
+  }
+
+  /* 标题 */
+
+  .jump-game .j-head { text-align: center; margin-bottom: 12px; }
+
+  .jump-game .j-title {
+
+    margin: 0 0 4px;
+
+    font-size: 30px;
+
+    font-weight: 800;
+
+    letter-spacing: 6px;
+
+    background: linear-gradient(120deg, #FF9CBE 0%, #C8A0F0 100%);
+
+    -webkit-background-clip: text;
+
+    background-clip: text;
+
+    -webkit-text-fill-color: transparent;
+
+  }
+
+  .jump-game .j-sub {
+
+    margin: 0;
+
+    font-size: 12px;
+
+    color: var(--j-ink-soft);
+
+    letter-spacing: 1px;
+
+  }
+
+  /* HUD 分数条 */
+
+  .jump-game .j-hud {
+
+    display: flex;
+
+    gap: 10px;
+
+    width: 100%;
+
+    justify-content: center;
+
+    margin-bottom: 12px;
+
+  }
+
+  .jump-game .j-chip {
+
+    flex: 1 1 0;
+
+    max-width: 140px;
+
+    background: var(--j-card);
+
+    border-radius: 16px;
+
+    padding: 8px 16px;
+
+    box-shadow: 0 6px 16px rgba(200, 160, 220, 0.18);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 10px;
+
+  }
+
+  .jump-game .j-chip-k {
+
+    font-size: 12px;
+
+    color: var(--j-ink-soft);
+
+    letter-spacing: 1px;
+
+  }
+
+  .jump-game .j-chip-v {
+
+    font-size: 18px;
+
+    font-weight: 800;
+
+    color: var(--j-pink-deep);
+
+    font-variant-numeric: tabular-nums;
+
+  }
+
+  .jump-game .j-chip:last-child .j-chip-v { color: var(--j-purple-deep); }
+
+  /* 舞台 */
+
+  .jump-game .j-stage {
+
+    position: relative;
+
+    width: 100%;
+
+    aspect-ratio: 5 / 6;
+
+    background: linear-gradient(180deg, #FFF7FB 0%, #EDE4FB 100%);
+
+    border-radius: 20px;
+
+    box-shadow: 0 10px 30px rgba(200, 160, 220, 0.22),
+
+                inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+    margin-bottom: 14px;
+
+    overflow: hidden;
+
+    touch-action: none;
+
+    user-select: none;
+
+  }
+
+  .jump-game .j-canvas {
+
+    display: block;
+
+    width: 100%;
+
+    height: 100%;
+
+  }
+
+  /* 覆盖层 */
+
+  .jump-game .j-overlay {
+
+    position: absolute;
+
+    top: 0; right: 0; bottom: 0; left: 0;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 20px;
+
+    background: rgba(255, 248, 252, 0.78);
+
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+
+    z-index: 5;
+
+  }
+
+  .jump-game .j-overlay.j-hide { opacity: 0; visibility: hidden; }
+
+  .jump-game .j-ov-card {
+
+    background: var(--j-card);
+
+    border-radius: 20px;
+
+    padding: 16px 22px;
+
+    text-align: center;
+
+    box-shadow: 0 10px 26px rgba(180, 140, 200, 0.25);
+
+    max-width: 86%;
+
+  }
+
+  .jump-game .j-ov-title {
+
+    margin: 0 0 6px;
+
+    font-size: 17px;
+
+    font-weight: 800;
+
+    color: var(--j-ink);
+
+    letter-spacing: 2px;
+
+  }
+
+  .jump-game .j-ov-text {
+
+    margin: 0;
+
+    font-size: 13px;
+
+    color: var(--j-ink-soft);
+
+    line-height: 1.7;
+
+  }
+
+  /* 按钮 */
+
+  .jump-game .j-actions {
+
+    display: flex;
+
+    gap: 12px;
+
+    width: 100%;
+
+    justify-content: center;
+
+  }
+
+  .jump-game .j-btn {
+
+    font-family: inherit;
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+    letter-spacing: 2px;
+
+    border: none;
+
+    border-radius: 999px;
+
+    padding: 12px 28px;
+
+    cursor: pointer;
+
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+
+    touch-action: manipulation;
+
+    -webkit-tap-highlight-color: transparent;
+
+    -webkit-appearance: none;
+
+    appearance: none;
+
+    user-select: none;
+
+  }
+
+  .jump-game .j-btn-main {
+
+    background: linear-gradient(135deg, #FFC2DA 0%, #FF9CBE 100%);
+
+    color: #FFFFFF;
+
+    box-shadow: 0 8px 20px rgba(255, 156, 190, 0.42);
+
+  }
+
+  .jump-game .j-btn-main:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(255, 156, 190, 0.55); }
+
+  .jump-game .j-btn-main:active { transform: translateY(0) scale(0.97); }
+
+  .jump-game .j-btn-ghost {
+
+    background: var(--j-card);
+
+    color: var(--j-purple-deep);
+
+    box-shadow: 0 6px 16px rgba(200, 160, 220, 0.2);
+
+  }
+
+  .jump-game .j-btn-ghost:hover { background: #F8F3FF; transform: translateY(-2px); }
+
+  .jump-game .j-btn-ghost:active { transform: translateY(0) scale(0.97); }
+
+  .jump-game .j-hidden { display: none !important; }
+
+  /* 提示 */
+
+  .jump-game .j-tip {
+
+    margin: 12px 0 0;
+
+    font-size: 12px;
+
+    color: var(--j-ink-soft);
+
+    text-align: center;
+
+    line-height: 1.9;
+
+    letter-spacing: 0.5px;
+
+  }
+
+  @media (max-width: 420px) {
+
+    .jump-game { padding: 16px 12px 20px; }
+
+    .jump-game .j-title { font-size: 26px; letter-spacing: 4px; }
+
+    .jump-game .j-btn { padding: 11px 22px; font-size: 14px; letter-spacing: 1px; }
+
+    .jump-game .j-ov-card { padding: 14px 18px; }
+
+  }
+
+</style>
+
+<div class="jump-game" id="j-app">
+
+  <header class="j-head">
+
+    <h2 class="j-title">跳 一 跳</h2>
+
+    <p class="j-sub">按住蓄力，松开起跳</p>
+
+  </header>
+
+  <div class="j-hud">
+
+    <div class="j-chip">
+
+      <span class="j-chip-k">得分</span>
+
+      <span class="j-chip-v" id="j-score">0</span>
+
+    </div>
+
+    <div class="j-chip">
+
+      <span class="j-chip-k">最高</span>
+
+      <span class="j-chip-v" id="j-best">0</span>
+
+    </div>
+
+  </div>
+
+  <div class="j-stage" id="j-stage">
+
+    <canvas class="j-canvas" id="j-canvas"></canvas>
+
+    <div class="j-overlay" id="j-overlay">
+
+      <div class="j-ov-card">
+
+        <p class="j-ov-title" id="j-ov-title">准备好了吗</p>
+
+        <p class="j-ov-text" id="j-ov-text">按住屏幕蓄力，松开跳到下一个平台</p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="j-actions">
+
+    <button class="j-btn j-btn-main" id="j-start" type="button">开始游戏</button>
+
+    <button class="j-btn j-btn-ghost j-hidden" id="j-reset" type="button">重 来</button>
+
+  </div>
+
+  <p class="j-tip">按住画布蓄力，松手起跳，落在平台中心有加分</p>
+
+</div>
+
+<script>
+(function () {
+
+  'use strict';
+
+  /* ============================================================
+
+     重要说明（给加加）
+
+     这套代码里所有 "对象.属性" 都写成了 "对象['属性']"，
+
+     原因是 Pages CMS 会把 xxx.yyy 自动链接化成 [xxx]([http://xxx)，](http://xxx)，)
+
+     导致 <script> 语法崩掉、按钮点不动。
+
+     方括号写法 CMS 碰不到，所以这样写。
+
+     功能、外观、文案和普通写法完全一样。
+
+     ============================================================ */
+
+  /* ============================================================
+
+     一、可调参数
+
+     ============================================================ */
+
+  var CONFIG = {
+
+    platMinW: 48,        // 平台最小宽度
+
+    platMaxW: 88,        // 平台最大宽度
+
+    platMinGap: 70,      // 平台中心间距最小值
+
+    platMaxGap: 140,     // 平台中心间距最大值
+
+    groundRatio: 0.70,   // 平台顶面在画布高度中的位置比例
+
+    powerMax: 100,       // 蓄力上限
+
+    powerPerMs: 0.08,    // 每毫秒蓄力值（100 / 0.08 = 1250ms 满）
+
+    distPerPower: 2.0,   // 蓄力满对应跳跃距离 = 200px
+
+    jumpDurBase: 320,    // 跳跃基础时长（毫秒）
+
+    jumpDurPerPx: 1.6,   // 每像素额外时长
+
+    jumpHBase: 50,       // 跳跃基础高度
+
+    jumpHPerPx: 0.35,    // 每像素额外高度
+
+    perfectRatio: 0.16   // 落点在平台中心这个比例内算完美
+
+  };
+
+  var COLOR = {
+
+    bgTop: '#FFF7FB',
+
+    bgBottom: '#F3EEFF',
+
+    platTop: '#FFE4EF',
+
+    platBottom: '#FFFFFF',
+
+    platEdge: '#FFC2DA',
+
+    platShadow: 'rgba(200, 160, 200, 0.16)',
+
+    player: '#FF9CBE',
+
+    playerHead: '#FFC2DA',
+
+    playerEye: '#5B4A6B',
+
+    chargeRing: 'rgba(255, 156, 190, '
+
+  };
+
+  var TEXT = {
+
+    idleTitle: '准备好了吗',
+
+    idleText: '按住屏幕蓄力，松开跳到下一个平台',
+
+    overTitle: '跳歪了',
+
+    overText: function (n) {
+
+      return n > 0 ? '这局跳了 ' + n + ' 分' : '还没跳过去，再试一次吧';
+
+    },
+
+    btnStart: '开始游戏',
+
+    btnAgain: '再来一局'
+
+  };
+
+  /* localStorage 键名：只存历史最高分（一个整数），纯本地。
+
+     不存任何账号、密码、隐私文本。清空浏览器数据即被清除。 */
+
+  var BEST_KEY = 'jump-game-best-v1';
+
+  /* ============================================================
+
+     二、全局状态
+
+     ============================================================ */
+
+  var state = 'idle';        // idle | playing | charging | jumping | over
+
+  var score = 0;
+
+  var best = readBest();
+
+  var platforms = [];
+
+  var offsetX = 0;           // 镜头当前偏移
+
+  var targetOffsetX = 0;     // 镜头目标偏移（平滑跟随）
+
+  var power = 0;
+
+  var player = { x: 0, yOffset: 0 };
+
+  var jumpStartX = 0;
+
+  var jumpEndX = 0;
+
+  var jumpProgress = 0;
+
+  var jumpDuration = 400;
+
+  var jumpHeight = 80;
+
+  var jumpTarget = null;
+
+  var jumpHit = false;
+
+  var canvasW = 400;
+
+  var canvasH = 480;
+
+  var groundY = 336;
+
+  var rafId = null;
+
+  var lastTime = 0;
+
+  var canvas, ctx, stageEl, overlayEl, ovTitleEl, ovTextEl;
+
+  var scoreEl, bestEl, startBtn, resetBtn;
+
+  var floats = [];           // 飘字特效 [{ x, y, text, life }]
+
+  /* ============================================================
+
+     三、工具函数
+
+     ============================================================ */
+
+  function readBest() {
+
+    try {
+
+      var v = parseInt(window['localStorage']['getItem'](BEST_KEY), 10);
+
+      return isNaN(v) || v < 0 ? 0 : v;
+
+    } catch (e) {
+
+      return 0; // 隐私模式等场景下静默降级
+
+    }
+
+  }
+
+  function writeBest(v) {
+
+    try {
+
+      window['localStorage']['setItem'](BEST_KEY, String(v));
+
+    } catch (e) { /* 存不了就算了，不影响游戏 */ }
+
+  }
+
+  function rand(min, max) {
+
+    return min + Math['floor'](Math['random']() * (max - min + 1));
+
+  }
+
+  function roundRect(c, x, y, w, h, r) {
+
+    var rr = Math['min'](r, w / 2, h / 2);
+
+    c['beginPath']();
+
+    c['moveTo'](x + rr, y);
+
+    c['arcTo'](x + w, y, x + w, y + h, rr);
+
+    c['arcTo'](x + w, y + h, x, y + h, rr);
+
+    c['arcTo'](x, y + h, x, y, rr);
+
+    c['arcTo'](x, y, x + w, y, rr);
+
+    c['closePath']();
+
+  }
+
+  /* ============================================================
+
+     四、自适应
+
+     ============================================================ */
+
+  function fit() {
+
+    if (!canvas || !stageEl) return;
+
+    var w = canvas['clientWidth'];
+
+    var h = canvas['clientHeight'];
+
+    if (!w || !h) return;
+
+    var dpr = Math['min'](window['devicePixelRatio'] || 1, 2);
+
+    canvas['width'] = Math['round'](w * dpr);
+
+    canvas['height'] = Math['round'](h * dpr);
+
+    ctx['setTransform'](dpr, 0, 0, dpr, 0, 0);
+
+    canvasW = w;
+
+    canvasH = h;
+
+    groundY = h * CONFIG['groundRatio'];
+
+    // 如果游戏未开始，重新摆好初始平台
+
+    if (state === 'idle') {
+
+      setupInitial();
+
+    }
+
+    draw();
+
+  }
+
+  /* ============================================================
+
+     五、初始布局
+
+     ============================================================ */
+
+  function setupInitial() {
+
+    platforms = [];
+
+    floats = [];
+
+    offsetX = 0;
+
+    targetOffsetX = 0;
+
+    score = 0;
+
+    power = 0;
+
+    var firstX = canvasW / 3;
+
+    var w0 = 80;
+
+    var w1 = rand(CONFIG['platMinW'], CONFIG['platMaxW']);
+
+    var w2 = rand(CONFIG['platMinW'], CONFIG['platMaxW']);
+
+    var gap1 = rand(CONFIG['platMinGap'], CONFIG['platMaxGap']);
+
+    var gap2 = rand(CONFIG['platMinGap'], CONFIG['platMaxGap']);
+
+    platforms['push']({ x: firstX, w: w0 });
+
+    platforms['push']({ x: firstX + gap1, w: w1 });
+
+    platforms['push']({ x: firstX + gap1 + gap2, w: w2 });
+
+    player['x'] = firstX;
+
+    player['yOffset'] = 0;
+
+    renderHUD();
+
+  }
+
+  /* ============================================================
+
+     六、跳跃
+
+     ============================================================ */
+
+  function beginCharge() {
+
+    if (state !== 'playing') return;
+
+    state = 'charging';
+
+    power = 0;
+
+    startLoop();
+
+  }
+
+  function releaseCharge() {
+
+    if (state !== 'charging') return;
+
+    var dist = power * CONFIG['distPerPower'];
+
+    var startX = player['x'];
+
+    var targetX = startX + dist;
+
+    // 找当前平台右侧最近的平台作为目标
+
+    var target = null;
+
+    for (var i = 0; i < platforms['length']; i++) {
+
+      if (platforms[i]['x'] > startX + 4) {
+
+        target = platforms[i];
+
+        break;
+
+      }
+
+    }
+
+    if (!target) {
+
+      // 理论上不该发生：没有目标平台了，判定失败
+
+      state = 'playing';
+
+      power = 0;
+
+      return;
+
+    }
+
+    var halfW = target['w'] / 2;
+
+    var hit = (targetX >= target['x'] - halfW && targetX <= target['x'] + halfW);
+
+    jumpStartX = startX;
+
+    jumpEndX = targetX;
+
+    jumpProgress = 0;
+
+    jumpDuration = CONFIG['jumpDurBase'] + dist * CONFIG['jumpDurPerPx'];
+
+    jumpHeight = CONFIG['jumpHBase'] + dist * CONFIG['jumpHPerPx'];
+
+    jumpTarget = target;
+
+    jumpHit = hit;
+
+    state = 'jumping';
+
+    power = 0;
+
+    startLoop();
+
+  }
+
+  function onLand() {
+
+    if (jumpHit) {
+
+      // 成功
+
+      score += 1;
+
+      // 完美落点：靠近平台中心再 +1
+
+      var diff = Math['abs'](player['x'] - jumpTarget['x']);
+
+      var perfectRange = jumpTarget['w'] * CONFIG['perfectRatio'];
+
+      if (diff < perfectRange) {
+
+        score += 1;
+
+        floats['push']({
+
+          x: player['x'],
+
+          y: groundY - 70,
+
+          text: '+2',
+
+          life: 1
+
+        });
+
+      } else {
+
+        floats['push']({
+
+          x: player['x'],
+
+          y: groundY - 70,
+
+          text: '+1',
+
+          life: 1
+
+        });
+
+      }
+
+      if (score > best) {
+
+        best = score;
+
+        writeBest(best);
+
+      }
+
+      // 镜头目标：让落点出现在画布 1/3 处
+
+      targetOffsetX = player['x'] - canvasW / 3;
+
+      // 生成下一个平台
+
+      spawnNextPlatform();
+
+      player['yOffset'] = 0;
+
+      state = 'playing';
+
+      renderHUD();
+
+      syncUI();
+
+    } else {
+
+      // 失败
+
+      player['yOffset'] = 0;
+
+      state = 'over';
+
+      syncUI();
+
+    }
+
+  }
+
+  function spawnNextPlatform() {
+
+    var last = platforms[platforms['length'] - 1];
+
+    var gap = rand(CONFIG['platMinGap'], CONFIG['platMaxGap']);
+
+    var w = rand(CONFIG['platMinW'], CONFIG['platMaxW']);
+
+    platforms['push']({ x: last['x'] + gap, w: w });
+
+    // 清理屏幕外太远的旧平台，保留前面至少 1 个作为参照
+
+    while (platforms['length'] > 3) {
+
+      var head = platforms[0];
+
+      if (head['x'] + head['w'] / 2 < offsetX - canvasW * 0.5) {
+
+        platforms['shift']();
+
+      } else {
+
+        break;
+
+      }
+
+    }
+
+  }
+
+  /* ============================================================
+
+     七、主循环
+
+     ============================================================ */
+
+  function startLoop() {
+
+    if (rafId !== null) return;
+
+    lastTime = 0;
+
+    rafId = window['requestAnimationFrame'](loop);
+
+  }
+
+  function stopLoop() {
+
+    if (rafId !== null) {
+
+      window['cancelAnimationFrame'](rafId);
+
+      rafId = null;
+
+    }
+
+  }
+
+  function loop(now) {
+
+    rafId = null;
+
+    if (!lastTime) lastTime = now;
+
+    var dt = Math['min'](now - lastTime, 50);
+
+    lastTime = now;
+
+    if (state === 'charging') {
+
+      power += CONFIG['powerPerMs'] * dt;
+
+      if (power > CONFIG['powerMax']) power = CONFIG['powerMax'];
+
+    }
+
+    if (state === 'jumping') {
+
+      jumpProgress += dt / jumpDuration;
+
+      if (jumpProgress >= 1) {
+
+        jumpProgress = 1;
+
+        player['x'] = jumpEndX;
+
+        player['yOffset'] = 0;
+
+        onLand();
+
+      } else {
+
+        var t = jumpProgress;
+
+        player['x'] = jumpStartX + (jumpEndX - jumpStartX) * t;
+
+        // 抛物线：sin 近似
+
+        player['yOffset'] = Math['sin'](t  *Math['PI'])*  jumpHeight;
+
+      }
+
+    }
+
+    // 镜头平滑跟随
+
+    if (state !== 'jumping' && state !== 'idle') {
+
+      offsetX += (targetOffsetX - offsetX) * 0.12;
+
+    }
+
+    // 飘字
+
+    for (var i = floats['length'] - 1; i >= 0; i--) {
+
+      floats[i]['y'] -= dt * 0.05;
+
+      floats[i]['life'] -= dt / 900;
+
+      if (floats[i]['life'] <= 0) floats['splice'](i, 1);
+
+    }
+
+    draw();
+
+    // 状态机：只有这些状态需要继续跑
+
+    if (state === 'charging' || state === 'jumping' ||
+
+        floats['length'] > 0) {
+
+      rafId = window['requestAnimationFrame'](loop);
+
+    } else {
+
+      lastTime = 0;
+
+    }
+
+  }
+
+  /* ============================================================
+
+     八、绘制
+
+     ============================================================ */
+
+  function draw() {
+
+    if (!ctx) return;
+
+    // 背景
+
+    var grad = ctx['createLinearGradient'](0, 0, 0, canvasH);
+
+    grad['addColorStop'](0, COLOR['bgTop']);
+
+    grad['addColorStop'](1, COLOR['bgBottom']);
+
+    ctx['fillStyle'] = grad;
+
+    ctx['fillRect'](0, 0, canvasW, canvasH);
+
+    drawPlatforms();
+
+    drawPlayer();
+
+    drawFloats();
+
+  }
+
+  function drawPlatforms() {
+
+    for (var i = 0; i < platforms['length']; i++) {
+
+      var p = platforms[i];
+
+      var sx = p['x'] - offsetX;
+
+      var halfW = p['w'] / 2;
+
+      // 屏幕外跳过
+
+      if (sx + halfW < -40) continue;
+
+      if (sx - halfW > canvasW + 40) continue;
+
+      var left = sx - halfW;
+
+      var top = groundY;
+
+      var bottom = canvasH;
+
+      // 底部阴影
+
+      ctx['fillStyle'] = COLOR['platShadow'];
+
+      roundRect(ctx, left + 3, top + 4, p['w'], bottom - top, 8);
+
+      ctx['fill']();
+
+      // 平台主体
+
+      var pg = ctx['createLinearGradient'](0, top, 0, bottom);
+
+      pg['addColorStop'](0, COLOR['platBottom']);
+
+      pg['addColorStop'](1, '#F0E8FA');
+
+      ctx['fillStyle'] = pg;
+
+      roundRect(ctx, left, top, p['w'], bottom - top, 8);
+
+      ctx['fill']();
+
+      // 顶面
+
+      ctx['fillStyle'] = COLOR['platTop'];
+
+      roundRect(ctx, left, top, p['w'], 10, 8);
+
+      ctx['fill']();
+
+      // 顶面高光条
+
+      ctx['fillStyle'] = 'rgba(255, 255, 255, 0.7)';
+
+      roundRect(ctx, left + 4, top + 2, p['w'] - 8, 3, 2);
+
+      ctx['fill']();
+
+      // 平台边框
+
+      ctx['strokeStyle'] = COLOR['platEdge'];
+
+      ctx['lineWidth'] = 1.5;
+
+      roundRect(ctx, left, top, p['w'], bottom - top, 8);
+
+      ctx['stroke']();
+
+    }
+
+  }
+
+  function drawPlayer() {
+
+    var x = player['x'] - offsetX;
+
+    var footY = groundY - player['yOffset'];
+
+    // 蓄力光环
+
+    if (state === 'charging') {
+
+      var r = 14 + power * 0.22;
+
+      var alpha = 0.25 + power * 0.0035;
+
+      ctx['fillStyle'] = COLOR['chargeRing'] + alpha + ')';
+
+      ctx['beginPath']();
+
+      ctx['arc'](x, groundY - 4, r, 0, Math['PI'] * 2);
+
+      ctx['fill']();
+
+    }
+
+    // 影子
+
+    ctx['fillStyle'] = 'rgba(180, 140, 200, 0.18)';
+
+    ctx['beginPath']();
+
+    ctx['ellipse'](x, groundY + 2, 14, 4, 0, 0, Math['PI'] * 2);
+
+    ctx['fill']();
+
+    // 蓄力压缩
+
+    var squash = 0;
+
+    if (state === 'charging') squash = power / CONFIG['powerMax'];
+
+    var bodyW = 22  *(1 + squash*  0.35);
+
+    var bodyH = 34  *(1 - squash*  0.45);
+
+    // 身体
+
+    var bodyX = x - bodyW / 2;
+
+    var bodyY = footY - bodyH;
+
+    ctx['fillStyle'] = COLOR['player'];
+
+    roundRect(ctx, bodyX, bodyY, bodyW, bodyH, bodyW / 2);
+
+    ctx['fill']();
+
+    // 身体高光
+
+    ctx['fillStyle'] = 'rgba(255, 255, 255, 0.35)';
+
+    roundRect(ctx, bodyX + bodyW * 0.22, bodyY + 4,
+
+              bodyW  *0.25, bodyH*  0.6, bodyW * 0.12);
+
+    ctx['fill']();
+
+    // 头
+
+    var headR = 10  *(1 + squash*  0.1);
+
+    var headY = bodyY - headR + 3;
+
+    ctx['fillStyle'] = COLOR['playerHead'];
+
+    ctx['beginPath']();
+
+    ctx['arc'](x, headY, headR, 0, Math['PI'] * 2);
+
+    ctx['fill']();
+
+    // 眼睛
+
+    var eyeY = headY - 1;
+
+    var eyeOff = 3.5;
+
+    ctx['fillStyle'] = COLOR['playerEye'];
+
+    ctx['beginPath']();
+
+    ctx['arc'](x - eyeOff, eyeY, 1.6, 0, Math['PI'] * 2);
+
+    ctx['arc'](x + eyeOff, eyeY, 1.6, 0, Math['PI'] * 2);
+
+    ctx['fill']();
+
+    // 腮红
+
+    ctx['fillStyle'] = 'rgba(255, 156, 190, 0.6)';
+
+    ctx['beginPath']();
+
+    ctx['arc'](x - headR + 2, headY + 3, 1.8, 0, Math['PI'] * 2);
+
+    ctx['arc'](x + headR - 2, headY + 3, 1.8, 0, Math['PI'] * 2);
+
+    ctx['fill']();
+
+  }
+
+  function drawFloats() {
+
+    for (var i = 0; i < floats['length']; i++) {
+
+      var f = floats[i];
+
+      var fx = f['x'] - offsetX;
+
+      ctx['fillStyle'] = 'rgba(255, 156, 190, ' + f['life'] + ')';
+
+      ctx['font'] = 'bold 20px "PingFang SC", sans-serif';
+
+      ctx['textAlign'] = 'center';
+
+      ctx['textBaseline'] = 'middle';
+
+      ctx['fillText'](f['text'], fx, f['y']);
+
+    }
+
+  }
+
+  /* ============================================================
+
+     九、界面同步
+
+     ============================================================ */
+
+  function renderHUD() {
+
+    if (scoreEl) scoreEl['textContent'] = String(score);
+
+    if (bestEl) bestEl['textContent'] = String(best);
+
+  }
+
+  function syncUI() {
+
+    if (!startBtn || !resetBtn || !overlayEl) return;
+
+    var showOverlay = (state === 'idle' || state === 'over');
+
+    if (showOverlay) {
+
+      overlayEl['classList']['remove']('j-hide');
+
+    } else {
+
+      overlayEl['classList']['add']('j-hide');
+
+    }
+
+    if (state === 'idle') {
+
+      ovTitleEl['textContent'] = TEXT['idleTitle'];
+
+      ovTextEl['textContent'] = TEXT['idleText'];
+
+      startBtn['textContent'] = TEXT['btnStart'];
+
+      startBtn['classList']['remove']('j-hidden');
+
+      resetBtn['classList']['add']('j-hidden');
+
+    } else if (state === 'over') {
+
+      ovTitleEl['textContent'] = TEXT['overTitle'];
+
+      ovTextEl['textContent'] = TEXT['overText'](score);
+
+      startBtn['textContent'] = TEXT['btnAgain'];
+
+      startBtn['classList']['remove']('j-hidden');
+
+      resetBtn['classList']['add']('j-hidden');
+
+    } else {
+
+      startBtn['classList']['add']('j-hidden');
+
+      resetBtn['classList']['remove']('j-hidden');
+
+    }
+
+  }
+
+  /* ============================================================
+
+     十、主流程
+
+     ============================================================ */
+
+  function newGame() {
+
+    setupInitial();
+
+    state = 'playing';
+
+    syncUI();
+
+    renderHUD();
+
+    draw();
+
+  }
+
+  function onMainButton() {
+
+    if (state === 'idle' || state === 'over') {
+
+      newGame();
+
+    }
+
+  }
+
+  /* ============================================================
+
+     十一、初始化
+
+     ============================================================ */
+
+  function init() {
+
+    var appEl = document['getElementById']('j-app');
+
+    var _canvas = document['getElementById']('j-canvas');
+
+    var _stageEl = document['getElementById']('j-stage');
+
+    var _overlayEl = document['getElementById']('j-overlay');
+
+    var _ovTitleEl = document['getElementById']('j-ov-title');
+
+    var _ovTextEl = document['getElementById']('j-ov-text');
+
+    var _scoreEl = document['getElementById']('j-score');
+
+    var _bestEl = document['getElementById']('j-best');
+
+    var _startBtn = document['getElementById']('j-start');
+
+    var _resetBtn = document['getElementById']('j-reset');
+
+    if (!appEl || !_canvas || !_stageEl || !_startBtn) return false;
+
+    canvas = _canvas;
+
+    stageEl = _stageEl;
+
+    overlayEl = _overlayEl;
+
+    ovTitleEl = _ovTitleEl;
+
+    ovTextEl = _ovTextEl;
+
+    scoreEl = _scoreEl;
+
+    bestEl = _bestEl;
+
+    startBtn = _startBtn;
+
+    resetBtn = _resetBtn;
+
+    ctx = canvas['getContext']('2d');
+
+    if (!ctx) return false;
+
+    fit();
+
+    renderHUD();
+
+    syncUI();
+
+    draw();
+
+    /* ---------- 事件 ---------- */
+
+    // 主按钮
+
+    startBtn['addEventListener']('click', onMainButton);
+
+    resetBtn['addEventListener']('click', function () {
+
+      newGame();
+
+    });
+
+    // 画布按下 / 松开
+
+    canvas['addEventListener']('mousedown', function (e) {
+
+      e['preventDefault']();
+
+      beginCharge();
+
+    });
+
+    canvas['addEventListener']('mouseup', function (e) {
+
+      e['preventDefault']();
+
+      releaseCharge();
+
+    });
+
+    canvas['addEventListener']('mouseleave', function () {
+
+      if (state === 'charging') releaseCharge();
+
+    });
+
+    canvas['addEventListener']('touchstart', function (e) {
+
+      e['preventDefault']();
+
+      beginCharge();
+
+    }, { passive: false });
+
+    canvas['addEventListener']('touchend', function (e) {
+
+      e['preventDefault']();
+
+      releaseCharge();
+
+    }, { passive: false });
+
+    canvas['addEventListener']('touchcancel', function () {
+
+      if (state === 'charging') releaseCharge();
+
+    });
+
+    // 键盘：空格
+
+    document['addEventListener']('keydown', function (e) {
+
+      if (e['key'] === ' ' || e['key'] === 'Spacebar') {
+
+        if (state === 'playing') {
+
+          e['preventDefault']();
+
+          beginCharge();
+
+        }
+
+      }
+
+    });
+
+    document['addEventListener']('keyup', function (e) {
+
+      if (e['key'] === ' ' || e['key'] === 'Spacebar') {
+
+        if (state === 'charging') {
+
+          e['preventDefault']();
+
+          releaseCharge();
+
+        }
+
+      }
+
+    });
+
+    // 窗口尺寸变化
+
+    window['addEventListener']('resize', function () {
+
+      fit();
+
+      draw();
+
+    });
+
+    // 切出去时取消蓄力并停循环
+
+    document['addEventListener']('visibilitychange', function () {
+
+      if (document['hidden']) {
+
+        if (state === 'charging') {
+
+          state = 'playing';
+
+          power = 0;
+
+        }
+
+        stopLoop();
+
+      } else {
+
+        if (state === 'charging' || state === 'jumping') startLoop();
+
+        draw();
+
+      }
+
+    });
+
+    window['addEventListener']('blur', function () {
+
+      if (state === 'charging') {
+
+        state = 'playing';
+
+        power = 0;
+
+      }
+
+      stopLoop();
+
+    });
+
+    return true;
+
+  }
+
+  /* 重试启动：应对 playable 系统把脚本抽到 DOM 之前执行的情况 */
+
+  var tries = 0;
+
+  var MAX_TRIES = 40;
+
+  function tryInit() {
+
+    if (init()) return;
+
+    tries++;
+
+    if (tries < MAX_TRIES) {
+
+      window['setTimeout'](tryInit, 100);
+
+    }
+
+  }
+
+  if (document['readyState'] === 'loading') {
+
+    document['addEventListener']('DOMContentLoaded', tryInit);
+
+  } else {
+
+    tryInit();
+
+  }
+
+})();
+</script>
+  </div>
+</body>
+</html>
