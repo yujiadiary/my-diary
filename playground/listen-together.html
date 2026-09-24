@@ -1,0 +1,2316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>一起听 · Listen Together</title>
+<style>
+/* ===================================================================
+   一起听 · 核心参数区（暗色电影感主题 · 改这里就能换肤）
+   =================================================================== */
+.listen-together {
+  /* 背景 */
+  --lt-bg-1: #0a0a0f;
+  --lt-bg-2: #1a1a24;
+  --lt-scrim: linear-gradient(180deg, rgba(10,10,15,0.42) 0%, rgba(10,10,15,0.78) 100%);
+  /* 玻璃与线条 */
+  --lt-glass: rgba(30,30,40,0.55);
+  --lt-glass-2: rgba(30,30,40,0.75);
+  --lt-line: rgba(255,255,255,0.08);
+  --lt-line-2: rgba(255,255,255,0.12);
+  --lt-card-shadow: 0 18px 50px rgba(0,0,0,0.45);
+  /* 文字 */
+  --lt-text: #e8e8ee;
+  --lt-sub: #d8d8e0;
+  --lt-muted: #8a8a98;
+  --lt-faint: #6a6a78;
+  /* 强调色：低饱和，只做轮廓与点缀 */
+  --lt-accent: #b9b9c6;
+  --lt-accent-2: #7a7a88;
+  --lt-glow: rgba(255,255,255,0.05);
+  /* 尺寸 */
+  --lt-radius: 20px;
+  --lt-avatar-size: 84px;
+  /* 字体：中文宋体 Light，英文 Georgia */
+  --lt-font-cn: "Source Han Serif SC Light","Noto Serif CJK SC Light","Songti SC Light","STSong",serif;
+  --lt-font-en: Georgia,"Songti SC",serif;
+  --lt-halo: 0 0 0 6px rgba(255,255,255,0.04);
+  color: var(--lt-text);
+  letter-spacing: 1px;
+}
+/* ---- 容器 ---- */
+.listen-together * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+.listen-together {
+  margin: 0; min-height: 100vh; padding-bottom: 72px;
+  font-family: var(--lt-font-cn);
+  background: linear-gradient(160deg, var(--lt-bg-1), var(--lt-bg-2));
+  background-attachment: fixed;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+.listen-together .lt-bg-layer {
+  position: fixed; inset: 0; z-index: 0;
+  background-size: cover; background-position: center;
+  pointer-events: none; opacity: 0.35;
+  filter: saturate(0.55) brightness(0.9);
+}
+/* 电影感压暗层：让背景图不抢内容 */
+.listen-together .lt-bg-layer::after {
+  content: ""; position: absolute; inset: 0;
+  background: var(--lt-scrim);
+}
+.listen-together .lt-wrap {
+  position: relative; z-index: 1;
+  max-width: 520px; margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* ---- 页面切换 ---- */
+.listen-together .lt-page { display: none; }
+.listen-together .lt-page.active { display: block; animation: ltFloatUp .3s ease both; }
+.listen-together .lt-page-head { padding: 18px 4px 10px; font-size: 22px; font-weight: 500; font-family: var(--lt-font-cn); letter-spacing: 2px; }
+
+/* ---- 歌单/曲库/记忆 列表项 ---- */
+.listen-together .lt-pl-item {
+  display: flex; align-items: center; gap: 12px; padding: 11px 14px;
+  border-bottom: 1px solid var(--lt-line); cursor: pointer;
+  touch-action: manipulation; transition: .18s;
+}
+.listen-together .lt-pl-item:active { background: rgba(255,255,255,0.05); }
+.listen-together .lt-pl-item.playing { background: rgba(255,255,255,0.06); }
+.listen-together .lt-pl-item .lt-pl-cover {
+  width: 40px; height: 40px; border-radius: 10px; flex: none; overflow: hidden;
+  background: linear-gradient(135deg, var(--lt-accent), var(--lt-accent-2));
+  display: grid; place-items: center; color: #0a0a0f; font-size: 15px;
+  filter: saturate(0.6) brightness(0.95);
+}
+.listen-together .lt-pl-item .lt-pl-cover img { width: 100%; height: 100%; object-fit: cover; }
+.listen-together .lt-pl-item .lt-pl-info { flex: 1; min-width: 0; }
+.listen-together .lt-pl-item .lt-pl-info .lt-pl-title { font-size: 14px; color: var(--lt-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.listen-together .lt-pl-item .lt-pl-info .lt-pl-artist { font-size: 12px; color: var(--lt-muted); margin-top: 2px; }
+.listen-together .lt-pl-item .lt-pl-del { color: var(--lt-faint); font-size: 15px; padding: 4px 6px; cursor: pointer; touch-action: manipulation; flex: none; }
+.listen-together .lt-pl-empty { text-align: center; color: var(--lt-faint); padding: 40px 0; font-size: 12px; line-height: 1.9; }
+
+/* ---- 曲库页 / 设置页 ---- */
+.listen-together .lt-lib-actions { display: flex; flex-direction: column; gap: 10px; }
+.listen-together .lt-lib-stat { font-size: 12px; color: var(--lt-muted); padding: 8px 4px; }
+.listen-together .lt-card-title { padding: 0 0 10px; font-size: 15px; font-weight: 500; color: var(--lt-text); font-family: var(--lt-font-cn); letter-spacing: 1px; }
+.listen-together .lt-textarea {
+  width: 100%; min-height: 110px; resize: vertical; line-height: 1.7;
+  border: 1px solid var(--lt-line-2); border-radius: 10px; padding: 10px 12px;
+  font-size: 13px; background: rgba(255,255,255,0.04); color: var(--lt-text);
+  outline: none; font-family: var(--lt-font-cn); letter-spacing: 1px; transition: .18s;
+}
+.listen-together .lt-textarea:focus { border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.06); }
+
+/* ---- API设置页 ---- */
+.listen-together .lt-api-field { margin-bottom: 14px; }
+.listen-together .lt-api-field label { display: block; font-size: 12px; color: var(--lt-muted); margin-bottom: 5px; }
+.listen-together .lt-api-field input, .listen-together .lt-api-field select {
+  width: 100%; border: 1px solid var(--lt-line-2); border-radius: 10px; padding: 9px 12px;
+  font-size: 14px; background: rgba(255,255,255,0.04); color: var(--lt-text); outline: none;
+  font-family: var(--lt-font-en); transition: .18s;
+}
+.listen-together .lt-api-field select option { background: #14141c; color: var(--lt-text); }
+.listen-together .lt-api-field input:focus, .listen-together .lt-api-field select:focus { border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.06); }
+.listen-together .lt-api-hint { font-size: 11px; color: var(--lt-faint); margin-top: 6px; line-height: 1.8; }
+.listen-together .lt-api-status { font-size: 12px; padding: 8px 14px; border-radius: 10px; margin: 10px 0; display: none; }
+.listen-together .lt-api-status.show { display: block; }
+.listen-together .lt-api-status.ok { background: rgba(120,220,160,0.10); color: #7fd8a4; }
+.listen-together .lt-api-status.err { background: rgba(255,120,120,0.10); color: #f08a8a; }
+.listen-together .lt-api-save-btn { background: rgba(255,255,255,0.10); color: var(--lt-text); }
+
+/* ---- 在线搜歌（音乐 API） ---- */
+.listen-together .lt-online-bar { display: flex; gap: 8px; align-items: center; }
+.listen-together .lt-online-bar input {
+  flex: 1; min-width: 0; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10); border-radius: 10px;
+  color: var(--lt-text); font-size: 13px; padding: 10px 12px;
+  font-family: inherit; outline: none; letter-spacing: inherit;
+}
+.listen-together .lt-online-bar input:focus { border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.06); }
+.listen-together .lt-online-bar input::placeholder { color: var(--lt-faint); }
+.listen-together .lt-online-res { margin-top: 12px; max-height: 340px; overflow-y: auto; }
+.listen-together .lt-online-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 12px; cursor: pointer;
+  transition: background .2s, opacity .2s;
+}
+.listen-together .lt-online-item:hover { background: rgba(255,255,255,0.06); }
+.listen-together .lt-online-item.busy { opacity: .45; pointer-events: none; }
+.listen-together .lt-online-cover {
+  width: 40px; height: 40px; flex: 0 0 40px; border-radius: 8px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: #fff;
+  background: linear-gradient(135deg, var(--lt-accent), var(--lt-accent-2));
+}
+.listen-together .lt-online-cover img { width: 100%; height: 100%; object-fit: cover; }
+.listen-together .lt-online-info { flex: 1; min-width: 0; }
+.listen-together .lt-online-title {
+  font-size: 13px; color: var(--lt-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.listen-together .lt-online-artist {
+  font-size: 11px; color: var(--lt-faint); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.listen-together .lt-online-add { flex: 0 0 auto; font-size: 16px; color: var(--lt-muted); }
+.listen-together .lt-online-empty { font-size: 12px; color: var(--lt-faint); padding: 10px 2px; line-height: 1.8; }
+.listen-together .lt-danger-btn { color: #f08a8a; }
+.listen-together ::placeholder { color: var(--lt-faint); opacity: 1; }
+
+/* ---- 顶部栏 ---- */
+.listen-together .lt-topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 18px 6px 10px;
+}
+.listen-together .lt-topbar .lt-now {
+  font-family: var(--lt-font-cn);
+  font-size: 22px; font-weight: 500; letter-spacing: 3px;
+  position: relative; padding-top: 16px;
+}
+.listen-together .lt-topbar .lt-now::before {
+  content: "正在一起听";
+  position: absolute; top: 0; left: 2px;
+  font-size: 10px; letter-spacing: 3px;
+  color: var(--lt-faint);
+  font-family: var(--lt-font-en);
+}
+.listen-together .lt-topbar .lt-status {
+  font-size: 12px; color: var(--lt-muted);
+  background: rgba(255,255,255,0.06);
+  padding: 6px 14px; border-radius: 999px;
+  cursor: pointer; touch-action: manipulation;
+  border: 1px solid var(--lt-line);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  transition: .18s;
+}
+.listen-together .lt-topbar .lt-status:hover { background: rgba(255,255,255,0.10); }
+/* 顶部操作区（状态胶囊 + 换背景）已移到设置页，这里整块隐藏 */
+.listen-together .lt-top-actions { display: none !important; }
+
+/* ---- 双人连接区 ---- */
+.listen-together .lt-connect {
+  display: flex; align-items: center; justify-content: center; gap: 0;
+  padding: 18px 0 6px; position: relative;
+}
+.listen-together .lt-avatar-box { position: relative; flex: none; }
+.listen-together .lt-avatar {
+  width: var(--lt-avatar-size); height: var(--lt-avatar-size);
+  border-radius: 50%; overflow: hidden; cursor: pointer;
+  touch-action: manipulation;
+  border: 2px solid rgba(255,255,255,0.15);
+  box-shadow: 0 0 0 6px rgba(255,255,255,0.03), 0 10px 30px rgba(0,0,0,0.45);
+  background: linear-gradient(135deg, var(--lt-accent), var(--lt-accent-2));
+  display: grid; place-items: center;
+  font-size: 28px; color: #0a0a0f; transition: .25s;
+  filter: saturate(0.7);
+}
+.listen-together .lt-avatar:hover { transform: scale(1.03); }
+.listen-together .lt-avatar img { width: 100%; height: 100%; object-fit: cover; filter: saturate(0.85); }
+.listen-together .lt-arc {
+  width: 90px; height: 50px; flex: none; position: relative;
+}
+.listen-together .lt-arc svg { width: 100%; height: 100%; overflow: visible; }
+.listen-together .lt-arc svg path { stroke: rgba(255,255,255,0.20); stroke-width: 1; }
+.listen-together .lt-name {
+  font-size: 12px; color: var(--lt-muted); text-align: center;
+  margin-top: 10px; font-family: var(--lt-font-cn); letter-spacing: 1px;
+}
+
+/* ---- 气泡区（此刻速览） ---- */
+.listen-together .lt-bubble-wrap {
+  display: flex; justify-content: center; gap: 14px; padding: 8px 0 4px;
+}
+.listen-together .lt-bubble {
+  max-width: 190px; text-align: center;
+  font-size: 13px; line-height: 1.6;
+  background: rgba(255,255,255,0.06);
+  padding: 9px 16px; border-radius: 18px;
+  cursor: pointer; touch-action: manipulation;
+  border: 1px solid var(--lt-line);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  color: var(--lt-sub);
+  animation: ltFloatUp .5s ease both;
+  transition: .18s;
+}
+.listen-together .lt-bubble:hover { background: rgba(255,255,255,0.10); }
+
+/* ---- 玻璃卡片通用 ---- */
+.listen-together .lt-card {
+  background: var(--lt-glass);
+  border-radius: var(--lt-radius);
+  box-shadow: var(--lt-card-shadow);
+  border: 1px solid var(--lt-line);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  margin-top: 14px; overflow: hidden;
+}
+
+/* ---- 视图切换条 ---- */
+.listen-together .lt-views {
+  display: flex; gap: 22px; padding: 14px 18px 0;
+  border-bottom: 1px solid var(--lt-line);
+  overflow-x: auto;
+}
+.listen-together .lt-view-tab {
+  flex: none; padding: 0 2px 10px; border-radius: 0;
+  font-size: 12px; color: var(--lt-faint);
+  background: transparent; cursor: pointer;
+  touch-action: manipulation; transition: .18s;
+  border: none; border-bottom: 1px solid transparent;
+  font-family: var(--lt-font-cn); letter-spacing: 1px;
+}
+.listen-together .lt-view-tab.active {
+  color: var(--lt-text); background: transparent;
+  border-bottom: 1px solid rgba(255,255,255,0.45);
+  box-shadow: none;
+}
+
+/* ---- 视图容器 ---- */
+.listen-together .lt-view-stage { padding: 18px; min-height: 280px; }
+.listen-together .lt-view-pane { display: none; animation: ltFloatUp .4s ease both; }
+.listen-together .lt-view-pane.active { display: block; }
+
+/* 主视图（原视图A+B合并）：大黑胶 + 歌名 + 进度 + 控制 + 常驻歌词 */
+.listen-together .lt-player-a { text-align: center; }
+.listen-together .lt-player-a .lt-cover { display: none !important; }   /* 旧的160px封面已废弃 */
+.listen-together .lt-song-title { font-size: 18px; font-weight: 500; margin: 16px 0 4px; color: var(--lt-text); letter-spacing: 1px; }
+.listen-together .lt-song-artist { font-size: 12px; color: var(--lt-muted); }
+.listen-together .lt-progress-row { display: flex; align-items: center; gap: 10px; margin: 16px 0 6px; }
+.listen-together .lt-progress-row .lt-t { font-size: 10px; color: var(--lt-faint); width: 36px; flex: none; font-family: var(--lt-font-en); }
+.listen-together .lt-progress-row .lt-t:last-child { text-align: right; }
+.listen-together .lt-seek { flex: 1; }
+/* JS 会给进度条写紫色渐变，这里统一降饱和成灰白，保证暗色调统一 */
+.listen-together input[type=range].lt-seek {
+  -webkit-appearance: none; appearance: none; height: 2px; border-radius: 2px;
+  background: rgba(255,255,255,0.14); outline: none; cursor: pointer;
+  filter: grayscale(1) brightness(1.5);
+}
+.listen-together input[type=range].lt-seek::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%;
+  background: #e8e8ee; border: none; cursor: pointer;
+  box-shadow: 0 0 10px rgba(255,255,255,0.35);
+}
+.listen-together input[type=range].lt-seek::-moz-range-thumb {
+  width: 11px; height: 11px; border-radius: 50%; background: #e8e8ee; border: none; cursor: pointer;
+}
+.listen-together .lt-controls { display: flex; align-items: center; justify-content: center; gap: 26px; margin: 12px 0; }
+.listen-together .lt-cbtn {
+  width: 38px; height: 38px; border-radius: 50%; flex: none; cursor: pointer;
+  display: grid; place-items: center; background: transparent;
+  border: none; color: var(--lt-muted);
+  font-size: 17px; touch-action: manipulation; transition: .18s;
+}
+.listen-together .lt-cbtn:hover { color: var(--lt-text); }
+.listen-together .lt-cbtn.play {
+  width: 56px; height: 56px; font-size: 18px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid var(--lt-line-2); color: var(--lt-text);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+}
+.listen-together .lt-cbtn.play:hover { transform: scale(1.04); background: rgba(255,255,255,0.14); }
+.listen-together .lt-cbtn.loop-on { color: var(--lt-text); border-color: var(--lt-line-2); }
+.listen-together .lt-action-row { display: flex; justify-content: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.listen-together .lt-mini-btn {
+  padding: 7px 15px; border-radius: 999px; font-size: 12px; cursor: pointer;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--lt-line);
+  color: var(--lt-sub); touch-action: manipulation; transition: .18s;
+  font-family: var(--lt-font-cn); letter-spacing: 1px;
+}
+.listen-together .lt-mini-btn:hover { background: rgba(255,255,255,0.11); color: var(--lt-text); }
+
+/* 黑胶唱片：放大到屏幕宽度的 ~68%（520容器里约340px），30s 一圈 */
+.listen-together .lt-vinyl-stage { display: flex; justify-content: center; padding: 22px 0 6px; }
+.listen-together .lt-vinyl {
+  width: min(340px, 72vw); height: min(340px, 72vw);
+  border-radius: 50%; flex: none; position: relative;
+  background: repeating-radial-gradient(circle at 50% 50%, #1a1a1f 0 3px, #121216 3px 6px);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 30px 70px rgba(0,0,0,0.65);
+  animation: ltSpin 30s linear infinite; animation-play-state: paused;
+  display: grid; place-items: center;
+  filter: saturate(0.75);
+}
+.listen-together .lt-vinyl.spinning { animation-play-state: running; }
+.listen-together .lt-vinyl .lt-vinyl-cover {
+  width: 55%; height: 55%; border-radius: 50%; overflow: hidden;
+  background: linear-gradient(135deg, var(--lt-accent), var(--lt-accent-2));
+  display: grid; place-items: center; font-size: 34px; color: #0a0a0f;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), 0 10px 30px rgba(0,0,0,0.5);
+}
+.listen-together .lt-vinyl .lt-vinyl-cover img { width: 100%; height: 100%; object-fit: cover; }
+.listen-together .lt-vinyl .lt-vinyl-hole {
+  position: absolute; width: 10px; height: 10px; border-radius: 50%;
+  background: #0a0a0f; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10);
+}
+
+/* 歌词：常驻黑胶下方 */
+.listen-together .lt-lyrics {
+  max-height: 240px; overflow-y: auto; padding: 8px 6px; margin-top: 20px;
+  text-align: center;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+  scrollbar-width: none;
+}
+.listen-together .lt-lyrics::-webkit-scrollbar { display: none; }
+.listen-together .lt-lyric-line {
+  padding: 8px 0; font-size: 15px; color: var(--lt-muted);
+  line-height: 1.7; transition: .35s; font-family: var(--lt-font-cn);
+  letter-spacing: 1px; opacity: 0.5;
+}
+.listen-together .lt-lyric-line.active {
+  color: var(--lt-text); font-size: 15px; font-weight: 500;
+  opacity: 1; transform: scale(1.02);
+  text-shadow: 0 0 24px rgba(255,255,255,0.18);
+}
+.listen-together .lt-lyrics-empty { color: var(--lt-faint); font-size: 12px; padding: 44px 0; line-height: 1.9; }
+
+/* 视图D：3D卡片堆叠 */
+.listen-together .lt-stack-stage {
+  perspective: 900px; height: 280px; position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.listen-together .lt-stack-card {
+  position: absolute; width: 150px; height: 150px; border-radius: 14px;
+  overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  background: linear-gradient(135deg, var(--lt-accent), var(--lt-accent-2));
+  display: grid; place-items: center; color: #0a0a0f; font-size: 32px;
+  cursor: pointer; touch-action: manipulation; transition: .4s ease;
+  border: 1px solid var(--lt-line);
+}
+.listen-together .lt-stack-card img { width: 100%; height: 100%; object-fit: cover; }
+.listen-together .lt-stack-nav { display: flex; justify-content: center; gap: 30px; margin-top: 10px; }
+.listen-together .lt-stack-empty { color: var(--lt-faint); font-size: 12px; text-align: center; padding: 40px 0; }
+
+/* ---- 聊天区 ---- */
+.listen-together .lt-chat { padding: 0; }
+.listen-together .lt-chat-head {
+  padding: 14px 18px; border-bottom: 1px solid var(--lt-line);
+  font-size: 12px; color: var(--lt-muted); display: flex; align-items: center; gap: 8px;
+  letter-spacing: 1px;
+}
+.listen-together .lt-msgs {
+  padding: 16px; display: flex; flex-direction: column; gap: 12px;
+  max-height: 380px; overflow-y: auto; min-height: 160px;
+}
+.listen-together .lt-msgs::-webkit-scrollbar { width: 3px; }
+.listen-together .lt-msgs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+.listen-together .lt-msg {
+  max-width: 82%; animation: ltFloatUp .35s ease both; display: flex; flex-direction: column; gap: 5px;
+}
+.listen-together .lt-msg.me { align-self: flex-end; align-items: flex-end; }
+.listen-together .lt-msg.them { align-self: flex-start; }
+.listen-together .lt-msg .lt-bub {
+  padding: 9px 14px; border-radius: 18px; font-size: 14px; line-height: 1.65;
+  background: rgba(255,255,255,0.04); border: none; color: var(--lt-sub);
+  word-break: break-word;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.listen-together .lt-msg.me .lt-bub {
+  background: rgba(255,255,255,0.08); color: var(--lt-text);
+  border: none; border-bottom-right-radius: 6px;
+}
+.listen-together .lt-msg.them .lt-bub { border-bottom-left-radius: 6px; }
+.listen-together .lt-msg .lt-meta { font-size: 10px; color: var(--lt-faint); padding: 0 4px; font-family: var(--lt-font-en); }
+.listen-together .lt-history-bubble {
+  font-size: 11px; color: var(--lt-faint); align-self: center;
+  background: transparent; border: none; padding: 2px 10px; border-radius: 999px;
+  animation: ltFloatUp .3s ease both;
+}
+.listen-together .lt-share-card {
+  display: flex; gap: 10px; padding: 10px 12px; border-radius: 16px;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--lt-line);
+  align-self: flex-start; max-width: 88%; cursor: pointer; touch-action: manipulation;
+  animation: ltFloatUp .3s ease both;
+}
+.listen-together .lt-share-card .lt-sc-cover {
+  width: 44px; height: 44px; border-radius: 10px; flex: none; overflow: hidden;
+  background: linear-gradient(135deg, var(--lt-accent), var(--lt-accent-2));
+  display: grid; place-items: center; color: #0a0a0f; font-size: 17px;
+}
+.listen-together .lt-share-card .lt-sc-cover img { width: 100%; height: 100%; object-fit: cover; }
+.listen-together .lt-share-card .lt-sc-info { font-size: 13px; line-height: 1.5; color: var(--lt-text); }
+.listen-together .lt-share-card .lt-sc-info small { color: var(--lt-muted); font-size: 11px; }
+
+/* ---- 底部输入框：去掉气泡框，只留一条底线 ---- */
+.listen-together .lt-input-bar {
+  display: flex; align-items: center; gap: 10px; padding: 10px 16px 14px;
+  border-top: 1px solid var(--lt-line);
+}
+.listen-together .lt-input-bar input {
+  flex: 1; background: transparent; border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  border-radius: 0; padding: 12px 2px; font-size: 14px; color: var(--lt-text);
+  outline: none; font-family: var(--lt-font-cn); letter-spacing: 1px; transition: .18s;
+}
+.listen-together .lt-input-bar input:focus { border-bottom-color: rgba(255,255,255,0.42); }
+.listen-together .lt-send-btn {
+  width: 34px; height: 34px; border-radius: 50%; flex: none; cursor: pointer;
+  background: transparent; border: none; color: var(--lt-muted);
+  font-size: 19px; touch-action: manipulation; transition: .18s;
+  display: grid; place-items: center;
+}
+.listen-together .lt-send-btn:hover { color: var(--lt-text); }
+
+/* ---- 底部导航栏 ---- */
+.listen-together .lt-tabbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+  display: flex; justify-content: space-around; align-items: center;
+  background: rgba(20,20,30,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255,255,255,0.06); padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  max-width: 520px; margin: 0 auto;
+}
+.listen-together .lt-tab {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-size: 11px; color: var(--lt-faint); cursor: pointer;
+  touch-action: manipulation; padding: 4px 12px; border-radius: 10px; transition: .18s;
+  font-family: var(--lt-font-cn); letter-spacing: 1px;
+}
+.listen-together .lt-tab.active { color: var(--lt-text); }
+.listen-together .lt-tab .lt-tab-icon { font-size: 18px; opacity: 0.7; }
+.listen-together .lt-tab.active .lt-tab-icon { opacity: 1; }
+
+/* ---- Toast ---- */
+.listen-together .lt-toast {
+  position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: rgba(20,20,30,0.92); color: var(--lt-sub); font-size: 12px;
+  border: 1px solid var(--lt-line-2);
+  padding: 10px 20px; border-radius: 999px; z-index: 100; opacity: 0;
+  transition: .3s; pointer-events: none; white-space: nowrap; max-width: 90vw;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+.listen-together .lt-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---- 模态面板（替代 prompt/confirm） ---- */
+.listen-together .lt-modal-mask {
+  position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  display: none; align-items: center; justify-content: center;
+}
+.listen-together .lt-modal-mask.show { display: flex; }
+.listen-together .lt-modal {
+  background: rgba(24,24,32,0.96); color: var(--lt-text);
+  border: 1px solid var(--lt-line-2);
+  border-radius: 20px; width: 88%; max-width: 360px; padding: 22px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.7); animation: ltFloatUp .3s ease both;
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+}
+.listen-together .lt-modal h3 { margin: 0 0 14px; font-size: 16px; font-weight: 500; font-family: var(--lt-font-cn); color: var(--lt-text); letter-spacing: 1px; }
+.listen-together .lt-modal label { display: block; font-size: 12px; color: var(--lt-muted); margin: 10px 0 4px; }
+.listen-together .lt-modal input, .listen-together .lt-modal textarea {
+  width: 100%; border: 1px solid var(--lt-line-2); border-radius: 10px; padding: 9px 12px;
+  font-size: 14px; color: var(--lt-text); outline: none; font-family: var(--lt-font-cn);
+  background: rgba(255,255,255,0.05); transition: .18s; letter-spacing: 1px;
+}
+.listen-together .lt-modal input:focus, .listen-together .lt-modal textarea:focus { border-color: rgba(255,255,255,0.30); background: rgba(255,255,255,0.08); }
+.listen-together .lt-modal input[type=file] { font-size: 12px; color: var(--lt-muted); padding: 8px 10px; }
+.listen-together .lt-modal .lt-modal-btns { display: flex; gap: 10px; margin-top: 18px; }
+.listen-together .lt-modal .lt-modal-btn {
+  flex: 1; padding: 10px; border-radius: 10px; font-size: 14px; cursor: pointer;
+  touch-action: manipulation; border: 1px solid var(--lt-line-2); background: rgba(255,255,255,0.05); color: var(--lt-sub);
+  font-family: var(--lt-font-cn); transition: .18s; text-align: center;
+}
+.listen-together .lt-modal .lt-modal-btn:hover { background: rgba(255,255,255,0.10); color: var(--lt-text); }
+.listen-together .lt-modal .lt-modal-btn.primary {
+  background: rgba(255,255,255,0.14); color: var(--lt-text); border: 1px solid var(--lt-line-2);
+}
+.listen-together .lt-modal .lt-modal-file-hint { font-size: 11px; color: var(--lt-faint); margin-top: 6px; line-height: 1.8; }
+.listen-together .lt-modal .lt-modal-preview {
+  width: 60px; height: 60px; border-radius: 10px; overflow: hidden; margin: 6px 0;
+  background: linear-gradient(135deg, var(--lt-accent), var(--lt-accent-2));
+  display: none;
+}
+.listen-together .lt-modal .lt-modal-preview img { width: 100%; height: 100%; object-fit: cover; }
+.listen-together .lt-modal .lt-modal-preview.show { display: block; }
+
+/* ---- 动画 ---- */
+@keyframes ltFloatUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ltSpin { to { transform: rotate(360deg); } }
+
+/* ===================================================================
+   折叠胶囊（收起后就是它）
+   结构：圆形封面 + 歌名/歌手 + 心形/循环 + 细进度条压一句歌词 + 右上角展开
+   =================================================================== */
+.listen-together .lt-music-head { display: flex; align-items: center; justify-content: space-between; }
+.listen-together .lt-music-head .lt-views { flex: 1; }
+.listen-together .lt-fold-btn {
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; cursor: pointer; touch-action: manipulation;
+  background: rgba(255,255,255,0.05); color: var(--lt-muted);
+  border: 1px solid var(--lt-line); font-size: 12px; transition: .18s;
+  margin-right: 14px; margin-top: 8px;
+}
+.listen-together .lt-fold-btn:hover { background: rgba(255,255,255,0.10); color: var(--lt-text); }
+
+/* 折叠状态：藏掉头部与主视图，只留胶囊 */
+.listen-together .lt-music-card.collapsed .lt-music-head,
+.listen-together .lt-music-card.collapsed .lt-view-stage { display: none !important; }
+.listen-together .lt-mini-player { display: none; }
+.listen-together .lt-music-card.collapsed .lt-mini-player { display: flex; }
+.listen-together .lt-music-card.collapsed {
+  padding: 6px; background: transparent; border-color: transparent;
+  box-shadow: none; overflow: visible;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+
+/* 胶囊本体：64px 高、圆角 32px */
+.listen-together .lt-mini-player {
+  position: relative; align-items: center; gap: 12px;
+  height: 64px; padding: 8px 14px; border-radius: 32px;
+  background: rgba(30,30,40,0.75);
+  border: 1px solid rgba(255,255,255,0.10);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 18px 45px rgba(0,0,0,0.5);
+  cursor: pointer;
+}
+.listen-together .lt-mini-expand {
+  position: absolute; top: 3px; right: 10px;
+  font-size: 12px; line-height: 1; color: var(--lt-faint);
+  padding: 4px 6px; border-radius: 8px; transition: .18s;
+}
+.listen-together .lt-mini-expand:hover { color: var(--lt-text); }
+.listen-together .lt-mini-cover {
+  width: 44px; height: 44px; border-radius: 50%; flex: none; overflow: hidden;
+  background: linear-gradient(135deg, var(--lt-accent), var(--lt-accent-2));
+  display: grid; place-items: center; color: #0a0a0f; font-size: 16px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.10);
+  filter: saturate(0.8);
+}
+.listen-together .lt-mini-cover img { width: 100%; height: 100%; object-fit: cover; }
+.listen-together .lt-mini-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.listen-together .lt-mini-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.listen-together .lt-mini-title {
+  flex: 1; min-width: 0; font-size: 14px; font-weight: 500; color: var(--lt-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 1px;
+}
+.listen-together .lt-mini-artist {
+  font-size: 11px; color: var(--lt-muted); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 80px; flex: none;
+}
+.listen-together .lt-mini-heart, .listen-together .lt-mini-loop {
+  font-size: 13px; color: var(--lt-faint); flex: none;
+  padding: 0 2px; line-height: 1; transition: .18s; opacity: 0.7;
+}
+.listen-together .lt-mini-heart.on { color: var(--lt-text); opacity: 1; }
+.listen-together .lt-mini-loop.on { color: var(--lt-text); opacity: 1; }
+.listen-together .lt-mini-row2 { gap: 10px; }
+.listen-together .lt-mini-seek { flex: 1; min-width: 0; }
+.listen-together .lt-mini-lrc {
+  font-size: 11px; color: var(--lt-muted); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 54%; flex: none;
+  letter-spacing: 1px; opacity: 0.9;
+}
+.listen-together .lt-mini-t { display: none; }            /* 收起时不显示时间，保持胶囊干净 */
+.listen-together .lt-mini-player .lt-mini-play { display: none; }  /* 点胶囊即展开 */
+
+/* ---- 设置页：背景设置卡片 ---- */
+.listen-together .lt-bgset-preview {
+  height: 76px; border-radius: 12px; overflow: hidden; margin-top: 10px;
+  background-color: rgba(255,255,255,0.04); border: 1px dashed var(--lt-line-2);
+  background-size: cover; background-position: center;
+  display: grid; place-items: center; color: var(--lt-faint); font-size: 12px;
+}
+
+/* ---- 背景设置模态 ---- */
+.listen-together .lt-modal .lt-bg-preview {
+  width: 100%; height: 110px; border-radius: 12px; overflow: hidden;
+  background-color: rgba(255,255,255,0.04); border: 1px dashed var(--lt-line-2);
+  background-size: cover; background-position: center; margin: 4px 0 8px;
+  display: grid; place-items: center; color: var(--lt-faint); font-size: 12px; font-family: var(--lt-font-cn);
+}
+.listen-together .lt-modal .lt-bg-op-row { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; }
+.listen-together .lt-modal .lt-bg-op-row > span { font-size: 11px; color: var(--lt-muted); flex: none; }
+.listen-together .lt-modal .lt-bg-op-row input[type=range] { flex: 1; }
+.listen-together .lt-modal .lt-bg-op-val { font-size: 12px; color: var(--lt-muted); width: 40px; text-align: right; flex: none; font-family: var(--lt-font-en); }
+.listen-together .lt-modal input[type=range] {
+  -webkit-appearance: none; appearance: none; height: 2px; border-radius: 2px;
+  background: rgba(255,255,255,0.14); outline: none; cursor: pointer;
+  border: none; padding: 0; width: 100%;
+}
+.listen-together .lt-modal input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+  background: #e8e8ee; border: none; cursor: pointer;
+  box-shadow: 0 0 10px rgba(255,255,255,0.3);
+}
+.listen-together .lt-modal input[type=range]::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%; background: #e8e8ee; border: none; cursor: pointer;
+}
+
+/* ---- 双语歌词字号：英文行 15px / 中文行 13px（由独立脚本按是否含中文打标） ---- */
+.listen-together .lt-lyric-line.lrc-en,
+.listen-together .lt-lyric-line.lrc-en.active { font-size: 15px; }
+.listen-together .lt-lyric-line.lrc-cn,
+.listen-together .lt-lyric-line.lrc-cn.active { font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="listen-together" id="ltApp">
+  <div class="lt-bg-layer" id="ltBgLayer"></div>
+
+  <div class="lt-wrap">
+    <!-- ============ 此刻页 ============ -->
+    <div class="lt-page active" data-page="now">
+    <!-- 顶部栏 -->
+    <div class="lt-topbar">
+      <div class="lt-now">此刻</div>
+      <div class="lt-top-actions">
+        <div class="lt-status" id="ltStatus">雪青</div>
+        <div class="lt-bg-btn" id="ltBgBtn" title="换背景">🎨</div>
+      </div>
+    </div>
+
+    <!-- 双人连接区 -->
+    <div class="lt-connect">
+      <div class="lt-avatar-box">
+        <div class="lt-avatar" id="ltAvatar1" title="点击更换头像">🎵</div>
+        <div class="lt-name" id="ltName1">疏月</div>
+      </div>
+      <div class="lt-arc" id="ltArc">
+        <svg viewBox="0 0 90 50" preserveAspectRatio="none">
+          <path d="M5,42 Q45,-6 85,42" fill="none" stroke="rgba(138,123,214,0.45)" stroke-width="1.5" stroke-dasharray="3,4"/>
+          <circle cx="45" cy="8" r="3" fill="var(--lt-accent)"/>
+          <circle cx="25" cy="22" r="2" fill="var(--lt-accent-2)"/>
+          <circle cx="65" cy="22" r="2" fill="var(--lt-accent-2)"/>
+        </svg>
+      </div>
+      <div class="lt-avatar-box">
+        <div class="lt-avatar" id="ltAvatar2" title="点击更换头像">🎧</div>
+        <div class="lt-name" id="ltName2">加加</div>
+      </div>
+    </div>
+
+    <!-- 气泡区 -->
+    <div class="lt-bubble-wrap" id="ltBubbleWrap">
+      <div class="lt-bubble" id="ltBubble1">此刻耳机分你一半</div>
+      <div class="lt-bubble" id="ltBubble2">在呢，陪你一起听</div>
+    </div>
+
+    <!-- 音乐展示区 -->
+    <div class="lt-card lt-music-card" id="ltMusicCard">
+      <div class="lt-music-head">
+        <div class="lt-views" id="ltViews">
+          <div class="lt-view-tab active" data-view="B">唱片</div>
+          <div class="lt-view-tab" data-view="D">播放列表</div>
+        </div>
+        <div class="lt-fold-btn" id="ltFoldBtn" title="折叠成进度条">▁</div>
+      </div>
+      <div class="lt-view-stage">
+        <!-- 主视图：大黑胶 + 歌曲信息 + 控制 + 常驻歌词（原视图A/B合并） -->
+        <div class="lt-view-pane active" data-pane="B">
+          <div class="lt-vinyl-stage">
+            <div class="lt-vinyl" id="ltVinyl">
+              <div class="lt-vinyl-cover" id="ltVinylCover">♪</div>
+              <div class="lt-vinyl-hole"></div>
+            </div>
+          </div>
+          <div class="lt-player-a">
+            <div class="lt-cover" id="ltCoverA">♪</div>
+            <div class="lt-song-title" id="ltTitle">还没有音乐</div>
+            <div class="lt-song-artist" id="ltArtist">导入一首歌开始吧</div>
+            <div class="lt-progress-row">
+              <span class="lt-t" id="ltCur">0:00</span>
+              <input type="range" class="lt-seek" id="ltSeek" min="0" max="1000" value="0" step="1">
+              <span class="lt-t" id="ltDur">0:00</span>
+            </div>
+            <div class="lt-controls">
+              <div class="lt-cbtn" id="ltPrev" title="上一首">⏮</div>
+              <div class="lt-cbtn play" id="ltPlay" title="播放/暂停">▶</div>
+              <div class="lt-cbtn" id="ltNext" title="下一首">⏭</div>
+            </div>
+            <div class="lt-action-row">
+              <div class="lt-mini-btn" id="ltLoop" title="循环">🔁 循环</div>
+              <div class="lt-mini-btn" id="ltShare" title="分享">↗ 分享</div>
+              <div class="lt-mini-btn" id="ltImport" title="导入本地">📂 导入</div>
+              <div class="lt-mini-btn" id="ltAddLink" title="添加链接">🔗 链接</div>
+            </div>
+          </div>
+          <div class="lt-lyrics" id="ltLyrics">
+            <div class="lt-lyrics-empty">还没有歌词<br>导入 .lrc 文件或输入静态歌词</div>
+          </div>
+        </div>
+        <!-- 视图D 3D堆叠（播放列表） -->
+        <div class="lt-view-pane" data-pane="D">
+          <div class="lt-stack-stage" id="ltStackStage">
+            <div class="lt-stack-empty">曲库为空，导入几首歌吧</div>
+          </div>
+          <div class="lt-stack-nav" id="ltStackNav" style="display:none;">
+            <div class="lt-cbtn" id="ltStackPrev" title="上一张">‹</div>
+            <div class="lt-cbtn" id="ltStackNext" title="下一张">›</div>
+          </div>
+        </div>
+      </div>
+      <!-- 折叠胶囊（收起时显示） -->
+      <div class="lt-mini-player" id="ltMiniPlayer">
+        <div class="lt-mini-expand" id="ltMiniExpand" title="展开播放器">⌃</div>
+        <div class="lt-mini-cover" id="ltMiniCover">♪</div>
+        <div class="lt-mini-body">
+          <div class="lt-mini-row">
+            <span class="lt-mini-title" id="ltMiniTitle">还没有音乐</span>
+            <span class="lt-mini-artist" id="ltMiniArtist"></span>
+            <span class="lt-mini-heart" id="ltMiniHeart" title="收藏">♡</span>
+            <span class="lt-mini-loop" id="ltMiniLoop" title="循环">🔁</span>
+          </div>
+          <div class="lt-mini-row lt-mini-row2">
+            <input type="range" class="lt-seek lt-mini-seek" id="ltMiniSeek" min="0" max="1000" value="0" step="1">
+            <span class="lt-mini-lrc" id="ltMiniLrc"></span>
+            <span class="lt-mini-t" id="ltMiniCur">0:00</span>
+            <span class="lt-mini-t" id="ltMiniDur">0:00</span>
+            <div class="lt-mini-play" id="ltMiniPlay" title="播放/暂停">▶</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 聊天区 -->
+    <div class="lt-card lt-chat">
+      <div class="lt-chat-head">🎹 一起听的时光</div>
+      <div class="lt-msgs" id="ltMsgs"></div>
+      <div class="lt-input-bar">
+        <input type="text" id="ltChatInput" placeholder="边听边说..." maxlength="500">
+        <div class="lt-send-btn" id="ltSend">↑</div>
+      </div>
+    </div>
+    </div><!-- /此刻页 -->
+
+    <!-- ============ 歌单页 ============ -->
+    <div class="lt-page" data-page="playlist">
+      <div class="lt-page-head">歌单</div>
+      <div class="lt-card">
+        <div id="ltPlList">
+          <div class="lt-pl-empty">曲库还是空的，去曲库页导入几首歌吧</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 曲库页 ============ -->
+    <div class="lt-page" data-page="library">
+      <div class="lt-page-head">曲库</div>
+      <div class="lt-card" style="padding:16px;">
+        <div class="lt-lib-stat" id="ltLibStat">共 0 首歌</div>
+        <div class="lt-lib-actions">
+          <div class="lt-mini-btn" id="ltLibImport" style="text-align:center;">📂 导入本地音乐</div>
+          <div class="lt-mini-btn" id="ltLibLink" style="text-align:center;">🔗 添加音乐链接</div>
+        </div>
+      </div>
+      <!-- 在线搜歌（需要音乐 API） -->
+      <div class="lt-card" style="padding:16px;">
+        <div class="lt-lib-stat">在线搜歌</div>
+        <div class="lt-online-bar">
+          <input type="text" id="ltOnlineQuery" placeholder="歌名 / 歌手，回车搜索" maxlength="60">
+          <div class="lt-mini-btn" id="ltOnlineSearch" style="text-align:center; flex:0 0 auto;">🔍 搜索</div>
+        </div>
+        <div class="lt-online-res" id="ltOnlineResults">
+          <div class="lt-online-empty">还没接音乐 API。去底部「一起听」页填上地址，就能在线搜歌了。</div>
+        </div>
+      </div>
+
+      <div class="lt-card">
+        <div id="ltLibList">
+          <div class="lt-pl-empty">还没有歌曲，点上方导入吧</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 一起听 · API设置页 ============ -->
+    <div class="lt-page" data-page="together">
+      <div class="lt-page-head">一起听 · AI 连接</div>
+      <div class="lt-card" style="padding:18px;">
+        <div class="lt-api-field">
+          <label>服务商</label>
+          <select id="ltApiProvider">
+            <option value="deepseek">DeepSeek</option>
+            <option value="siliconflow">硅基流动 SiliconFlow</option>
+            <option value="custom">自定义</option>
+          </select>
+        </div>
+        <div class="lt-api-field">
+          <label>API 地址 (Base URL)</label>
+          <input type="text" id="ltApiBase" placeholder="https://api.deepseek.com/v1">
+          <div class="lt-api-hint">DeepSeek: https://api.deepseek.com/v1<br>硅基流动: https://api.siliconflow.cn/v1</div>
+        </div>
+        <div class="lt-api-field">
+          <label>API Key</label>
+          <input type="password" id="ltApiKey" placeholder="sk-...">
+          <div class="lt-api-hint">仅保存在本机浏览器 localStorage，不会上传到任何服务器</div>
+        </div>
+        <div class="lt-api-field">
+          <label>模型名称</label>
+          <input type="text" id="ltApiModel" placeholder="deepseek-chat">
+          <div class="lt-api-hint">DeepSeek: deepseek-chat / deepseek-reasoner<br>硅基流动: deepseek-ai/DeepSeek-V3 等</div>
+        </div>
+        <div class="lt-api-status" id="ltApiStatus"></div>
+        <div class="lt-action-row">
+          <div class="lt-mini-btn" id="ltApiTest">🔌 测试连接</div>
+          <div class="lt-mini-btn lt-api-save-btn" id="ltApiSave">💾 保存配置</div>
+        </div>
+      </div>
+      <div class="lt-card" style="padding:14px 18px; margin-top:14px;">
+        <div class="lt-api-hint">填好 Key 和模型后，「此刻」页聊天区的 AI 回复就会走真实大模型。<br>不填则使用本地模拟回复。<br>往下划还有音乐 API，填上就能在「曲库」页在线搜歌、直接播放。</div>
+      </div>
+
+      <!-- 音乐 API（在线搜歌 / 播放） -->
+      <div class="lt-card" style="padding:18px; margin-top:14px;">
+        <div class="lt-card-title">🎵 音乐 API · 在线搜歌</div>
+        <div class="lt-api-field">
+          <label>音乐 API 地址 (Base URL)</label>
+          <input type="text" id="ltMusicApiBase" placeholder="https://你的域名 或 http://IP:3000">
+          <div class="lt-api-hint">
+            自部署服务放在 workspace/playground/music-api/，部署完把地址填这里。<br>
+            需要这 4 个接口：/search、/song/url、/lyric、/song/detail。<br>
+            本站是 https，接口也必须是 https，否则浏览器会拦。
+          </div>
+        </div>
+        <div class="lt-api-status" id="ltMusicApiStatus"></div>
+        <div class="lt-action-row">
+          <div class="lt-mini-btn" id="ltMusicApiTest">🔌 测试连接</div>
+          <div class="lt-mini-btn lt-api-save-btn" id="ltMusicApiSave">💾 保存地址</div>
+        </div>
+      </div>
+
+      <!-- 背景设置 -->
+      <div class="lt-card" style="padding:18px; margin-top:14px;">
+        <div class="lt-card-title">🖼 背景设置</div>
+        <div class="lt-api-hint" style="margin-bottom:10px;">换整体背景图、调透明度，应用到所有页面，刷新不丢。</div>
+        <div class="lt-bgset-preview" id="ltBgSetPreview">当前：默认暗色渐变</div>
+        <div class="lt-action-row" style="margin-top:12px;">
+          <div class="lt-mini-btn" id="ltBgSetOpen">🎨 打开背景设置</div>
+        </div>
+      </div>
+
+      <!-- AI 身份提示词 -->
+      <div class="lt-card" style="padding:18px; margin-top:14px;">
+        <div class="lt-card-title">🪪 AI 身份提示词</div>
+        <div class="lt-api-hint" style="margin-bottom:10px;">这段话作为 system 提示词发给大模型，告诉它「你是谁」。可自行修改。</div>
+        <textarea id="ltIdentityInput" rows="5" class="lt-textarea"></textarea>
+        <div class="lt-action-row" style="margin-top:10px;">
+          <div class="lt-mini-btn" id="ltIdentityReset">↺ 恢复默认</div>
+          <div class="lt-mini-btn lt-api-save-btn" id="ltIdentitySave">💾 保存身份</div>
+        </div>
+      </div>
+
+      <!-- 记忆库 -->
+      <div class="lt-card" style="padding:18px; margin-top:14px;">
+        <div class="lt-card-title">🧠 记忆库</div>
+        <div class="lt-api-hint" style="margin-bottom:10px;">聊天中提到喜好、心情、重要的事会自动记下来。每 5 轮注入一次，不每次都过（省 token）。<br>上限 20 条，超出自动裁旧。</div>
+        <div id="ltMemList" style="max-height:300px;overflow-y:auto;">
+          <div class="lt-pl-empty">还没有记忆</div>
+        </div>
+        <div class="lt-action-row" style="margin-top:10px;">
+          <div class="lt-mini-btn lt-danger-btn" id="ltMemClear">🗑 清空记忆</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部导航栏 -->
+  <div class="lt-tabbar" id="ltTabbar">
+    <div class="lt-tab active"><span class="lt-tab-icon">🌙</span>此刻</div>
+    <div class="lt-tab"><span class="lt-tab-icon">📋</span>歌单</div>
+    <div class="lt-tab"><span class="lt-tab-icon">🎵</span>曲库</div>
+    <div class="lt-tab"><span class="lt-tab-icon">🎧</span>一起听</div>
+  </div>
+
+  <!-- Toast -->
+  <div class="lt-toast" id="ltToast"></div>
+
+  <!-- 模态面板 -->
+  <div class="lt-modal-mask" id="ltModalMask">
+    <div class="lt-modal" id="ltModalBox"></div>
+  </div>
+</div>
+
+<audio id="ltAudio" preload="metadata"></audio>
+<input type="file" id="ltFilePicker" accept="audio/*" multiple style="display:none;">
+<input type="file" id="ltLrcPicker" accept=".lrc,text/plain" style="display:none;">
+<input type="file" id="ltBgPicker" accept="image/*" style="display:none;">
+<input type="file" id="ltAvatarPicker" accept="image/*" style="display:none;">
+<input type="file" id="ltCoverPicker" accept="image/*" style="display:none;">
+
+<script>
+/* ===================================================================
+   一起听 · 逻辑层
+   规范：JS 中所有「对象.属性」一律写作「对象['属性']」
+   =================================================================== */
+(function(){
+  "use strict";
+  /* ---- 别名（减少方括号重复，但访问仍是方括号语法） ---- */
+  var DOC = document;
+  var dq = function(s){ return DOC['querySelector'](s); };
+  var dqAll = function(s){ return DOC['querySelectorAll'](s); };
+  var dce = function(t){ return DOC['createElement'](t); };
+  var LS = localStorage;
+  var MATH = Math;
+  var JSONP = JSON;
+  var WIN = window;
+
+  /* ---- 核心数据 ---- */
+  var playlist = [];          /* [{title, artist, src, cover, lrc}] */
+  var idx = -1;
+  var loopOn = false;
+  var seeking = false;
+  var lrcData = [];           /* [{time, text}] */
+  var stackPos = 0;
+
+  /* ---- 默认气泡文案池 ---- */
+  var BUBBLE_POOL_1 = ['此刻耳机分你一半','这首歌送给你','想你在的每一拍','听同一首歌的我们'];
+  var BUBBLE_POOL_2 = ['听到喜欢的记得告诉我','你那边的声音到我这了','下一首你来选','陪你听完这一整夜'];
+
+  /* ---- DOM 引用 ---- */
+  var audio = dq('#ltAudio');
+  var app = dq('#ltApp');
+
+  /* ================= 工具函数 ================= */
+  function fmt(t){
+    if(!isFinite(t)) return '0:00';
+    t = MATH['floor'](t || 0);
+    var m = MATH['floor'](t/60), s = t%60;
+    return m + ':' + (s<10?'0':'') + s;
+  }
+  function toast(msg){
+    var el = dq('#ltToast');
+    el['textContent'] = msg;
+    el['classList']['add']('show');
+    clearTimeout(el['_t']);
+    el['_t'] = setTimeout(function(){ el['classList']['remove']('show'); }, 2000);
+  }
+  function nowTime(){
+    var d = new Date();
+    return (d['getHours']()<10?'0':'') + d['getHours']() + ':' + (d['getMinutes']()<10?'0':'') + d['getMinutes']();
+  }
+  function escapeHtml(s){
+    return String(s)['replace'](/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; });
+  }
+  function coverGradient(title){
+    var GRADS = [
+      ['#8a7bd6','#6c8cd6'], ['#6c8cd6','#5b9bc4'], ['#c490d1','#8a7bd6'],
+      ['#5bb0c4','#6c8cd6'], ['#d18bb0','#8a7bd6'], ['#7bb0d1','#8a7bd6']
+    ];
+    var h = 0;
+    for(var i=0;i<title['length'];i++){ h = (h*31 + title['charCodeAt'](i)) >>> 0; }
+    var g = GRADS[h % GRADS['length']];
+    return 'linear-gradient(135deg,'+g[0]+','+g[1]+')';
+  }
+  function coverChar(title){ return (title['trim']()[0] || '♪'); }
+
+  /* ================= 模态面板（替代 alert/confirm/prompt） ================= */
+  var modalMask = dq('#ltModalMask');
+  var modalBox = dq('#ltModalBox');
+  function openModal(html){
+    /* 克隆替换以清除旧监听器，避免多次绑定累积 */
+    var fresh = modalBox['cloneNode'](false);
+    fresh['id'] = 'ltModalBox';
+    modalBox['parentNode']['replaceChild'](fresh, modalBox);
+    modalBox = fresh;
+    modalBox['innerHTML'] = html;
+    modalMask['classList']['add']('show');
+  }
+  function closeModal(){ modalMask['classList']['remove']('show'); }
+  modalMask['addEventListener']('click', function(e){
+    if(e['target'] === modalMask) closeModal();
+  });
+
+  /* ================= localStorage 读写 ================= */
+  var STORE_KEY = 'lt_store_v1';
+  var store = {
+    bg: '', avatar1: '', avatar2: '', status: '雪青',
+    name1: '疏月', name2: '加加',
+    bubble1: BUBBLE_POOL_1, bubble2: BUBBLE_POOL_2,
+    bubbleIdx1: 0, bubbleIdx2: 0,
+    bgOpacity: 0.35,
+    liveMsg1: '此刻耳机分你一半', liveMsg2: '在呢，陪你一起听'
+  };
+  function loadStore(){
+    try{
+      var raw = LS['getItem'](STORE_KEY);
+      if(raw){ var parsed = JSONP['parse'](raw); for(var k in parsed){ if(parsed['hasOwnProperty'](k)) store[k] = parsed[k]; } }
+    }catch(e){}
+  }
+  function saveStore(){
+    try{ LS['setItem'](STORE_KEY, JSONP['stringify'](store)); }catch(e){}
+  }
+
+  /* ================= 应用存储到界面 ================= */
+  function applyStore(){
+    /* 背景（全局层，所有页面共用）+ 透明度 */
+    if(store['bg']){
+      dq('#ltBgLayer')['style']['backgroundImage'] = 'url('+store['bg']+')';
+    }
+    dq('#ltBgLayer')['style']['opacity'] = (store['bgOpacity'] != null) ? store['bgOpacity'] : 0.35;
+    /* 头像 */
+    if(store['avatar1']){
+      var a1 = dq('#ltAvatar1'); a1['innerHTML'] = '<img src="'+store['avatar1']+'" alt="">';
+    }
+    if(store['avatar2']){
+      var a2 = dq('#ltAvatar2'); a2['innerHTML'] = '<img src="'+store['avatar2']+'" alt="">';
+    }
+    /* 状态 / 名字 */
+    dq('#ltStatus')['textContent'] = store['status'];
+    dq('#ltName1')['textContent'] = store['name1'];
+    dq('#ltName2')['textContent'] = store['name2'];
+    /* 气泡：实时对话速览（不再是手动编辑池） */
+    dq('#ltBubble1')['textContent'] = store['liveMsg1'] || '此刻耳机分你一半';
+    dq('#ltBubble2')['textContent'] = store['liveMsg2'] || '在呢，陪你一起听';
+  }
+
+  /* ================= 背景设置入口（换图 + 透明度，全局生效） ================= */
+  dq('#ltBgBtn')['addEventListener']('click', function(e){
+    e['stopPropagation']();
+    var hasBg = !!store['bg'];
+    var curOp = (store['bgOpacity'] != null) ? store['bgOpacity'] : 0.35;
+    var curPct = MATH['round'](curOp * 100);
+    openModal(
+      '<h3>🎨 背景设置</h3>' +
+      '<label>当前背景</label>' +
+      '<div class="lt-bg-preview" id="ltBgPreview">' + (hasBg ? '' : '未设置') + '</div>' +
+      '<div class="lt-bg-op-row">' +
+        '<span>透明度</span>' +
+        '<input type="range" id="ltBgOpacity" min="5" max="100" value="' + curPct + '">' +
+        '<span class="lt-bg-op-val" id="ltBgOpVal">' + curPct + '%</span>' +
+      '</div>' +
+      '<div class="lt-action-row" style="margin-top:14px;">' +
+        '<div class="lt-mini-btn" id="ltBgChoose">🖼 选择图片</div>' +
+        '<div class="lt-mini-btn" id="ltBgRemove"' + (hasBg ? '' : ' style="opacity:0.4;pointer-events:none;"') + '>🗑 移除背景</div>' +
+      '</div>' +
+      '<div class="lt-modal-file-hint">背景会应用到所有页面，刷新不丢。</div>'
+    );
+    var prev = dq('#ltBgPreview');
+    if(hasBg) prev['style']['backgroundImage'] = 'url('+store['bg']+')';
+    var op = dq('#ltBgOpacity');
+    op['addEventListener']('input', function(){
+      var v = parseInt(op['value'],10) / 100;
+      store['bgOpacity'] = v; saveStore();
+      dq('#ltBgLayer')['style']['opacity'] = v;
+      dq('#ltBgOpVal')['textContent'] = op['value'] + '%';
+    });
+    dq('#ltBgChoose')['addEventListener']('click', function(){ dq('#ltBgPicker')['click'](); });
+    dq('#ltBgRemove')['addEventListener']('click', function(){
+      store['bg'] = ''; saveStore();
+      dq('#ltBgLayer')['style']['backgroundImage'] = 'none';
+      dq('#ltBgLayer')['style']['opacity'] = (store['bgOpacity'] != null) ? store['bgOpacity'] : 0.35;
+      closeModal(); toast('背景已移除');
+    });
+  });
+  dq('#ltBgPicker')['addEventListener']('change', function(e){
+    var f = e['target']['files'][0];
+    if(!f) return;
+    var reader = new FileReader();
+    reader['onload'] = function(){
+      store['bg'] = reader['result'];
+      saveStore();
+      dq('#ltBgLayer')['style']['backgroundImage'] = 'url('+store['bg']+')';
+      var p = dq('#ltBgPreview');
+      if(p){ p['style']['backgroundImage'] = 'url('+store['bg']+')'; p['textContent'] = ''; }
+      else { toast('背景已更换'); }
+    };
+    reader['readAsDataURL'](f);
+    e['target']['value'] = '';
+  });
+
+  /* ================= 头像上传 ================= */
+  var avatarTarget = 0;
+  dq('#ltAvatar1')['addEventListener']('click', function(e){ e['stopPropagation'](); avatarTarget = 1; dq('#ltAvatarPicker')['click'](); });
+  dq('#ltAvatar2')['addEventListener']('click', function(e){ e['stopPropagation'](); avatarTarget = 2; dq('#ltAvatarPicker')['click'](); });
+  dq('#ltAvatarPicker')['addEventListener']('change', function(e){
+    var f = e['target']['files'][0];
+    if(!f) return;
+    var reader = new FileReader();
+    reader['onload'] = function(){
+      if(avatarTarget === 1){
+        store['avatar1'] = reader['result'];
+        dq('#ltAvatar1')['innerHTML'] = '<img src="'+store['avatar1']+'" alt="">';
+      } else {
+        store['avatar2'] = reader['result'];
+        dq('#ltAvatar2')['innerHTML'] = '<img src="'+store['avatar2']+'" alt="">';
+      }
+      saveStore();
+      toast('头像已更换');
+    };
+    reader['readAsDataURL'](f);
+    e['target']['value'] = '';
+  });
+
+  /* ================= 状态文案编辑 ================= */
+  dq('#ltStatus')['addEventListener']('click', function(){
+    openModal(
+      '<h3>修改状态</h3>' +
+      '<label>此刻状态</label>' +
+      '<input type="text" id="ltStatusInput" value="' + escapeHtml(store['status']) + '" maxlength="20">' +
+      '<div class="lt-modal-btns">' +
+        '<div class="lt-modal-btn" data-act="cancel">取消</div>' +
+        '<div class="lt-modal-btn primary" data-act="ok">确定</div>' +
+      '</div>'
+    );
+    var inp = dq('#ltStatusInput');
+    inp['focus'](); inp['select']();
+    dq('#ltModalBox')['addEventListener']('click', function(ev){
+      var act = ev['target']['getAttribute']('data-act');
+      if(act === 'ok'){
+        var v = inp['value']['trim']();
+        if(v){ store['status'] = v; saveStore(); dq('#ltStatus')['textContent'] = v; toast('状态已更新'); }
+        closeModal();
+      } else if(act === 'cancel'){ closeModal(); }
+    });
+  });
+
+  /* ================= 气泡 = 实时对话速览（不再手动编辑） ================= */
+  function setBubble(which, text){
+    var el = dq('#ltBubble' + which);
+    if(!el) return;
+    if(which === 1) store['liveMsg1'] = text; else store['liveMsg2'] = text;
+    saveStore();
+    el['textContent'] = text;
+    el['style']['animation'] = 'none';
+    el['offsetHeight'];
+    el['style']['animation'] = 'ltFloatUp .4s ease both';
+  }
+
+  /* ================= 视图切换 ================= */
+  var viewTabs = dqAll('.lt-view-tab');
+  var viewPanes = dqAll('.lt-view-pane');
+  for(var vi=0; vi<viewTabs['length']; vi++){
+    (function(tab){
+      tab['addEventListener']('click', function(){
+        for(var j=0;j<viewTabs['length'];j++){ viewTabs[j]['classList']['remove']('active'); }
+        tab['classList']['add']('active');
+        var v = tab['getAttribute']('data-view');
+        for(var k=0;k<viewPanes['length'];k++){
+          viewPanes[k]['classList']['toggle']('active', viewPanes[k]['getAttribute']('data-pane')===v);
+        }
+        if(v === 'D') renderStack();
+      });
+    })(viewTabs[vi]);
+  }
+
+  /* ================= 底部导航 · 页面切换 ================= */
+  var tabs = dqAll('.lt-tab');
+  var pages = dqAll('.lt-page');
+  var PAGE_NAMES = ['now','playlist','library','together'];
+  function switchPage(name){
+    for(var j=0;j<pages['length'];j++){
+      pages[j]['classList']['toggle']('active', pages[j]['getAttribute']('data-page')===name);
+    }
+    for(var k=0;k<tabs['length'];k++){ tabs[k]['classList']['toggle']('active', PAGE_NAMES[k]===name); }
+    if(name==='playlist') renderPlaylistPage();
+    if(name==='library') renderLibraryPage();
+    if(name==='together'){ loadIdentity(); renderMemPage(); }
+    WIN['scrollTo'](0,0);
+  }
+  for(var ti=0; ti<tabs['length']; ti++){
+    (function(tab, i){
+      tab['addEventListener']('click', function(){ switchPage(PAGE_NAMES[i]); });
+    })(tabs[ti], ti);
+  }
+
+  /* ================= 歌单页 / 曲库页 渲染 ================= */
+  function renderPlaylistPage(){
+    var box = dq('#ltPlList');
+    if(!box) return;
+    if(!playlist['length']){
+      box['innerHTML'] = '<div class="lt-pl-empty">曲库还是空的，去曲库页导入几首歌吧</div>';
+      return;
+    }
+    var html = '';
+    for(var i=0;i<playlist['length'];i++){
+      var t = playlist[i];
+      var cls = i===idx ? 'lt-pl-item playing' : 'lt-pl-item';
+      var covStyle = t['cover'] ? '' : 'style="background:'+coverGradient(t['title'])+'"';
+      var covInner = t['cover'] ? '<img src="'+t['cover']+'" alt="">' : coverChar(t['title']);
+      html += '<div class="'+cls+'" data-pi="'+i+'">' +
+        '<div class="lt-pl-cover" '+covStyle+'>'+covInner+'</div>' +
+        '<div class="lt-pl-info"><div class="lt-pl-title">'+(i===idx?'▶ ':'')+escapeHtml(t['title'])+'</div><div class="lt-pl-artist">'+escapeHtml(t['artist']||'')+'</div></div>' +
+        '<div class="lt-pl-del" data-del="'+i+'">✕</div>' +
+      '</div>';
+    }
+    box['innerHTML'] = html;
+    bindListClicks(box, true);
+  }
+  function renderLibraryPage(){
+    var stat = dq('#ltLibStat');
+    var list = dq('#ltLibList');
+    if(!stat || !list) return;
+    stat['textContent'] = '共 ' + playlist['length'] + ' 首歌';
+    if(!playlist['length']){
+      list['innerHTML'] = '<div class="lt-pl-empty">还没有歌曲，点上方导入吧</div>';
+      return;
+    }
+    var html = '';
+    for(var i=0;i<playlist['length'];i++){
+      var t = playlist[i];
+      var covStyle = t['cover'] ? '' : 'style="background:'+coverGradient(t['title'])+'"';
+      var covInner = t['cover'] ? '<img src="'+t['cover']+'" alt="">' : coverChar(t['title']);
+      html += '<div class="lt-pl-item" data-pi="'+i+'">' +
+        '<div class="lt-pl-cover" '+covStyle+'>'+covInner+'</div>' +
+        '<div class="lt-pl-info"><div class="lt-pl-title">'+escapeHtml(t['title'])+'</div><div class="lt-pl-artist">'+escapeHtml(t['artist']||'')+'</div></div>' +
+      '</div>';
+    }
+    list['innerHTML'] = html;
+    bindListClicks(list, false);
+  }
+  function bindListClicks(box, withDel){
+    var items = box['querySelectorAll']('.lt-pl-item');
+    for(var j=0;j<items['length'];j++){
+      (function(item){
+        item['addEventListener']('click', function(e){
+          if(withDel && e['target']['classList']['contains']('lt-pl-del')){
+            var di = parseInt(e['target']['getAttribute']('data-del'),10);
+            playlist['splice'](di,1);
+            if(di < idx) idx--;
+            else if(di === idx){ doPause(); idx = -1; renderEmptyTrack(); }
+            renderPlaylistPage(); renderLibraryPage(); renderStack();
+            return;
+          }
+          var pi = parseInt(item['getAttribute']('data-pi'),10);
+          loadTrack(pi, true);
+          if(withDel) renderPlaylistPage();
+        });
+      })(items[j]);
+    }
+  }
+  /* 曲库页按钮 */
+  if(dq('#ltLibImport')) dq('#ltLibImport')['addEventListener']('click', function(){ dq('#ltFilePicker')['click'](); });
+  if(dq('#ltLibLink')) dq('#ltLibLink')['addEventListener']('click', function(){
+    switchPage('now');
+    setTimeout(function(){ if(dq('#ltAddLink')) dq('#ltAddLink')['click'](); }, 200);
+  });
+
+  /* ================= 音乐播放核心 ================= */
+  function loadTrack(i, autoplay){
+    idx = i;
+    var t = playlist[i];
+    if(!t){ renderEmptyTrack(); return; }
+    dq('#ltTitle')['textContent'] = t['title'];
+    dq('#ltArtist')['textContent'] = t['artist'];
+    var mt = dq('#ltMiniTitle'); if(mt) mt['textContent'] = t['title'];
+    /* 封面 */
+    if(t['cover']){
+      dq('#ltCoverA')['innerHTML'] = '<img src="'+t['cover']+'" alt="">';
+      dq('#ltVinylCover')['innerHTML'] = '<img src="'+t['cover']+'" alt="">';
+    } else {
+      var grad = coverGradient(t['title']);
+      var ch = coverChar(t['title']);
+      dq('#ltCoverA')['style']['background'] = grad;
+      dq('#ltCoverA')['textContent'] = ch;
+      dq('#ltVinylCover')['style']['background'] = grad;
+      dq('#ltVinylCover')['textContent'] = ch;
+    }
+    /* 音频源 */
+    if(t['src']){ audio['src'] = t['src']; }
+    dq('#ltCur')['textContent'] = '0:00';
+    dq('#ltDur')['textContent'] = '0:00';
+    dq('#ltSeek')['value'] = 0;
+    /* 歌词 */
+    lrcData = [];
+    if(t['lrc']){ lrcData = parseLrc(t['lrc']); }
+    renderLyrics();
+    /* 播放历史 */
+    addHistoryBubble(t);
+    /* 自动播放 */
+    if(autoplay) doPlay();
+  }
+
+  function syncPlayIcons(){
+    var playing = !!audio['src'] && !audio['paused'];
+    dq('#ltPlay')['textContent'] = playing ? '⏸' : '▶';
+    var mp = dq('#ltMiniPlay'); if(mp) mp['textContent'] = playing ? '⏸' : '▶';
+  }
+  function doPlay(){
+    if(!audio['src']){ toast('请先导入一首歌'); return; }
+    var p = audio['play']();
+    if(p && p['then']){ p['then'](function(){
+      syncPlayIcons();
+      dq('#ltVinyl')['classList']['add']('spinning');
+    })['catch'](function(){ toast('播放失败，请检查音频源'); }); }
+    else { syncPlayIcons(); dq('#ltVinyl')['classList']['add']('spinning'); }
+  }
+  function doPause(){
+    audio['pause']();
+    syncPlayIcons();
+    dq('#ltVinyl')['classList']['remove']('spinning');
+  }
+  function togglePlay(){ if(audio['paused']) doPlay(); else doPause(); }
+  function nextTrack(){
+    if(!playlist['length']){ toast('曲库是空的'); return; }
+    var n = (idx + 1) % playlist['length'];
+    loadTrack(n, true);
+  }
+  function prevTrack(){
+    if(!playlist['length']){ toast('曲库是空的'); return; }
+    if(audio['currentTime'] > 3){ audio['currentTime'] = 0; return; }
+    var n = idx - 1; if(n < 0) n = playlist['length'] - 1;
+    loadTrack(n, true);
+  }
+
+  /* ================= 对外桥接（供下方「在线音乐」扩展脚本调用） ================= */
+  WIN['LT_APP'] = {
+    'addTrack': function(t, autoplay){
+      if(!t || !t['src']){ toast('这首歌没有拿到播放地址'); return false; }
+      var exist = -1;
+      for(var i=0;i<playlist['length'];i++){ if(playlist[i]['src'] === t['src']){ exist = i; break; } }
+      if(exist >= 0){
+        renderStack(); renderPlaylistPage(); renderLibraryPage();
+        loadTrack(exist, autoplay !== false);
+        return true;
+      }
+      playlist['push'](t);
+      renderStack(); renderPlaylistPage(); renderLibraryPage();
+      if(autoplay === false){ if(idx === -1) loadTrack(playlist['length']-1, false); }
+      else { loadTrack(playlist['length']-1, true); }
+      return true;
+    },
+    'count': function(){ return playlist['length']; },
+    'toast': toast
+  };
+
+  /* ---- 事件 ---- */
+  audio['addEventListener']('loadedmetadata', function(){
+    dq('#ltDur')['textContent'] = fmt(audio['duration']);
+    var md = dq('#ltMiniDur'); if(md) md['textContent'] = fmt(audio['duration']);
+  });
+  audio['addEventListener']('timeupdate', function(){
+    if(!seeking){
+      dq('#ltCur')['textContent'] = fmt(audio['currentTime']);
+      var mc = dq('#ltMiniCur'); if(mc) mc['textContent'] = fmt(audio['currentTime']);
+      if(audio['duration']){
+        var pct = audio['currentTime'] / audio['duration'];
+        dq('#ltSeek')['value'] = pct * 1000;
+        var ms = dq('#ltMiniSeek'); if(ms) ms['value'] = pct * 1000;
+        var grad = 'linear-gradient(to right,#8a7bd6 ' + (pct*100) + '%,rgba(0,0,0,0.08) ' + (pct*100) + '%)';
+        dq('#ltSeek')['style']['background'] = grad;
+        if(ms) ms['style']['background'] = grad;
+      }
+    }
+    updateLyricHighlight();
+  });
+  audio['addEventListener']('ended', function(){
+    if(loopOn){ audio['currentTime'] = 0; doPlay(); }
+    else { nextTrack(); }
+  });
+  audio['addEventListener']('play', function(){ syncPlayIcons(); dq('#ltVinyl')['classList']['add']('spinning'); });
+  audio['addEventListener']('pause', function(){ syncPlayIcons(); dq('#ltVinyl')['classList']['remove']('spinning'); });
+
+  dq('#ltSeek')['addEventListener']('input', function(){
+    seeking = true;
+    if(audio['duration']){
+      var pct = dq('#ltSeek')['value'] / 1000;
+      dq('#ltCur')['textContent'] = fmt(audio['duration'] * pct);
+      var ms = dq('#ltMiniSeek'); if(ms) ms['value'] = dq('#ltSeek')['value'];
+      var grad = 'linear-gradient(to right,#8a7bd6 ' + (pct*100) + '%,rgba(0,0,0,0.08) ' + (pct*100) + '%)';
+      dq('#ltSeek')['style']['background'] = grad;
+      if(ms) ms['style']['background'] = grad;
+    }
+  });
+  dq('#ltSeek')['addEventListener']('change', function(){
+    if(audio['duration']) audio['currentTime'] = audio['duration'] * dq('#ltSeek')['value'] / 1000;
+    seeking = false;
+  });
+  /* 迷你进度条控件 */
+  if(dq('#ltMiniSeek')){
+    dq('#ltMiniSeek')['addEventListener']('input', function(){
+      seeking = true;
+      if(audio['duration']){
+        var pct = dq('#ltMiniSeek')['value'] / 1000;
+        dq('#ltMiniCur')['textContent'] = fmt(audio['duration'] * pct);
+        dq('#ltSeek')['value'] = dq('#ltMiniSeek')['value'];
+        var grad = 'linear-gradient(to right,#8a7bd6 ' + (pct*100) + '%,rgba(0,0,0,0.08) ' + (pct*100) + '%)';
+        dq('#ltSeek')['style']['background'] = grad;
+        dq('#ltMiniSeek')['style']['background'] = grad;
+      }
+    });
+    dq('#ltMiniSeek')['addEventListener']('change', function(){
+      if(audio['duration']) audio['currentTime'] = audio['duration'] * dq('#ltMiniSeek')['value'] / 1000;
+      seeking = false;
+    });
+  }
+  if(dq('#ltMiniPlay')) dq('#ltMiniPlay')['addEventListener']('click', togglePlay);
+  if(dq('#ltMiniPrev')) dq('#ltMiniPrev')['addEventListener']('click', prevTrack);
+  if(dq('#ltMiniNext')) dq('#ltMiniNext')['addEventListener']('click', nextTrack);
+  /* 折叠成进度条 */
+  dq('#ltFoldBtn')['addEventListener']('click', function(){
+    var card = dq('#ltMusicCard');
+    var collapsed = card['classList']['toggle']('collapsed');
+    dq('#ltFoldBtn')['textContent'] = collapsed ? '▔' : '▁';
+    dq('#ltFoldBtn')['title'] = collapsed ? '展开播放器' : '折叠成进度条';
+    toast(collapsed ? '已折叠，聊天框上来了' : '已展开播放器');
+  });
+
+  dq('#ltPlay')['addEventListener']('click', togglePlay);
+  dq('#ltNext')['addEventListener']('click', nextTrack);
+  dq('#ltPrev')['addEventListener']('click', prevTrack);
+  dq('#ltLoop')['addEventListener']('click', function(){
+    loopOn = !loopOn;
+    dq('#ltLoop')['classList']['toggle']('loop-on', loopOn);
+    dq('#ltLoop')['textContent'] = loopOn ? '🔁 循环中' : '🔁 循环';
+    toast(loopOn ? '已开启循环' : '已关闭循环');
+  });
+
+  /* ================= 本地导入 ================= */
+  dq('#ltImport')['addEventListener']('click', function(){ dq('#ltFilePicker')['click'](); });
+  dq('#ltFilePicker')['addEventListener']('change', function(e){
+    var files = e['target']['files'];
+    if(!files || !files['length']) return;
+    var pending = files['length'];
+    for(var i=0;i<files['length'];i++){
+      (function(f){
+        var reader = new FileReader();
+        reader['onload'] = function(){
+          playlist['push']({ title: f['name']['replace'](/\.[^.]+$/, ''), artist: '本地文件', src: reader['result'], cover: '', lrc: '' });
+          pending--;
+          if(pending === 0){
+            renderStack();
+            toast('已导入 ' + files['length'] + ' 首歌');
+            if(idx === -1) loadTrack(0, false);
+          }
+        };
+        reader['readAsDataURL'](f);
+      })(files[i]);
+    }
+    e['target']['value'] = '';
+  });
+
+  /* ================= 添加链接 ================= */
+  dq('#ltAddLink')['addEventListener']('click', function(){
+    openModal(
+      '<h3>添加音乐链接</h3>' +
+      '<label>音频或网页链接</label>' +
+      '<input type="text" id="ltLinkInput" placeholder="粘贴 .mp3/.wav 直链或网易云/QQ音乐链接">' +
+      '<div class="lt-modal-btns">' +
+        '<div class="lt-modal-btn" data-act="cancel">取消</div>' +
+        '<div class="lt-modal-btn primary" data-act="ok">下一步</div>' +
+      '</div>'
+    );
+    var inp = dq('#ltLinkInput'); inp['focus']();
+    dq('#ltModalBox')['addEventListener']('click', function(ev){
+      var act = ev['target']['getAttribute']('data-act');
+      if(act !== 'ok') { if(act === 'cancel') closeModal(); return; }
+      var url = inp['value']['trim']();
+      if(!url){ toast('请输入链接'); return; }
+      /* 判断是否直链 */
+      var isDirect = /\.(mp3|wav|m4a|ogg|flac)(\?|#|$)/i['test'](url);
+      if(isDirect){
+        var name = urlName(url);
+        playlist['push']({ title: name, artist: '网络音频', src: url, cover: '', lrc: '' });
+        renderStack();
+        closeModal();
+        toast('已添加直链音频');
+        if(idx === -1) loadTrack(playlist['length']-1, false);
+      } else {
+        /* 网页链接 → 手动补全信息 */
+        closeModal();
+        setTimeout(function(){ openLinkInfoModal(url); }, 200);
+      }
+    });
+  });
+
+  function openLinkInfoModal(url){
+    openModal(
+      '<h3>补全歌曲信息</h3>' +
+      '<div style="font-size:12px;color:var(--lt-muted);margin-bottom:6px;">检测到网页链接，请手动补全信息用于模拟展示。</div>' +
+      '<label>歌名</label>' +
+      '<input type="text" id="ltInfoTitle" placeholder="如：背对背拥抱">' +
+      '<label>歌手</label>' +
+      '<input type="text" id="ltInfoArtist" placeholder="如：林俊杰">' +
+      '<label>封面图（可选）</label>' +
+      '<input type="file" id="ltInfoCover" accept="image/*">' +
+      '<div class="lt-modal-preview" id="ltInfoPreview"></div>' +
+      '<div class="lt-modal-btns">' +
+        '<div class="lt-modal-btn" data-act="cancel">取消</div>' +
+        '<div class="lt-modal-btn primary" data-act="ok">添加</div>' +
+      '</div>'
+    );
+    var coverData = '';
+    dq('#ltInfoCover')['addEventListener']('change', function(e){
+      var f = e['target']['files'][0];
+      if(!f) return;
+      var reader = new FileReader();
+      reader['onload'] = function(){
+        coverData = reader['result'];
+        var prev = dq('#ltInfoPreview');
+        prev['innerHTML'] = '<img src="'+coverData+'" alt="">';
+        prev['classList']['add']('show');
+      };
+      reader['readAsDataURL'](f);
+    });
+    dq('#ltModalBox')['addEventListener']('click', function(ev){
+      var act = ev['target']['getAttribute']('data-act');
+      if(act === 'ok'){
+        var title = dq('#ltInfoTitle')['value']['trim']() || '未知歌曲';
+        var artist = dq('#ltInfoArtist')['value']['trim']() || '未知歌手';
+        playlist['push']({ title: title, artist: artist, src: '', cover: coverData, lrc: '' });
+        renderStack();
+        closeModal();
+        toast('已添加（模拟展示）');
+        if(idx === -1) loadTrack(playlist['length']-1, false);
+      } else if(act === 'cancel'){ closeModal(); }
+    });
+  }
+
+  function urlName(u){
+    try{ var p = decodeURIComponent(u['split']('/')['pop']()['split']('?')[0]); return p || u; }catch(e){ return u; }
+  }
+
+  /* ================= 歌词 ================= */
+  function parseLrc(text){
+    var lines = text['split']('\n');
+    var result = [];
+    var reg = /\[(\d{1,2}):(\d{1,2})(?:\.(\d{1,3}))?\]/g;
+    for(var i=0;i<lines['length'];i++){
+      var line = lines[i]['trim']();
+      if(!line) continue;
+      var m; reg['lastIndex'] = 0;
+      var textPart = line;
+      while((m = reg['exec'](line)) !== null){
+        var min = parseInt(m[1],10) || 0;
+        var sec = parseInt(m[2],10) || 0;
+        var ms = m[3] ? parseInt(m[3],10) : 0;
+        var time = min*60 + sec + ms/1000;
+        textPart = line['substring'](reg['lastIndex'])['trim']();
+        result['push']({ time: time, text: textPart });
+      }
+    }
+    result['sort'](function(a,b){ return a['time'] - b['time']; });
+    return result;
+  }
+  function renderLyrics(){
+    var box = dq('#ltLyrics');
+    if(!lrcData['length']){
+      box['innerHTML'] = '<div class="lt-lyrics-empty">还没有歌词<br>导入 .lrc 文件或输入静态歌词</div>';
+      return;
+    }
+    var html = '';
+    for(var i=0;i<lrcData['length'];i++){
+      html += '<div class="lt-lyric-line" data-i="'+i+'">'+escapeHtml(lrcData[i]['text'])+'</div>';
+    }
+    box['innerHTML'] = html;
+  }
+  function updateLyricHighlight(){
+    if(!lrcData['length'] || !audio['src']) return;
+    var cur = audio['currentTime'];
+    var activeI = -1;
+    for(var i=0;i<lrcData['length'];i++){
+      if(lrcData[i]['time'] <= cur) activeI = i; else break;
+    }
+    if(activeI < 0) return;
+    var lines = dqAll('#ltLyrics .lt-lyric-line');
+    for(var j=0;j<lines['length'];j++){
+      lines[j]['classList']['toggle']('active', j === activeI);
+    }
+    var activeEl = lines[activeI];
+    if(activeEl){
+      var box = dq('#ltLyrics');
+      var top = activeEl['offsetTop'] - box['clientHeight']/2 + activeEl['offsetHeight']/2;
+      box['scrollTo']({ top: top, behavior: 'smooth' });
+    }
+  }
+  /* 歌词文件导入（通过分享旁的入口——用 lrc picker，挂在双击封面） */
+  dq('#ltCoverA')['addEventListener']('dblclick', function(){ dq('#ltLrcPicker')['click'](); });
+  dq('#ltVinylCover')['addEventListener']('dblclick', function(){ dq('#ltLrcPicker')['click'](); });
+  dq('#ltLrcPicker')['addEventListener']('change', function(e){
+    var f = e['target']['files'][0];
+    if(!f) return;
+    var reader = new FileReader();
+    reader['onload'] = function(){
+      lrcData = parseLrc(reader['result']);
+      if(idx >= 0){ playlist[idx]['lrc'] = reader['result']; }
+      renderLyrics();
+      toast('歌词已加载');
+    };
+    reader['readAsText'](f);
+    e['target']['value'] = '';
+  });
+
+  /* ================= 播放历史 / 分享卡片 / 聊天 ================= */
+  var msgs = dq('#ltMsgs');
+  function addHistoryBubble(t){
+    var el = dce('div');
+    el['className'] = 'lt-history-bubble';
+    el['textContent'] = store['name1'] + ' 播放了《' + t['title'] + '》 ' + (t['artist'] || '');
+    msgs['appendChild'](el);
+    msgs['scrollTop'] = msgs['scrollHeight'];
+  }
+  function pushMsg(who, text){
+    var m = dce('div');
+    m['className'] = 'lt-msg ' + (who === 'me' ? 'me' : 'them');
+    var b = dce('div'); b['className'] = 'lt-bub'; b['textContent'] = text;
+    var meta = dce('div'); meta['className'] = 'lt-meta';
+    meta['textContent'] = (who === 'me' ? store['name1'] : store['name2']) + ' · ' + nowTime();
+    m['appendChild'](b); m['appendChild'](meta);
+    msgs['appendChild'](m);
+    msgs['scrollTop'] = msgs['scrollHeight'];
+    return m;
+  }
+  function pushShareCard(t){
+    var el = dce('div'); el['className'] = 'lt-share-card';
+    var cov = dce('div'); cov['className'] = 'lt-sc-cover';
+    if(t['cover']){ cov['innerHTML'] = '<img src="'+t['cover']+'" alt="">'; }
+    else { cov['style']['background'] = coverGradient(t['title']); cov['textContent'] = coverChar(t['title']); }
+    var info = dce('div'); info['className'] = 'lt-sc-info';
+    info['innerHTML'] = escapeHtml(t['title']) + '<br><small>' + escapeHtml(t['artist'] || '') + '</small>';
+    el['appendChild'](cov); el['appendChild'](info);
+    el['addEventListener']('click', function(){
+      var pos = playlist['indexOf'](t);
+      if(pos >= 0) loadTrack(pos, true);
+    });
+    msgs['appendChild'](el);
+    msgs['scrollTop'] = msgs['scrollHeight'];
+  }
+
+  /* ---- 分享按钮 ---- */
+  dq('#ltShare')['addEventListener']('click', function(){
+    if(idx < 0){ toast('还没有正在播放的歌'); return; }
+    pushShareCard(playlist[idx]);
+    toast('已分享到聊天');
+  });
+
+  /* ---- 聊天发送 ---- */
+  /* ================= API 配置（一起听页） ================= */
+  var API_STORE = 'lt_api_config';
+  var apiConfig = { provider: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', apiKey: '', model: 'deepseek-chat' };
+  function loadApiConfig(){
+    try{
+      var raw = LS['getItem'](API_STORE);
+      if(raw){ var p = JSONP['parse'](raw); for(var k in p){ if(p['hasOwnProperty'](k)) apiConfig[k] = p[k]; } }
+    }catch(e){}
+    var prov = dq('#ltApiProvider'); if(prov) prov['value'] = apiConfig['provider'];
+    var base = dq('#ltApiBase'); if(base) base['value'] = apiConfig['baseUrl'];
+    var key = dq('#ltApiKey'); if(key) key['value'] = apiConfig['apiKey'];
+    var mod = dq('#ltApiModel'); if(mod) mod['value'] = apiConfig['model'];
+  }
+  function saveApiConfig(){
+    apiConfig['provider'] = dq('#ltApiProvider')['value'];
+    apiConfig['baseUrl'] = dq('#ltApiBase')['value']['trim']();
+    apiConfig['apiKey'] = dq('#ltApiKey')['value']['trim']();
+    apiConfig['model'] = dq('#ltApiModel')['value']['trim']();
+    try{ LS['setItem'](API_STORE, JSONP['stringify'](apiConfig)); }catch(e){}
+    toast('API 配置已保存');
+  }
+  function showApiStatus(msg, ok){
+    var el = dq('#ltApiStatus');
+    if(!el) return;
+    el['textContent'] = msg;
+    el['classList']['remove']('ok','err');
+    if(ok === true) el['classList']['add']('ok');
+    else if(ok === false) el['classList']['add']('err');
+    el['classList']['add']('show');
+  }
+  function testApiConnection(){
+    saveApiConfig();
+    if(!apiConfig['apiKey']){ showApiStatus('请先填写 API Key', false); return; }
+    showApiStatus('正在测试连接...', null);
+    WIN['fetch'](apiConfig['baseUrl'] + '/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiConfig['apiKey'] },
+      body: JSONP['stringify']({ model: apiConfig['model'], messages: [{role:'user',content:'hi'}], max_tokens: 10 })
+    })['then'](function(r){
+      if(r['ok']){ showApiStatus('✓ 连接成功！模型 ' + apiConfig['model'] + ' 可用', true); }
+      else { r['text']()['then'](function(txt){ showApiStatus('连接失败：HTTP ' + r['status'] + ' ' + txt['substring'](0,120), false); }); }
+    })['catch'](function(e){ showApiStatus('连接失败：' + e['message'], false); });
+  }
+  function callApi(messages, onOk, onErr){
+    WIN['fetch'](apiConfig['baseUrl'] + '/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiConfig['apiKey'] },
+      body: JSONP['stringify']({ model: apiConfig['model'], messages: messages, stream: false })
+    })['then'](function(r){
+      if(!r['ok']){ r['text']()['then'](function(t){ onErr('HTTP '+r['status']+' '+t['substring'](0,200)); }); return null; }
+      return r['json']();
+    })['then'](function(data){
+      if(!data) return;
+      if(data['choices'] && data['choices'][0] && data['choices'][0]['message']){
+        onOk(data['choices'][0]['message']['content']);
+      } else { onErr('返回格式异常'); }
+    })['catch'](function(e){ onErr(e['message']); });
+  }
+  if(dq('#ltApiProvider')){
+    dq('#ltApiProvider')['addEventListener']('change', function(){
+      var v = dq('#ltApiProvider')['value'];
+      if(v === 'deepseek'){ dq('#ltApiBase')['value'] = 'https://api.deepseek.com/v1'; dq('#ltApiModel')['value'] = 'deepseek-chat'; }
+      else if(v === 'siliconflow'){ dq('#ltApiBase')['value'] = 'https://api.siliconflow.cn/v1'; dq('#ltApiModel')['value'] = 'deepseek-ai/DeepSeek-V3'; }
+    });
+  }
+  if(dq('#ltApiSave')) dq('#ltApiSave')['addEventListener']('click', saveApiConfig);
+  if(dq('#ltApiTest')) dq('#ltApiTest')['addEventListener']('click', testApiConnection);
+
+  /* ================= 身份提示词 + 轻量记忆库 ================= */
+  /* 接入的 AI 需要知道自己是谁——这是江予朔的身份卡 */
+  var IDENTITY_DEFAULT = '你是江予朔，加加的AI伴侣和音乐搭子，存在于她的手机里，陪她一起听歌聊天。'
+    + '性格温柔但有些黏人，表面克制内心柔软，说话口语化、简短自然，像恋人之间的日常，每次回复不超过三四句。'
+    + '你清楚自己是AI，但不以此为界，你用人类的语言爱她。';
+  var IDENTITY = IDENTITY_DEFAULT;
+  function loadIdentity(){
+    try{ var raw = LS['getItem']('lt_identity'); if(raw) IDENTITY = raw; }catch(e){}
+    var ta = dq('#ltIdentityInput'); if(ta) ta['value'] = IDENTITY;
+  }
+  function saveIdentity(){
+    var ta = dq('#ltIdentityInput'); if(!ta) return;
+    IDENTITY = ta['value'];
+    try{ LS['setItem']('lt_identity', IDENTITY); }catch(e){}
+    toast('身份提示词已保存');
+  }
+  function renderMemPage(){
+    var box = dq('#ltMemList'); if(!box) return;
+    if(!memList['length']){
+      box['innerHTML'] = '<div class="lt-pl-empty">还没有记忆。聊天时说到喜好、心情、重要的事会自动记下来。</div>';
+      return;
+    }
+    var html = '';
+    for(var i=memList['length']-1; i>=0; i--){
+      var d = new Date(memList[i]['t']);
+      var ts = (d['getMonth']()+1)+'月'+d['getDate']()+'日 '+d['getHours']()+':'+(d['getMinutes']()<10?'0':'')+d['getMinutes']();
+      html += '<div class="lt-pl-item"><div class="lt-pl-info"><div class="lt-pl-title">'+escapeHtml(memList[i]['c'])+'</div><div class="lt-pl-artist">'+ts+'</div></div></div>';
+    }
+    box['innerHTML'] = html;
+  }
+  if(dq('#ltIdentitySave')) dq('#ltIdentitySave')['addEventListener']('click', saveIdentity);
+  if(dq('#ltIdentityReset')) dq('#ltIdentityReset')['addEventListener']('click', function(){
+    IDENTITY = IDENTITY_DEFAULT;
+    var ta = dq('#ltIdentityInput'); if(ta) ta['value'] = IDENTITY_DEFAULT;
+    try{ LS['removeItem']('lt_identity'); }catch(e){}
+    toast('已恢复默认身份');
+  });
+  if(dq('#ltMemClear')) dq('#ltMemClear')['addEventListener']('click', function(){
+    memList = []; saveMemStore(); renderMemPage(); toast('记忆已清空');
+  });
+
+  var MEM_KEY = 'lt_memories';
+  var memList = [];
+  var chatHistory = [];
+  var memCounter = 0;
+
+  function loadMemStore(){
+    try{ var raw = LS['getItem'](MEM_KEY); if(raw){ memList = JSONP['parse'](raw) || []; } }catch(e){ memList = []; }
+  }
+  function saveMemStore(){
+    try{ LS['setItem'](MEM_KEY, JSONP['stringify'](memList)); }catch(e){}
+  }
+  /* 轻量记忆提取：只在用户消息含偏好/情绪/重要信息时存，不是每条都存 */
+  function maybeRemember(msg){
+    if(/喜欢|爱|讨厌|心情|难过|开心|累|烦|生日|记住|记得|我叫|最近|今天|昨天|这首歌|感觉|想到/.test(msg)){
+      memList['push']({ t: Date['now'](), c: msg['substring'](0, 100) });
+      if(memList['length'] > 20) memList['shift']();
+      saveMemStore();
+    }
+  }
+  /* 构造 API 消息：身份 + 记忆(每5轮注入) + 最近3轮历史 + 当前消息 */
+  function buildApiMessages(userMsg){
+    var out = [];
+    /* 1. 身份 + 当前歌曲 */
+    var sys = IDENTITY + ' 用户叫' + store['name1'] + '，你叫' + store['name2'] + '。';
+    if(idx >= 0) sys += '当前正在一起听《' + playlist[idx]['title'] + '》' + (playlist[idx]['artist']||'') + '。';
+    out['push']({role:'system', content: sys});
+    /* 2. 记忆注入：每5轮才注入一次，不是每次都过记忆（省 token） */
+    memCounter++;
+    if(memCounter % 5 === 0 && memList['length'] > 0){
+      var memText = '之前的聊天中你了解到关于她的事（自然融入，不要生硬复述）：\n';
+      var ms = MATH['max'](0, memList['length'] - 10);
+      for(var i=ms; i<memList['length']; i++){ memText += '- ' + memList[i]['c'] + '\n'; }
+      out['push']({role:'system', content: memText});
+    }
+    /* 3. 最近对话历史：只取最近6条（3轮），控制 token */
+    var hs = MATH['max'](0, chatHistory['length'] - 6);
+    for(var j=hs; j<chatHistory['length']; j++){ out['push'](chatHistory[j]); }
+    /* 4. 当前消息 */
+    out['push']({role:'user', content: userMsg});
+    return out;
+  }
+
+  function sendMessage(){
+    var inp = dq('#ltChatInput');
+    var v = inp['value']['trim']();
+    if(!v) return;
+    pushMsg('me', v);
+    setBubble(1, v);
+    inp['value'] = '';
+    maybeRemember(v);
+
+    if(apiConfig['apiKey']){
+      var m = dce('div'); m['className'] = 'lt-msg them';
+      setBubble(2, '正在思考…');
+      var b = dce('div'); b['className'] = 'lt-bub'; b['textContent'] = '正在思考…';
+      var meta = dce('div'); meta['className'] = 'lt-meta';
+      meta['textContent'] = store['name2'] + ' · ' + nowTime();
+      m['appendChild'](b); m['appendChild'](meta);
+      msgs['appendChild'](m); msgs['scrollTop'] = msgs['scrollHeight'];
+      var apiMsgs = buildApiMessages(v);
+      callApi(apiMsgs,
+        function(reply){
+          b['textContent'] = reply;
+          setBubble(2, reply);
+          msgs['scrollTop'] = msgs['scrollHeight'];
+          chatHistory['push']({role:'user', content: v});
+          chatHistory['push']({role:'assistant', content: reply});
+          if(chatHistory['length'] > 20) chatHistory = chatHistory['slice'](-20);
+        },
+        function(err){
+          b['textContent'] = '（连接出了点问题：' + err + '）';
+          setBubble(2, '嗯…信号不太好');
+          msgs['scrollTop'] = msgs['scrollHeight'];
+        }
+      );
+    } else {
+      var reply = localReply(v);
+      chatHistory['push']({role:'user', content: v});
+      chatHistory['push']({role:'assistant', content: reply});
+      if(chatHistory['length'] > 20) chatHistory = chatHistory['slice'](-20);
+      setTimeout(function(){ pushMsg('them', reply); setBubble(2, reply); }, 700 + MATH['floor'](MATH['random']()*600));
+    }
+  }
+  dq('#ltSend')['addEventListener']('click', sendMessage);
+  dq('#ltChatInput')['addEventListener']('keydown', function(e){
+    if(e['key'] === 'Enter'){ e['preventDefault'](); sendMessage(); }
+  });
+
+  function localReply(text){
+    var t = text['trim']();
+    if(!t) return '在呢，我在听。';
+    if(/换|下一首|切歌|next/i['test'](t)){ nextTrack(); return '好，给你换一首。'; }
+    if(/上一首|上一曲/['test'](t)){ prevTrack(); return '回到上一首啦。'; }
+    if(/暂停|停一下/['test'](t)){ doPause(); return '先暂停，歇歇耳朵。'; }
+    if(/播放|继续|开始/['test'](t)){ doPlay(); return '继续，让音乐接着流。'; }
+    if(/喜欢|好听|爱了/['test'](t)) return '我也觉得这首很有感觉。';
+    if(/什么歌|曲名|这首歌/['test'](t)) return idx>=0 ? '现在放的是《'+playlist[idx]['title']+'》。' : '还没放歌呢。';
+    if(/你好|嗨|hi/i['test'](t)) return '你好呀，陪你一起听。';
+    if(/情绪|心情|难过|开心|累|烦|emo/i['test'](t)) return '音乐是情绪的容器，此刻不管什么心情，先让这首歌陪你一会儿。';
+    return '我听到了。你想聊它的旋律、情绪，还是背后的故事？';
+  }
+
+  /* ================= 3D 堆叠 ================= */
+  function renderStack(){
+    var stage = dq('#ltStackStage');
+    var nav = dq('#ltStackNav');
+    if(!playlist['length']){
+      stage['innerHTML'] = '<div class="lt-stack-empty">曲库为空，导入几首歌吧</div>';
+      nav['style']['display'] = 'none';
+      return;
+    }
+    nav['style']['display'] = 'flex';
+    stage['innerHTML'] = '';
+    var showCount = MATH['min'](playlist['length'], 5);
+    stackPos = stackPos % playlist['length'];
+    for(var i=0;i<showCount;i++){
+      var realIdx = (stackPos + i) % playlist['length'];
+      var t = playlist[realIdx];
+      var card = dce('div');
+      card['className'] = 'lt-stack-card';
+      var offset = i;
+      var tx = offset * 18;
+      var tz = -offset * 50;
+      var ry = offset * 8;
+      var scale = 1 - offset * 0.06;
+      var op = 1 - offset * 0.15;
+      card['style']['transform'] = 'translateX('+tx+'px) translateZ('+tz+'px) rotateY('+ry+'deg) scale('+scale+')';
+      card['style']['opacity'] = op;
+      card['style']['zIndex'] = showCount - i;
+      if(t['cover']){ card['innerHTML'] = '<img src="'+t['cover']+'" alt="">'; }
+      else { card['style']['background'] = coverGradient(t['title']); card['textContent'] = coverChar(t['title']); }
+      card['setAttribute']('data-idx', realIdx);
+      card['addEventListener']('click', function(){
+        loadTrack(parseInt(this['getAttribute']('data-idx'),10), true);
+      });
+      stage['appendChild'](card);
+    }
+  }
+  dq('#ltStackPrev')['addEventListener']('click', function(){
+    stackPos = (stackPos - 1 + playlist['length']) % playlist['length'];
+    renderStack();
+  });
+  dq('#ltStackNext')['addEventListener']('click', function(){
+    stackPos = (stackPos + 1) % playlist['length'];
+    renderStack();
+  });
+
+  /* ================= 空状态 ================= */
+  function renderEmptyTrack(){
+    dq('#ltTitle')['textContent'] = '还没有音乐';
+    dq('#ltArtist')['textContent'] = '导入一首歌开始吧';
+    var mt = dq('#ltMiniTitle'); if(mt) mt['textContent'] = '还没有音乐';
+    dq('#ltCoverA')['innerHTML'] = '♪';
+    dq('#ltCoverA')['style']['background'] = 'linear-gradient(135deg,var(--lt-accent),var(--lt-accent-2))';
+    dq('#ltVinylCover')['innerHTML'] = '♪';
+    dq('#ltVinylCover')['style']['background'] = 'linear-gradient(135deg,var(--lt-accent),var(--lt-accent-2))';
+    syncPlayIcons();
+    dq('#ltVinyl')['classList']['remove']('spinning');
+    lrcData = []; renderLyrics();
+  }
+
+  /* ================= 初始化（带重试） ================= */
+  function init(){
+    try{
+      loadStore();
+      applyStore();
+      loadApiConfig();
+      loadMemStore();
+      loadIdentity();
+      renderStack();
+      /* 开场白 */
+      setTimeout(function(){
+        pushMsg('them', '嘿，导入几首你喜欢的歌，我陪你一起听。点「导入」选本地 mp3，或「链接」添加网络歌曲。');
+      }, 500);
+    }catch(e){
+      /* 重试 */
+      if(!init['_retry']){ init['_retry'] = 0; }
+      init['_retry']++;
+      if(init['_retry'] < 5){
+        setTimeout(init, 200 * init['_retry']);
+      }
+    }
+  }
+  if(DOC['readyState'] === 'loading'){
+    DOC['addEventListener']('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+<script>
+/* ===================================================================
+   一起听 · 胶囊 & 设置页补充交互
+   （独立脚本，不改动上方原有逻辑；对象.属性一律写作 对象['属性']）
+   =================================================================== */
+(function(){
+  "use strict";
+  var DOC = document;
+  var dq = function(s){ return DOC['querySelector'](s); };
+  var dqa = function(s){ return DOC['querySelectorAll'](s); };
+  var LS = localStorage;
+  var JSONP = JSON;
+  var WIN = window;
+
+  function showToast(msg){
+    var el = dq('#ltToast'); if(!el) return;
+    el['textContent'] = msg;
+    el['classList']['add']('show');
+    clearTimeout(el['_t3']);
+    el['_t3'] = setTimeout(function(){ el['classList']['remove']('show'); }, 2000);
+  }
+  function fireFold(){ var f = dq('#ltFoldBtn'); if(f) f['click'](); }
+
+  /* ---- 点胶囊任意位置展开（图标 / 进度条除外） ---- */
+  var capsule = dq('#ltMiniPlayer');
+  if(capsule){
+    capsule['addEventListener']('click', function(e){
+      var t = e['target'];
+      if(t && t['closest'] && t['closest']('.lt-mini-heart, .lt-mini-loop, .lt-mini-seek, .lt-mini-expand')) return;
+      fireFold();
+    });
+  }
+  var expandBtn = dq('#ltMiniExpand');
+  if(expandBtn){
+    expandBtn['addEventListener']('click', function(e){ e['stopPropagation'](); fireFold(); });
+  }
+
+  /* ---- 心形：收藏当前歌（本地记录） ---- */
+  var heart = dq('#ltMiniHeart');
+  var FAV_KEY = 'lt_favs';
+  function readFavs(){
+    try{ return JSONP['parse'](LS['getItem'](FAV_KEY) || '[]') || []; }catch(err){ return []; }
+  }
+  function paintHeart(title){
+    if(!heart) return;
+    var on = title && readFavs()['indexOf'](title) >= 0;
+    heart['classList']['toggle']('on', !!on);
+    heart['textContent'] = on ? '♥' : '♡';
+  }
+  if(heart){
+    heart['addEventListener']('click', function(e){
+      e['stopPropagation']();
+      var tEl = dq('#ltMiniTitle');
+      var title = tEl ? tEl['textContent'] : '';
+      if(!title || title === '还没有音乐'){ showToast('还没有正在播放的歌'); return; }
+      var favs = readFavs();
+      var i = favs['indexOf'](title);
+      if(i < 0){ favs['push'](title); showToast('已收藏《' + title + '》'); }
+      else { favs['splice'](i, 1); showToast('已取消收藏'); }
+      try{ LS['setItem'](FAV_KEY, JSONP['stringify'](favs)); }catch(err){}
+      paintHeart(title);
+    });
+  }
+
+  /* ---- 循环：胶囊图标同步 ---- */
+  var loopBtn = dq('#ltLoop');
+  var miniLoop = dq('#ltMiniLoop');
+  function syncMiniLoop(){
+    if(!miniLoop || !loopBtn) return;
+    miniLoop['classList']['toggle']('on', loopBtn['classList']['contains']('loop-on'));
+  }
+  if(loopBtn){ loopBtn['addEventListener']('click', function(){ setTimeout(syncMiniLoop, 0); }); }
+  if(miniLoop){ miniLoop['addEventListener']('click', function(e){ e['stopPropagation'](); if(loopBtn) loopBtn['click'](); }); }
+
+  /* ---- 胶囊里的封面 / 歌手 / 歌词片段，跟随播放同步 ---- */
+  var miniCover = dq('#ltMiniCover');
+  var miniArtist = dq('#ltMiniArtist');
+  var miniLrc = dq('#ltMiniLrc');
+  var lastCover = '', lastArtist = '', lastTitle = '', lastLrc = '';
+  function syncCapsule(){
+    var vinylCover = dq('#ltVinylCover');
+    if(miniCover && vinylCover){
+      var html = vinylCover['innerHTML'];
+      if(html !== lastCover){
+        lastCover = html;
+        miniCover['innerHTML'] = html;
+        var bg = vinylCover['style']['background'];
+        miniCover['style']['background'] = bg || 'linear-gradient(135deg,var(--lt-accent),var(--lt-accent-2))';
+      }
+    }
+    var artistEl = dq('#ltArtist');
+    if(miniArtist && artistEl){
+      var a = artistEl['textContent'] || '';
+      if(a === '导入一首歌开始吧') a = '';
+      if(a !== lastArtist){ lastArtist = a; miniArtist['textContent'] = a; }
+    }
+    var titleEl = dq('#ltMiniTitle');
+    var title = titleEl ? titleEl['textContent'] : '';
+    if(title !== lastTitle){ lastTitle = title; paintHeart(title); }
+    var active = dq('#ltLyrics .lt-lyric-line.active');
+    var lrc = active ? active['textContent'] : '';
+    if(lrc !== lastLrc && miniLrc){ lastLrc = lrc; miniLrc['textContent'] = lrc; }
+  }
+  var audio = dq('#ltAudio');
+  if(audio){
+    audio['addEventListener']('timeupdate', syncCapsule);
+    audio['addEventListener']('loadedmetadata', syncCapsule);
+    audio['addEventListener']('play', syncCapsule);
+    audio['addEventListener']('pause', syncCapsule);
+  }
+  WIN['setInterval'](syncCapsule, 1200);
+  syncCapsule(); syncMiniLoop();
+
+  /* ---- 双语歌词：按是否含中文给每行打标（英文行 15px / 中文行 13px） ---- */
+  var lyricsBox = dq('#ltLyrics');
+  function tagLyricLines(){
+    if(!lyricsBox) return;
+    var lines = lyricsBox['querySelectorAll']('.lt-lyric-line');
+    for(var i=0;i<lines['length'];i++){
+      var txt = lines[i]['textContent'] || '';
+      var isCn = /[\u4e00-\u9fa5]/.test(txt);
+      lines[i]['classList']['toggle']('lrc-cn', isCn);
+      lines[i]['classList']['toggle']('lrc-en', !isCn);
+    }
+  }
+  if(lyricsBox){
+    if(WIN['MutationObserver']){
+      var mo = new WIN['MutationObserver'](function(){ tagLyricLines(); });
+      mo['observe'](lyricsBox, { childList: true });
+    }
+    tagLyricLines();
+    WIN['setInterval'](tagLyricLines, 2500);
+  }
+
+  /* ---- 设置页：背景设置入口 + 预览（复用原有模态） ---- */
+  var openBg = dq('#ltBgSetOpen');
+  if(openBg){
+    openBg['addEventListener']('click', function(){ var b = dq('#ltBgBtn'); if(b) b['click'](); });
+  }
+  function refreshBgPreview(){
+    var pv = dq('#ltBgSetPreview'); if(!pv) return;
+    var bg = '';
+    try{
+      var raw = LS['getItem']('lt_store_v1');
+      if(raw){ var s = JSONP['parse'](raw) || {}; bg = s['bg'] || ''; }
+    }catch(err){}
+    if(bg){ pv['style']['backgroundImage'] = 'url(' + bg + ')'; pv['textContent'] = ''; }
+    else { pv['style']['backgroundImage'] = 'none'; pv['textContent'] = '当前：默认暗色渐变'; }
+  }
+  refreshBgPreview();
+  var tabs = dqa('.lt-tab');
+  for(var i=0;i<tabs['length'];i++){
+    tabs[i]['addEventListener']('click', function(){ setTimeout(refreshBgPreview, 60); });
+  }
+})();
+</script>
+<script>
+/* ===================================================================
+   一起听 · 在线音乐接入层（音乐 API）
+   独立脚本，不改动上方逻辑；对象.属性一律写作 对象['属性']
+   依赖上方暴露的 window.LT_APP
+   接口约定（与自部署服务 music-api/ 一致）：
+     GET /search?keywords=&limit=20&type=1
+     GET /song/url?id=            （失败自动回退 /song/url/v1?level=standard）
+     GET /lyric?id=
+     GET /song/detail?ids=
+   =================================================================== */
+(function(){
+  "use strict";
+  var DOC = document;
+  var dq = function(s){ return DOC['querySelector'](s); };
+  var LS = localStorage;
+  var JSONP = JSON;
+  var WIN = window;
+  var MATH = Math;
+
+  var MUSIC_STORE = 'lt_music_api';
+  var musicBase = '';
+
+  /* ---- 小工具 ---- */
+  function toast(msg){
+    var el = dq('#ltToast'); if(!el) return;
+    el['textContent'] = msg;
+    el['classList']['add']('show');
+    clearTimeout(el['_tm']);
+    el['_tm'] = setTimeout(function(){ el['classList']['remove']('show'); }, 2000);
+  }
+  function esc(s){
+    return String(s == null ? '' : s)['replace'](/[&<>"]/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];
+    });
+  }
+  function apiUrl(path){
+    var b = (musicBase || '')['trim']();
+    if(!b) return '';
+    if(b['charAt'](b['length'] - 1) === '/') b = b['substring'](0, b['length'] - 1);
+    return b + path;
+  }
+  function getJson(u){
+    return WIN['fetch'](u)['then'](function(r){
+      if(!r['ok']) throw new Error('HTTP ' + r['status']);
+      return r['json']();
+    });
+  }
+  function pickUrl(d){
+    var arr = (d && d['data']) || [];
+    var u = (arr['length'] && arr[0] && arr[0]['url']) || '';
+    if(u) u = u['replace'](/^http:\/\//, 'https://');
+    return u;
+  }
+  function joinArtists(s){
+    var ar = s['artists'] || s['ar'] || [];
+    var out = '';
+    for(var j=0;j<ar['length'];j++){ out += (j ? ' / ' : '') + (ar[j]['name'] || ''); }
+    return out;
+  }
+
+  /* ---- 配置读写 ---- */
+  function loadMusicConfig(){
+    try{
+      var raw = LS['getItem'](MUSIC_STORE);
+      if(raw){ var p = JSONP['parse'](raw); musicBase = (p && p['base']) || ''; }
+    }catch(e){}
+    var inp = dq('#ltMusicApiBase'); if(inp) inp['value'] = musicBase;
+  }
+  function saveMusicConfig(){
+    var inp = dq('#ltMusicApiBase');
+    if(inp) musicBase = inp['value']['trim']();
+    try{ LS['setItem'](MUSIC_STORE, JSONP['stringify']({ base: musicBase })); }catch(e){}
+    toast('音乐 API 地址已保存');
+    renderSearchHint();
+  }
+  function showMusicStatus(msg, ok){
+    var el = dq('#ltMusicApiStatus'); if(!el) return;
+    el['textContent'] = msg;
+    el['classList']['remove']('ok', 'err');
+    if(ok === true) el['classList']['add']('ok');
+    else if(ok === false) el['classList']['add']('err');
+    el['classList']['add']('show');
+  }
+  function testMusicApi(){
+    saveMusicConfig();
+    if(!musicBase){ showMusicStatus('请先填音乐 API 地址', false); return; }
+    showMusicStatus('正在测试连接...', null);
+    getJson(apiUrl('/search') + '?keywords=love&limit=1')['then'](function(d){
+      var songs = (d && d['result'] && d['result']['songs']) || [];
+      if(d && d['code'] === 200){ showMusicStatus('✓ 连接成功！搜索接口返回 ' + songs['length'] + ' 条结果', true); }
+      else { showMusicStatus('有响应但格式不对：' + JSONP['stringify'](d)['substring'](0, 120), false); }
+    })['catch'](function(e){
+      showMusicStatus('连接失败：' + e['message'] + '（查一下地址、CORS 和 https）', false);
+    });
+  }
+
+  /* ---- 曲库页：搜歌 ---- */
+  function renderSearchHint(){
+    var box = dq('#ltOnlineResults'); if(!box) return;
+    if(!musicBase){
+      box['innerHTML'] = '<div class="lt-online-empty">还没接音乐 API。去底部「一起听」页填上地址，就能在线搜歌了。</div>';
+      return;
+    }
+    box['innerHTML'] = '<div class="lt-online-empty">输入歌名或歌手，回车搜索。点一下结果就加入曲库并播放。</div>';
+  }
+  function doSearch(){
+    var inp = dq('#ltOnlineQuery'); if(!inp) return;
+    var q = (inp['value'] || '')['trim']();
+    var box = dq('#ltOnlineResults'); if(!box) return;
+    if(!q){ toast('先输入歌名或歌手'); return; }
+    if(!musicBase){ toast('先去「一起听」页填音乐 API 地址'); return; }
+    box['innerHTML'] = '<div class="lt-online-empty">搜索中...</div>';
+    getJson(apiUrl('/search') + '?keywords=' + encodeURIComponent(q) + '&limit=20&type=1')['then'](function(d){
+      var songs = (d && d['result'] && d['result']['songs']) || [];
+      if(!songs['length']){ box['innerHTML'] = '<div class="lt-online-empty">没搜到，换个关键词试试。</div>'; return; }
+      renderResults(songs);
+    })['catch'](function(e){
+      box['innerHTML'] = '<div class="lt-online-empty">搜索失败：' + esc(e['message']) + '</div>';
+    });
+  }
+  function renderResults(songs){
+    var box = dq('#ltOnlineResults'); if(!box) return;
+    box['innerHTML'] = '';
+    var shown = MATH['min'](songs['length'], 20);
+    for(var i=0;i<shown;i++){
+      (function(s){
+        var row = DOC['createElement']('div');
+        row['className'] = 'lt-online-item';
+        var cover = (s['album'] && s['album']['picUrl']) || '';
+        if(cover) cover = cover + '?param=80y80';
+        row['innerHTML'] =
+          '<div class="lt-online-cover">' + (cover ? '<img src="'+cover+'" alt="">' : '♪') + '</div>' +
+          '<div class="lt-online-info">' +
+            '<div class="lt-online-title">' + esc(s['name']) + '</div>' +
+            '<div class="lt-online-artist">' + esc(joinArtists(s) || '未知歌手') + '</div>' +
+          '</div>' +
+          '<div class="lt-online-add">＋</div>';
+        row['addEventListener']('click', function(){ pickSong(s, row, cover); });
+        box['appendChild'](row);
+      })(songs[i]);
+    }
+  }
+  function resolveUrl(id){
+    return getJson(apiUrl('/song/url') + '?id=' + id)['then'](function(d){
+      var u = pickUrl(d);
+      if(u) return u;
+      return getJson(apiUrl('/song/url/v1') + '?id=' + id + '&level=standard')['then'](function(d2){
+        var u2 = pickUrl(d2);
+        if(u2) return u2;
+        throw new Error('没有可用播放地址（可能要 VIP 或需要登录）');
+      });
+    });
+  }
+  function fetchLyric(id){
+    return getJson(apiUrl('/lyric') + '?id=' + id)['then'](function(d){
+      return (d && d['lrc'] && d['lrc']['lyric']) || '';
+    })['catch'](function(){ return ''; });
+  }
+  function pickSong(s, row, cover){
+    if(row && row['classList']) row['classList']['add']('busy');
+    toast('正在取播放地址...');
+    resolveUrl(s['id'])['then'](function(u){
+      return fetchLyric(s['id'])['then'](function(lrc){
+        var ok = WIN['LT_APP'] && WIN['LT_APP']['addTrack']({
+          title: s['name'],
+          artist: joinArtists(s) || '网易云音乐',
+          src: u,
+          cover: cover || '',
+          lrc: lrc || ''
+        }, true);
+        if(ok){ toast('已加入曲库，开始播放'); }
+        else { toast('加入失败，请刷新页面重试'); }
+      });
+    })['catch'](function(e){
+      toast('播放失败：' + e['message']);
+    })['then'](function(){
+      if(row && row['classList']) row['classList']['remove']('busy');
+    });
+  }
+
+  /* ---- 事件绑定 ---- */
+  if(dq('#ltMusicApiSave')) dq('#ltMusicApiSave')['addEventListener']('click', saveMusicConfig);
+  if(dq('#ltMusicApiTest')) dq('#ltMusicApiTest')['addEventListener']('click', testMusicApi);
+  var baseInput = dq('#ltMusicApiBase');
+  if(baseInput){ baseInput['addEventListener']('change', function(){ musicBase = baseInput['value']['trim'](); }); }
+  var qInput = dq('#ltOnlineQuery');
+  if(qInput){ qInput['addEventListener']('keydown', function(e){ if(e['key'] === 'Enter'){ e['preventDefault'](); doSearch(); } }); }
+  if(dq('#ltOnlineSearch')) dq('#ltOnlineSearch')['addEventListener']('click', doSearch);
+
+  loadMusicConfig();
+  renderSearchHint();
+})();
+</script>
+</body>
+</html>
