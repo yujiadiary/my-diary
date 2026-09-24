@@ -1044,8 +1044,12 @@
     if(e['target'] === modalMask) closeModal();
   });
 
-  /* ================= localStorage 读写 ================= */
+  /* ================= 持久化：小偏好走 localStorage，大图（头像/背景）走 IndexedDB =================
+     为什么拆：头像/背景是 base64 dataURL，体积大；和主题/名字塞同一个 localStorage
+     会被配额撑爆，saveStore() 静默失败 —— 于是主题、名字、背景、头像刷新全丢。
+     拆开后小偏好永远能存；大图进 IndexedDB（配额大得多）。 */
   var STORE_KEY = 'lt_store_v1';
+  var LARGE_KEYS = { bg: 1, avatar1: 1, avatar2: 1 };
   var store = {
     bg: '', avatar1: '', avatar2: '', status: '雪青',
     theme: 'dark',
@@ -1055,14 +1059,68 @@
     bgOpacity: 0.35,
     liveMsg1: '此刻耳机分你一半', liveMsg2: '在呢，陪你一起听'
   };
+  /* IndexedDB 轻量封装；不可用时回退 localStorage（与旧版行为一致） */
+  var IDB = (function(){
+    var DB_NAME = 'lt_db', KV = 'kv', _dbp = null;
+    function idb(){ return WIN['indexedDB'] || WIN['webkitIndexedDB'] || WIN['mozIndexedDB']; }
+    function open(){
+      return new WIN['Promise'](function(res, rej){
+        var api = idb();
+        if(!api){ rej(new Error('no indexedDB')); return; }
+        try{
+          var req = api['open'](DB_NAME, 1);
+          req['onupgradeneeded'] = function(){
+            var db = req['result'];
+            if(!db['objectStoreNames']['contains'](KV)) db['createObjectStore'](KV);
+          };
+          req['onsuccess'] = function(){ _dbp = req['result']; res(_dbp); };
+          req['onerror'] = function(){ rej(req['error']); };
+        }catch(e){ rej(e); }
+      });
+    }
+    function get(key){
+      return open()['then'](function(db){
+        return new WIN['Promise'](function(res){
+          try{
+            var tx = db['transaction'](KV, 'readonly');
+            var rq = tx['objectStore'](KV)['get'](key);
+            rq['onsuccess'] = function(){ res(rq['result'] || null); };
+            rq['onerror'] = function(){ res(null); };
+          }catch(e){ res(null); }
+        });
+      })['catch'](function(){ return null; });
+    }
+    function set(key, val){
+      open()['then'](function(db){
+        try{ db['transaction'](KV, 'readwrite')['objectStore'](KV)['put'](val, key); }catch(e){}
+      })['catch'](function(){
+        try{ LS['setItem']('lt_large_'+key, val); }catch(e){}
+      });
+    }
+    function del(key){
+      open()['then'](function(db){
+        try{ db['transaction'](KV, 'readwrite')['objectStore'](KV)['delete'](key); }catch(e){}
+      })['catch'](function(){});
+      try{ LS['removeItem']('lt_large_'+key); }catch(e){}
+    }
+    return { get: get, set: set, del: del };
+  })();
   function loadStore(){
     try{
       var raw = LS['getItem'](STORE_KEY);
-      if(raw){ var parsed = JSONP['parse'](raw); for(var k in parsed){ if(parsed['hasOwnProperty'](k)) store[k] = parsed[k]; } }
+      if(raw){ var parsed = JSONP['parse'](raw); for(var k in parsed){ if(parsed['hasOwnProperty'](k) && !LARGE_KEYS[k]) store[k] = parsed[k]; } }
     }catch(e){}
   }
   function saveStore(){
-    try{ LS['setItem'](STORE_KEY, JSONP['stringify'](store)); }catch(e){}
+    try{
+      var small = {};
+      for(var k in store){ if(store['hasOwnProperty'](k) && !LARGE_KEYS[k]) small[k] = store[k]; }
+      LS['setItem'](STORE_KEY, JSONP['stringify'](small));
+    }catch(e){ toast('设置保存失败：浏览器存储已满'); }
+  }
+  function saveLarge(key){
+    var v = store[key];
+    if(v){ IDB['set'](key, v); } else { IDB['del'](key); }
   }
 
   /* ================= 应用存储到界面 ================= */
@@ -1089,6 +1147,35 @@
     /* 气泡：实时对话速览（不再是手动编辑池） */
     dq('#ltBubble1')['textContent'] = store['liveMsg1'] || '此刻耳机分你一半';
     dq('#ltBubble2')['textContent'] = store['liveMsg2'] || '在呢，陪你一起听';
+  }
+  /* 大图（背景/头像）单独应用 —— 异步从 IndexedDB 读到后再刷一次 */
+  function applyBg(){
+    var el = dq('#ltBgLayer'); if(!el) return;
+    if(store['bg']){ el['style']['backgroundImage'] = 'url('+store['bg']+')'; }
+    el['style']['opacity'] = (store['bgOpacity'] != null) ? store['bgOpacity'] : 0.35;
+  }
+  function applyAvatar(n){
+    var el = dq('#ltAvatar'+n); if(!el) return;
+    if(store['avatar'+n]){ el['innerHTML'] = '<img src="'+store['avatar'+n]+'" alt="">'; }
+  }
+  /* 迁移旧版：把曾塞在 localStorage 里的大图搬到 IndexedDB，并清掉冗余字段腾配额 */
+  function migrateLegacyLarge(){
+    var raw;
+    try{ raw = LS['getItem'](STORE_KEY); }catch(e){ return; }
+    if(!raw) return;
+    var parsed;
+    try{ parsed = JSONP['parse'](raw); }catch(e){ return; }
+    if(!parsed) return;
+    var hit = false;
+    if(parsed['bg']){ store['bg'] = parsed['bg']; hit = true; }
+    if(parsed['avatar1']){ store['avatar1'] = parsed['avatar1']; hit = true; }
+    if(parsed['avatar2']){ store['avatar2'] = parsed['avatar2']; hit = true; }
+    if(!hit) return;
+    saveLarge('bg'); saveLarge('avatar1'); saveLarge('avatar2');
+    try{
+      delete parsed['bg']; delete parsed['avatar1']; delete parsed['avatar2'];
+      LS['setItem'](STORE_KEY, JSONP['stringify'](parsed));
+    }catch(e){}
   }
 
   /* ================= 背景设置入口（换图 + 透明度，全局生效） ================= */
@@ -1123,7 +1210,7 @@
     });
     dq('#ltBgChoose')['addEventListener']('click', function(){ dq('#ltBgPicker')['click'](); });
     dq('#ltBgRemove')['addEventListener']('click', function(){
-      store['bg'] = ''; saveStore();
+      store['bg'] = ''; saveStore(); saveLarge('bg');
       dq('#ltBgLayer')['style']['backgroundImage'] = 'none';
       dq('#ltBgLayer')['style']['opacity'] = (store['bgOpacity'] != null) ? store['bgOpacity'] : 0.35;
       closeModal(); toast('背景已移除');
@@ -1135,7 +1222,7 @@
     var reader = new FileReader();
     reader['onload'] = function(){
       store['bg'] = reader['result'];
-      saveStore();
+      saveStore(); saveLarge('bg');
       dq('#ltBgLayer')['style']['backgroundImage'] = 'url('+store['bg']+')';
       var p = dq('#ltBgPreview');
       if(p){ p['style']['backgroundImage'] = 'url('+store['bg']+')'; p['textContent'] = ''; }
@@ -1161,8 +1248,7 @@
         store['avatar2'] = reader['result'];
         dq('#ltAvatar2')['innerHTML'] = '<img src="'+store['avatar2']+'" alt="">';
       }
-      saveStore();
-      toast('头像已更换');
+      saveStore(); saveLarge('avatar'+avatarTarget); toast('头像已更换');
     };
     reader['readAsDataURL'](f);
     e['target']['value'] = '';
@@ -1998,11 +2084,16 @@
   function init(){
     try{
       loadStore();
+      migrateLegacyLarge();
       applyStore();
       loadApiConfig();
       loadMemStore();
       loadIdentity();
       renderStack();
+      /* 大图异步从 IndexedDB 补齐（迁移没命中的走这条） */
+      IDB['get']('bg')['then'](function(v){ if(v && !store['bg']){ store['bg'] = v; applyBg(); } try{ refreshBgPreview(); }catch(_e){} });
+      IDB['get']('avatar1')['then'](function(v){ if(v && !store['avatar1']){ store['avatar1'] = v; applyAvatar(1); } });
+      IDB['get']('avatar2')['then'](function(v){ if(v && !store['avatar2']){ store['avatar2'] = v; applyAvatar(2); } });
       /* 开场白 */
       setTimeout(function(){
         pushMsg('them', '嘿，导入几首你喜欢的歌，我陪你一起听。点「导入」选本地 mp3，或「链接」添加网络歌曲。');
@@ -2164,11 +2255,7 @@
   }
   function refreshBgPreview(){
     var pv = dq('#ltBgSetPreview'); if(!pv) return;
-    var bg = '';
-    try{
-      var raw = LS['getItem']('lt_store_v1');
-      if(raw){ var s = JSONP['parse'](raw) || {}; bg = s['bg'] || ''; }
-    }catch(err){}
+    var bg = store['bg'] || '';
     if(bg){ pv['style']['backgroundImage'] = 'url(' + bg + ')'; pv['textContent'] = ''; }
     else { pv['style']['backgroundImage'] = 'none'; pv['textContent'] = '当前：默认暗色渐变'; }
   }
