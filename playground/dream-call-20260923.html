@@ -39,6 +39,8 @@
 .dream-call-captions .cap::before{content:"Ta — ";font-size:11px;color:#6B9ACD;letter-spacing:.18em;font-family:"Helvetica Neue",Arial,sans-serif;}
 .dream-call-captions .cap.me{align-self:flex-end;text-align:right;color:#E9F4FF;}
 .dream-call-captions .cap.me::before{content:"JiaJia — ";font-size:11px;color:#6B9ACD;letter-spacing:.18em;}
+.dream-call-captions .cap.err{color:#ff8a8a;font-size:12px;}
+.dream-call-captions .cap.err::before{content:"⚠ TTS ";font-size:11px;color:#ff8a8a;letter-spacing:.18em;}
 @keyframes capIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* ---------- 控制栏（极简，融背景） ---------- */
@@ -168,6 +170,8 @@
     <input id="cfg-mmgroup" spellcheck="false" placeholder="18xxxxx">
     <label>VoiceId</label>
     <input id="cfg-mmvoice" spellcheck="false" placeholder="male-qn-qingse">
+    <label>模型</label>
+    <input id="cfg-ttsmodel" spellcheck="false" placeholder="speech-2.8-hd">
     <button class="savebtn" id="cfg-save">保存</button>
     <div class="dream-call-hint" id="dc-cfgmsg">配置仅保存在你的浏览器本地，他人访问看不到。</div>
   </div>
@@ -190,6 +194,7 @@ var CFG={
   'mmKey':'',
   'mmGroup':'',
   'ttsVoice':'male-qn-qingse',
+  'ttsModel':'speech-2.8-hd',
   'maxRounds':8
 };
 var STORE_KEY='dream_call_config';
@@ -222,13 +227,13 @@ var t=0;               /* 动画时间（秒） */
 /* ================= 配置读写（localStorage） ================= */
 function loadCfg(){try{var raw=window['localStorage']['getItem'](STORE_KEY);if(raw){var o=JSON['parse'](raw);for(var k in o){if(CFG['hasOwnProperty'](k))CFG[k]=o[k];}}}catch(e){}}
 function saveCfg(){try{window['localStorage']['setItem'](STORE_KEY,JSON['stringify'](CFG));}catch(e){}}
-function populatePanel(){el('cfg-base')['value']=CFG['apiBase'];el('cfg-model')['value']=CFG['model'];el('cfg-key')['value']=CFG['key'];el('cfg-prompt')['value']=CFG['prompt'];el('cfg-cloudtts')['checked']=CFG['cloudTTS'];el('cfg-ttsurl')['value']=CFG['ttsUrl'];el('cfg-mmkey')['value']=CFG['mmKey'];el('cfg-mmgroup')['value']=CFG['mmGroup'];el('cfg-mmvoice')['value']=CFG['ttsVoice'];}
+function populatePanel(){el('cfg-base')['value']=CFG['apiBase'];el('cfg-model')['value']=CFG['model'];el('cfg-key')['value']=CFG['key'];el('cfg-prompt')['value']=CFG['prompt'];el('cfg-cloudtts')['checked']=CFG['cloudTTS'];el('cfg-ttsurl')['value']=CFG['ttsUrl'];el('cfg-mmkey')['value']=CFG['mmKey'];el('cfg-mmgroup')['value']=CFG['mmGroup'];el('cfg-mmvoice')['value']=CFG['ttsVoice'];el('cfg-ttsmodel')['value']=CFG['ttsModel'];}
 function saveFromPanel(){
   CFG['apiBase']=el('cfg-base')['value']['trim']();CFG['model']=el('cfg-model')['value']['trim']();
   CFG['key']=el('cfg-key')['value']['trim']();CFG['prompt']=el('cfg-prompt')['value'];
   CFG['cloudTTS']=el('cfg-cloudtts')['checked'];CFG['ttsUrl']=el('cfg-ttsurl')['value']['trim']();
   CFG['mmKey']=el('cfg-mmkey')['value']['trim']();CFG['mmGroup']=el('cfg-mmgroup')['value']['trim']();
-  CFG['ttsVoice']=el('cfg-mmvoice')['value']['trim']();saveCfg();
+  CFG['ttsVoice']=el('cfg-mmvoice')['value']['trim']();CFG['ttsModel']=el('cfg-ttsmodel')['value']['trim']()||'speech-2.8-hd';saveCfg();
   el('dc-cfgmsg')['textContent']='已保存 ✓';
   setTimeout(function(){el('dc-cfgmsg')['textContent']='配置仅保存在你的浏览器本地，他人访问看不到。';},2500);
 }
@@ -242,7 +247,10 @@ function startTimer(){secs=0;timerText['textContent']='00:00';timerId=setInterva
 function stopTimer(){if(timerId){clearInterval(timerId);timerId=null;}}
 function addCap(who,txt){
   var d=document['createElement']('div');
-  d['className']='cap'+(who==='me'?' me':'');
+  var cls='cap';
+  if(who==='me')cls+=' me';
+  else if(who==='err')cls+=' err';
+  d['className']=cls;
   d['textContent']=txt;
   captions['appendChild'](d);
   /* 保留全部记录；新消息后滚到底，保证最新可见 */
@@ -310,7 +318,7 @@ var cloudAudio=document['createElement']('audio');
 function stopSpeak(){
   ttsQueue=[];
   if(ttsBusy){try{synth['cancel']();}catch(e){}}
-  try{cloudAudio['pause']();cloudAudio['src']='';}catch(e){}
+  try{cloudAudio['pause']();var _u=cloudAudio['src'];cloudAudio['src']='';if(_u&&_u['indexOf']('blob:')===0){window['URL']['revokeObjectURL'](_u);}}catch(e){}
   ttsBusy=false;setVoice(false);
 }
 /* 音频优先：文件播放时暂停 TTS，文件结束恢复 */
@@ -345,27 +353,37 @@ function tickTTS(){
     }catch(e){ttsBusy=false;tickTTS();}
   }
 }
+/* hex 字符串 -> Uint8Array（MiniMax 返回的是 hex 编码的 mp3，不是 base64） */
+function hexToBytes(hex){
+  var bytes=new Uint8Array(hex['length']/2);
+  for(var i=0;i<hex['length'];i+=2){bytes[i/2]=parseInt(hex['substr'](i,2),16);}
+  return bytes;
+}
 function playCloudChunk(chunk){
-  /* MiniMax t2a_v2：POST + Bearer 认证 + base64 音频解码 */
+  /* MiniMax t2a_v2：POST + Bearer 认证；返回 JSON，data.audio 是 hex 编码的 mp3 */
   var url=CFG['ttsUrl']+'?GroupId='+encodeURIComponent(CFG['mmGroup']||'');
-  var body={'model':'speech-02-hd','text':chunk,'stream':false,
+  var body={'model':CFG['ttsModel']||'speech-2.8-hd','text':chunk,'stream':false,
     'voice_setting':{'voice_id':CFG['ttsVoice']||'male-qn-qingse','speed':1.0,'vol':1.0,'pitch':0},
     'audio_setting':{'sample_rate':32000,'bitrate':128000,'format':'mp3','channel':1}};
   var headers={'Content-Type':'application/json','Authorization':'Bearer '+CFG['mmKey']};
   fetch(url,{'method':'POST','headers':headers,'body':JSON['stringify'](body)})
   ['then'](function(res){return res['json']();})
   ['then'](function(j){
+    /* MiniMax 错误码：base_resp.status_code 非 0 时显示 status_msg 原文，别静默吞 */
+    var br=j&&j['base_resp'];
+    if(br&&br['status_code']!==0){addCap('err','TTS 错误：'+(br['status_msg']||('code '+br['status_code'])));ttsBusy=false;tickTTS();return;}
     var audio=j['data']&&j['data']['audio'];
     if(!audio){ttsBusy=false;tickTTS();return;}
-    var bin=atob(audio);
-    var arr=new Uint8Array(bin['length']);
-    for(var i=0;i<bin['length'];i++){arr[i]=bin['charCodeAt'](i);}
-    var blob=new Blob([arr],{'type':'audio/mp3'});
-    cloudAudio['src']=window['URL']['createObjectURL'](blob);
-    cloudAudio['onended']=function(){ttsBusy=false;tickTTS();};
-    cloudAudio['onerror']=function(){ttsBusy=false;tickTTS();};
-    cloudAudio['play']()['catch'](function(){ttsBusy=false;tickTTS();});
-  })['catch'](function(){ttsBusy=false;tickTTS();});
+    var bytes=hexToBytes(audio);
+    var blob=new Blob([bytes],{'type':'audio/mpeg'});
+    var objUrl=window['URL']['createObjectURL'](blob);
+    /* 释放上一段的 blob URL，防内存泄漏 */
+    var prev=cloudAudio['src'];if(prev&&prev['indexOf']('blob:')===0){try{window['URL']['revokeObjectURL'](prev);}catch(e){}}
+    cloudAudio['src']=objUrl;
+    cloudAudio['onended']=function(){try{window['URL']['revokeObjectURL'](objUrl);}catch(e){}ttsBusy=false;tickTTS();};
+    cloudAudio['onerror']=function(){try{window['URL']['revokeObjectURL'](objUrl);}catch(e){}ttsBusy=false;tickTTS();};
+    cloudAudio['play']()['catch'](function(){try{window['URL']['revokeObjectURL'](objUrl);}catch(e){}ttsBusy=false;tickTTS();});
+  })['catch'](function(e){addCap('err','TTS 请求失败：'+(e&&e['message']?e['message']:e));ttsBusy=false;tickTTS();});
 }
 function speakInPieces(full){
   var parts=full['split'](/[。！？!?\n]+/);
@@ -559,15 +577,17 @@ function handleSSE(block){
     if(liveCap===null){liveCap=document['createElement']('div');liveCap['className']='cap';captions['appendChild'](liveCap);}
     liveCap['textContent']=liveText;
     captions['scrollTop']=captions['scrollHeight'];
-    /* 按标点切句，立即送去朗读（文字语音同步） */
-    var m=liveText['match'](/[^。！？!?\n]*[。！？!?\n]/g);
-    if(m&&m['length']>0){
-      var last=m[m['length']-1];
-      var usedPos=liveText['indexOf'](last);
-      if(usedPos>=lastSpeakPos){
-        speakText(last);
-        lastSpeakPos=usedPos+last['length'];
-      }
+    /* 边生成边朗读：遇句末标点（。！？；…!?\n）或累积超 30 字就切一段，立刻送 TTS */
+    var segPunc=/[。！？；…!?\n]/;
+    var cutPos=-1;
+    for(var p=lastSpeakPos;p<liveText['length'];p++){
+      if(segPunc['test'](liveText[p])){cutPos=p+1;break;}
+    }
+    if(cutPos<0&&liveText['length']-lastSpeakPos>=30){cutPos=liveText['length'];}
+    if(cutPos>lastSpeakPos){
+      var seg=liveText['slice'](lastSpeakPos,cutPos)['trim']();
+      if(seg){speakText(seg);}
+      lastSpeakPos=cutPos;
     }
   }
 }
