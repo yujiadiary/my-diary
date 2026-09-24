@@ -16,8 +16,8 @@
   /* 玻璃与线条 */
   --lt-glass: rgba(30,30,40,0.55);
   --lt-glass-2: rgba(30,30,40,0.75);
-  --lt-line: rgba(255,255,255,0.08);
-  --lt-line-2: rgba(255,255,255,0.12);
+  --lt-line: var(--lt-fill-2);
+  --lt-line-2: var(--lt-fill-3);
   --lt-card-shadow: 0 18px 50px rgba(0,0,0,0.45);
   /* 文字 */
   --lt-text: #e8e8ee;
@@ -27,16 +27,48 @@
   /* 强调色：低饱和，只做轮廓与点缀 */
   --lt-accent: #b9b9c6;
   --lt-accent-2: #7a7a88;
-  --lt-glow: rgba(255,255,255,0.05);
+  --lt-glow: var(--lt-line-soft);
   /* 尺寸 */
   --lt-radius: 20px;
   --lt-avatar-size: 84px;
   /* 字体：中文宋体 Light，英文 Georgia */
   --lt-font-cn: "Source Han Serif SC Light","Noto Serif CJK SC Light","Songti SC Light","STSong",serif;
   --lt-font-en: Georgia,"Songti SC",serif;
-  --lt-halo: 0 0 0 6px rgba(255,255,255,0.04);
+  --lt-halo: 0 0 0 6px var(--lt-fill-1);
+  /* 填充层级（替代全篇硬编码 rgba(255,255,255,…)）*/
+  --lt-fill-1: rgba(255,255,255,0.04);
+  --lt-fill-2: rgba(255,255,255,0.08);
+  --lt-fill-3: rgba(255,255,255,0.12);
+  --lt-border-hi: rgba(255,255,255,0.28);
+  --lt-on-accent: #0a0a0f;
+  --lt-line-soft: rgba(255,255,255,0.05);
   color: var(--lt-text);
   letter-spacing: 1px;
+}
+/* ============ 浅色主题 ============ */
+.listen-together[data-theme="light"] {
+  --lt-bg-1: #f4f1ea;
+  --lt-bg-2: #e6e1d6;
+  --lt-scrim: linear-gradient(180deg, rgba(255,255,255,0.40) 0%, rgba(255,255,255,0.74) 100%);
+  --lt-glass: rgba(255,255,255,0.62);
+  --lt-glass-2: rgba(255,255,255,0.78);
+  --lt-line: rgba(0,0,0,0.08);
+  --lt-line-2: rgba(0,0,0,0.12);
+  --lt-card-shadow: 0 18px 50px rgba(0,0,0,0.10);
+  --lt-text: #383842;
+  --lt-sub: #52525e;
+  --lt-muted: #767680;
+  --lt-faint: #a0a0aa;
+  --lt-accent: #8a8390;
+  --lt-accent-2: #b0a6b6;
+  --lt-glow: rgba(0,0,0,0.03);
+  --lt-halo: 0 0 0 6px rgba(0,0,0,0.04);
+  --lt-fill-1: rgba(0,0,0,0.035);
+  --lt-fill-2: rgba(0,0,0,0.06);
+  --lt-fill-3: rgba(0,0,0,0.09);
+  --lt-border-hi: rgba(0,0,0,0.22);
+  --lt-on-accent: #ffffff;
+  --lt-line-soft: rgba(0,0,0,0.05);
 }
 /* ---- 容器 ---- */
 .listen-together * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -77,12 +109,12 @@
   border-bottom: 1px solid var(--lt-line); cursor: pointer;
   touch-action: manipulation; transition: .18s;
 }
-.listen-together .lt-pl-item:active { background: rgba(255,255,255,0.05); }
-.listen-together .lt-pl-item.playing { background: rgba(255,255,255,0.06); }
+.listen-together .lt-pl-item:active { background: var(--lt-line-soft); }
+.listen-together .lt-pl-item.playing { background: var(--lt-fill-2); }
 .listen-together .lt-pl-item .lt-pl-cover {
   width: 40px; height: 40px; border-radius: 10px; flex: none; overflow: hidden;
   background: linear-gradient(135deg, var(--lt-accent), var(--lt-accent-2));
-  display: grid; place-items: center; color: #0a0a0f; font-size: 15px;
+  display: grid; place-items: center; color: var(--lt-on-accent); font-size: 15px;
   filter: saturate(0.6) brightness(0.95);
 }
 .listen-together .lt-pl-item .lt-pl-cover img { width: 100%; height: 100%; object-fit: cover; }
@@ -99,37 +131,37 @@
 .listen-together .lt-textarea {
   width: 100%; min-height: 110px; resize: vertical; line-height: 1.7;
   border: 1px solid var(--lt-line-2); border-radius: 10px; padding: 10px 12px;
-  font-size: 13px; background: rgba(255,255,255,0.04); color: var(--lt-text);
+  font-size: 13px; background: var(--lt-fill-1); color: var(--lt-text);
   outline: none; font-family: var(--lt-font-cn); letter-spacing: 1px; transition: .18s;
 }
-.listen-together .lt-textarea:focus { border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.06); }
+.listen-together .lt-textarea:focus { border-color: var(--lt-border-hi); background: var(--lt-fill-2); }
 
 /* ---- API设置页 ---- */
 .listen-together .lt-api-field { margin-bottom: 14px; }
 .listen-together .lt-api-field label { display: block; font-size: 12px; color: var(--lt-muted); margin-bottom: 5px; }
 .listen-together .lt-api-field input, .listen-together .lt-api-field select {
   width: 100%; border: 1px solid var(--lt-line-2); border-radius: 10px; padding: 9px 12px;
-  font-size: 14px; background: rgba(255,255,255,0.04); color: var(--lt-text); outline: none;
+  font-size: 14px; background: var(--lt-fill-1); color: var(--lt-text); outline: none;
   font-family: var(--lt-font-en); transition: .18s;
 }
-.listen-together .lt-api-field select option { background: #14141c; color: var(--lt-text); }
-.listen-together .lt-api-field input:focus, .listen-together .lt-api-field select:focus { border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.06); }
+.listen-together .lt-api-field select option { background: var(--lt-bg-2); color: var(--lt-text); }
+.listen-together .lt-api-field input:focus, .listen-together .lt-api-field select:focus { border-color: var(--lt-border-hi); background: var(--lt-fill-2); }
 .listen-together .lt-api-hint { font-size: 11px; color: var(--lt-faint); margin-top: 6px; line-height: 1.8; }
 .listen-together .lt-api-status { font-size: 12px; padding: 8px 14px; border-radius: 10px; margin: 10px 0; display: none; }
 .listen-together .lt-api-status.show { display: block; }
 .listen-together .lt-api-status.ok { background: rgba(120,220,160,0.10); color: #7fd8a4; }
 .listen-together .lt-api-status.err { background: rgba(255,120,120,0.10); color: #f08a8a; }
-.listen-together .lt-api-save-btn { background: rgba(255,255,255,0.10); color: var(--lt-text); }
+.listen-together .lt-api-save-btn { background: var(--lt-fill-2); color: var(--lt-text); }
 
 /* ---- 在线搜歌（音乐 API） ---- */
 .listen-together .lt-online-bar { display: flex; gap: 8px; align-items: center; }
 .listen-together .lt-online-bar input {
-  flex: 1; min-width: 0; background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.10); border-radius: 10px;
+  flex: 1; min-width: 0; background: var(--lt-fill-1);
+  border: 1px solid var(--lt-fill-2); border-radius: 10px;
   color: var(--lt-text); font-size: 13px; padding: 10px 12px;
   font-family: inherit; outline: none; letter-spacing: inherit;
 }
-.listen-together .lt-online-bar input:focus { border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.06); }
+.listen-together .lt-online-bar input:focus { border-color: var(--lt-border-hi); background: var(--lt-fill-2); }
 .listen-together .lt-online-bar input::placeholder { color: var(--lt-faint); }
 .listen-together .lt-online-res { margin-top: 12px; max-height: 340px; overflow-y: auto; }
 .listen-together .lt-online-item {
@@ -137,7 +169,7 @@
   padding: 8px 10px; border-radius: 12px; cursor: pointer;
   transition: background .2s, opacity .2s;
 }
-.listen-together .lt-online-item:hover { background: rgba(255,255,255,0.06); }
+.listen-together .lt-online-item:hover { background: var(--lt-fill-2); }
 .listen-together .lt-online-item.busy { opacity: .45; pointer-events: none; }
 .listen-together .lt-online-cover {
   width: 40px; height: 40px; flex: 0 0 40px; border-radius: 8px; overflow: hidden;
@@ -165,30 +197,27 @@
   display: flex; justify-content: space-between; align-items: center;
   padding: 18px 6px 10px;
 }
-.listen-together .lt-topbar .lt-now {
-  font-family: var(--lt-font-cn);
-  font-size: 22px; font-weight: 500; letter-spacing: 3px;
-  position: relative; padding-top: 16px;
-}
-.listen-together .lt-topbar .lt-now::before {
-  content: "正在一起听";
-  position: absolute; top: 0; left: 2px;
-  font-size: 10px; letter-spacing: 3px;
-  color: var(--lt-faint);
-  font-family: var(--lt-font-en);
+.listen-together .lt-now {
+  font-size: 18px; opacity: 0.65; letter-spacing: 0;
 }
 .listen-together .lt-topbar .lt-status {
   font-size: 12px; color: var(--lt-muted);
-  background: rgba(255,255,255,0.06);
+  background: var(--lt-fill-2);
   padding: 6px 14px; border-radius: 999px;
   cursor: pointer; touch-action: manipulation;
   border: 1px solid var(--lt-line);
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   transition: .18s;
 }
-.listen-together .lt-topbar .lt-status:hover { background: rgba(255,255,255,0.10); }
+.listen-together .lt-topbar .lt-status:hover { background: var(--lt-fill-2); }
 /* 顶部操作区（状态胶囊 + 换背景）已移到设置页，这里整块隐藏 */
 .listen-together .lt-top-actions { display: none !important; }
+.listen-together .lt-theme-btn {
+  font-size: 16px; cursor: pointer; touch-action: manipulation;
+  padding: 4px 8px; border-radius: 10px; transition: .18s;
+}
+.listen-together .lt-theme-btn:hover { background: var(--lt-fill-2); }
+
 
 /* ---- 双人连接区 ---- */
 .listen-together .lt-connect {
@@ -204,7 +233,7 @@
   box-shadow: 0 0 0 6px rgba(255,255,255,0.03), 0 10px 30px rgba(0,0,0,0.45);
   background: linear-gradient(135deg, var(--lt-accent), var(--lt-accent-2));
   display: grid; place-items: center;
-  font-size: 28px; color: #0a0a0f; transition: .25s;
+  font-size: 28px; color: var(--lt-on-accent); transition: .25s;
   filter: saturate(0.7);
 }
 .listen-together .lt-avatar:hover { transform: scale(1.03); }
@@ -218,6 +247,10 @@
   font-size: 12px; color: var(--lt-muted); text-align: center;
   margin-top: 10px; font-family: var(--lt-font-cn); letter-spacing: 1px;
 }
+.listen-together .lt-name { cursor: text; }
+.listen-together .lt-name:hover { text-decoration: underline dotted var(--lt-border-hi); }
+.listen-together .lt-name:focus { outline: none; background: var(--lt-fill-1); border-radius: 6px; }
+
 
 /* ---- 气泡区（此刻速览） ---- */
 .listen-together .lt-bubble-wrap {
@@ -226,7 +259,7 @@
 .listen-together .lt-bubble {
   max-width: 190px; text-align: center;
   font-size: 13px; line-height: 1.6;
-  background: rgba(255,255,255,0.06);
+  background: var(--lt-fill-2);
   padding: 9px 16px; border-radius: 18px;
   cursor: pointer; touch-action: manipulation;
   border: 1px solid var(--lt-line);
@@ -236,7 +269,7 @@
   animation: ltFloatUp .5s ease both;
   transition: .18s;
 }
-.listen-together .lt-bubble:hover { background: rgba(255,255,255,0.10); }
+.listen-together .lt-bubble:hover { background: var(--lt-fill-2); }
 
 /* ---- 玻璃卡片通用 ---- */
 .listen-together .lt-card {
@@ -285,7 +318,7 @@
 /* JS 会给进度条写紫色渐变，这里统一降饱和成灰白，保证暗色调统一 */
 .listen-together input[type=range].lt-seek {
   -webkit-appearance: none; appearance: none; height: 2px; border-radius: 2px;
-  background: rgba(255,255,255,0.14); outline: none; cursor: pointer;
+  background: var(--lt-fill-3); outline: none; cursor: pointer;
   filter: grayscale(1) brightness(1.5);
 }
 .listen-together input[type=range].lt-seek::-webkit-slider-thumb {
@@ -306,20 +339,20 @@
 .listen-together .lt-cbtn:hover { color: var(--lt-text); }
 .listen-together .lt-cbtn.play {
   width: 56px; height: 56px; font-size: 18px;
-  background: rgba(255,255,255,0.10);
+  background: var(--lt-fill-2);
   border: 1px solid var(--lt-line-2); color: var(--lt-text);
   box-shadow: 0 10px 30px rgba(0,0,0,0.45);
 }
-.listen-together .lt-cbtn.play:hover { transform: scale(1.04); background: rgba(255,255,255,0.14); }
+.listen-together .lt-cbtn.play:hover { transform: scale(1.04); background: var(--lt-fill-3); }
 .listen-together .lt-cbtn.loop-on { color: var(--lt-text); border-color: var(--lt-line-2); }
 .listen-together .lt-action-row { display: flex; justify-content: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 .listen-together .lt-mini-btn {
   padding: 7px 15px; border-radius: 999px; font-size: 12px; cursor: pointer;
-  background: rgba(255,255,255,0.06); border: 1px solid var(--lt-line);
+  background: var(--lt-fill-2); border: 1px solid var(--lt-line);
   color: var(--lt-sub); touch-action: manipulation; transition: .18s;
   font-family: var(--lt-font-cn); letter-spacing: 1px;
 }
-.listen-together .lt-mini-btn:hover { background: rgba(255,255,255,0.11); color: var(--lt-text); }
+.listen-together .lt-mini-btn:hover { background: var(--lt-fill-3); color: var(--lt-text); }
 
 /* 黑胶唱片：放大到屏幕宽度的 ~68%（520容器里约340px），30s 一圈 */
 .listen-together .lt-vinyl-stage { display: flex; justify-content: center; padding: 22px 0 6px; }
@@ -327,7 +360,7 @@
   width: min(340px, 72vw); height: min(340px, 72vw);
   border-radius: 50%; flex: none; position: relative;
   background: repeating-radial-gradient(circle at 50% 50%, #1a1a1f 0 3px, #121216 3px 6px);
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 30px 70px rgba(0,0,0,0.65);
+  box-shadow: 0 0 0 1px var(--lt-fill-2), 0 30px 70px rgba(0,0,0,0.65);
   animation: ltSpin 30s linear infinite; animation-play-state: paused;
   display: grid; place-items: center;
   filter: saturate(0.75);
@@ -336,13 +369,13 @@
 .listen-together .lt-vinyl .lt-vinyl-cover {
   width: 55%; height: 55%; border-radius: 50%; overflow: hidden;
   background: linear-gradient(135deg, var(--lt-accent), var(--lt-accent-2));
-  display: grid; place-items: center; font-size: 34px; color: #0a0a0f;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), 0 10px 30px rgba(0,0,0,0.5);
+  display: grid; place-items: center; font-size: 34px; color: var(--lt-on-accent);
+  box-shadow: inset 0 0 0 1px var(--lt-fill-2), 0 10px 30px rgba(0,0,0,0.5);
 }
 .listen-together .lt-vinyl .lt-vinyl-cover img { width: 100%; height: 100%; object-fit: cover; }
 .listen-together .lt-vinyl .lt-vinyl-hole {
   position: absolute; width: 10px; height: 10px; border-radius: 50%;
-  background: #0a0a0f; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10);
+  background: var(--lt-bg-1); box-shadow: inset 0 0 0 1px var(--lt-fill-2);
 }
 
 /* 歌词：常驻黑胶下方 */
@@ -375,7 +408,7 @@
   position: absolute; width: 150px; height: 150px; border-radius: 14px;
   overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.6);
   background: linear-gradient(135deg, var(--lt-accent), var(--lt-accent-2));
-  display: grid; place-items: center; color: #0a0a0f; font-size: 32px;
+  display: grid; place-items: center; color: var(--lt-on-accent); font-size: 32px;
   cursor: pointer; touch-action: manipulation; transition: .4s ease;
   border: 1px solid var(--lt-line);
 }
@@ -395,7 +428,7 @@
   max-height: 380px; overflow-y: auto; min-height: 160px;
 }
 .listen-together .lt-msgs::-webkit-scrollbar { width: 3px; }
-.listen-together .lt-msgs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+.listen-together .lt-msgs::-webkit-scrollbar-thumb { background: var(--lt-fill-3); border-radius: 2px; }
 .listen-together .lt-msg {
   max-width: 82%; animation: ltFloatUp .35s ease both; display: flex; flex-direction: column; gap: 5px;
 }
@@ -403,12 +436,12 @@
 .listen-together .lt-msg.them { align-self: flex-start; }
 .listen-together .lt-msg .lt-bub {
   padding: 9px 14px; border-radius: 18px; font-size: 14px; line-height: 1.65;
-  background: rgba(255,255,255,0.04); border: none; color: var(--lt-sub);
+  background: var(--lt-fill-1); border: none; color: var(--lt-sub);
   word-break: break-word;
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
 }
 .listen-together .lt-msg.me .lt-bub {
-  background: rgba(255,255,255,0.08); color: var(--lt-text);
+  background: var(--lt-fill-2); color: var(--lt-text);
   border: none; border-bottom-right-radius: 6px;
 }
 .listen-together .lt-msg.them .lt-bub { border-bottom-left-radius: 6px; }
@@ -420,14 +453,14 @@
 }
 .listen-together .lt-share-card {
   display: flex; gap: 10px; padding: 10px 12px; border-radius: 16px;
-  background: rgba(255,255,255,0.05); border: 1px solid var(--lt-line);
+  background: var(--lt-line-soft); border: 1px solid var(--lt-line);
   align-self: flex-start; max-width: 88%; cursor: pointer; touch-action: manipulation;
   animation: ltFloatUp .3s ease both;
 }
 .listen-together .lt-share-card .lt-sc-cover {
   width: 44px; height: 44px; border-radius: 10px; flex: none; overflow: hidden;
   background: linear-gradient(135deg, var(--lt-accent), var(--lt-accent-2));
-  display: grid; place-items: center; color: #0a0a0f; font-size: 17px;
+  display: grid; place-items: center; color: var(--lt-on-accent); font-size: 17px;
 }
 .listen-together .lt-share-card .lt-sc-cover img { width: 100%; height: 100%; object-fit: cover; }
 .listen-together .lt-share-card .lt-sc-info { font-size: 13px; line-height: 1.5; color: var(--lt-text); }
@@ -458,7 +491,7 @@
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
   display: flex; justify-content: space-around; align-items: center;
   background: rgba(20,20,30,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255,255,255,0.06); padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--lt-fill-2); padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
   max-width: 520px; margin: 0 auto;
 }
 .listen-together .lt-tab {
@@ -501,19 +534,19 @@
 .listen-together .lt-modal input, .listen-together .lt-modal textarea {
   width: 100%; border: 1px solid var(--lt-line-2); border-radius: 10px; padding: 9px 12px;
   font-size: 14px; color: var(--lt-text); outline: none; font-family: var(--lt-font-cn);
-  background: rgba(255,255,255,0.05); transition: .18s; letter-spacing: 1px;
+  background: var(--lt-line-soft); transition: .18s; letter-spacing: 1px;
 }
-.listen-together .lt-modal input:focus, .listen-together .lt-modal textarea:focus { border-color: rgba(255,255,255,0.30); background: rgba(255,255,255,0.08); }
+.listen-together .lt-modal input:focus, .listen-together .lt-modal textarea:focus { border-color: var(--lt-border-hi); background: var(--lt-fill-2); }
 .listen-together .lt-modal input[type=file] { font-size: 12px; color: var(--lt-muted); padding: 8px 10px; }
 .listen-together .lt-modal .lt-modal-btns { display: flex; gap: 10px; margin-top: 18px; }
 .listen-together .lt-modal .lt-modal-btn {
   flex: 1; padding: 10px; border-radius: 10px; font-size: 14px; cursor: pointer;
-  touch-action: manipulation; border: 1px solid var(--lt-line-2); background: rgba(255,255,255,0.05); color: var(--lt-sub);
+  touch-action: manipulation; border: 1px solid var(--lt-line-2); background: var(--lt-line-soft); color: var(--lt-sub);
   font-family: var(--lt-font-cn); transition: .18s; text-align: center;
 }
-.listen-together .lt-modal .lt-modal-btn:hover { background: rgba(255,255,255,0.10); color: var(--lt-text); }
+.listen-together .lt-modal .lt-modal-btn:hover { background: var(--lt-fill-2); color: var(--lt-text); }
 .listen-together .lt-modal .lt-modal-btn.primary {
-  background: rgba(255,255,255,0.14); color: var(--lt-text); border: 1px solid var(--lt-line-2);
+  background: var(--lt-fill-3); color: var(--lt-text); border: 1px solid var(--lt-line-2);
 }
 .listen-together .lt-modal .lt-modal-file-hint { font-size: 11px; color: var(--lt-faint); margin-top: 6px; line-height: 1.8; }
 .listen-together .lt-modal .lt-modal-preview {
@@ -537,11 +570,11 @@
 .listen-together .lt-fold-btn {
   width: 30px; height: 30px; border-radius: 50%; flex: none;
   display: grid; place-items: center; cursor: pointer; touch-action: manipulation;
-  background: rgba(255,255,255,0.05); color: var(--lt-muted);
+  background: var(--lt-line-soft); color: var(--lt-muted);
   border: 1px solid var(--lt-line); font-size: 12px; transition: .18s;
   margin-right: 14px; margin-top: 8px;
 }
-.listen-together .lt-fold-btn:hover { background: rgba(255,255,255,0.10); color: var(--lt-text); }
+.listen-together .lt-fold-btn:hover { background: var(--lt-fill-2); color: var(--lt-text); }
 
 /* 折叠状态：藏掉头部与主视图，只留胶囊 */
 .listen-together .lt-music-card.collapsed .lt-music-head,
@@ -559,7 +592,7 @@
   position: relative; align-items: center; gap: 12px;
   height: 64px; padding: 8px 14px; border-radius: 32px;
   background: rgba(30,30,40,0.75);
-  border: 1px solid rgba(255,255,255,0.10);
+  border: 1px solid var(--lt-fill-2);
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 18px 45px rgba(0,0,0,0.5);
   cursor: pointer;
@@ -573,8 +606,8 @@
 .listen-together .lt-mini-cover {
   width: 44px; height: 44px; border-radius: 50%; flex: none; overflow: hidden;
   background: linear-gradient(135deg, var(--lt-accent), var(--lt-accent-2));
-  display: grid; place-items: center; color: #0a0a0f; font-size: 16px;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.10);
+  display: grid; place-items: center; color: var(--lt-on-accent); font-size: 16px;
+  box-shadow: 0 0 0 1px var(--lt-fill-2);
   filter: saturate(0.8);
 }
 .listen-together .lt-mini-cover img { width: 100%; height: 100%; object-fit: cover; }
@@ -607,7 +640,7 @@
 /* ---- 设置页：背景设置卡片 ---- */
 .listen-together .lt-bgset-preview {
   height: 76px; border-radius: 12px; overflow: hidden; margin-top: 10px;
-  background-color: rgba(255,255,255,0.04); border: 1px dashed var(--lt-line-2);
+  background-color: var(--lt-fill-1); border: 1px dashed var(--lt-line-2);
   background-size: cover; background-position: center;
   display: grid; place-items: center; color: var(--lt-faint); font-size: 12px;
 }
@@ -615,7 +648,7 @@
 /* ---- 背景设置模态 ---- */
 .listen-together .lt-modal .lt-bg-preview {
   width: 100%; height: 110px; border-radius: 12px; overflow: hidden;
-  background-color: rgba(255,255,255,0.04); border: 1px dashed var(--lt-line-2);
+  background-color: var(--lt-fill-1); border: 1px dashed var(--lt-line-2);
   background-size: cover; background-position: center; margin: 4px 0 8px;
   display: grid; place-items: center; color: var(--lt-faint); font-size: 12px; font-family: var(--lt-font-cn);
 }
@@ -625,13 +658,13 @@
 .listen-together .lt-modal .lt-bg-op-val { font-size: 12px; color: var(--lt-muted); width: 40px; text-align: right; flex: none; font-family: var(--lt-font-en); }
 .listen-together .lt-modal input[type=range] {
   -webkit-appearance: none; appearance: none; height: 2px; border-radius: 2px;
-  background: rgba(255,255,255,0.14); outline: none; cursor: pointer;
+  background: var(--lt-fill-3); outline: none; cursor: pointer;
   border: none; padding: 0; width: 100%;
 }
 .listen-together .lt-modal input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
   background: #e8e8ee; border: none; cursor: pointer;
-  box-shadow: 0 0 10px rgba(255,255,255,0.3);
+  box-shadow: 0 0 10px var(--lt-border-hi);
 }
 .listen-together .lt-modal input[type=range]::-moz-range-thumb {
   width: 14px; height: 14px; border-radius: 50%; background: #e8e8ee; border: none; cursor: pointer;
@@ -653,18 +686,19 @@
     <div class="lt-page active" data-page="now">
     <!-- 顶部栏 -->
     <div class="lt-topbar">
-      <div class="lt-now">此刻</div>
+      <div class="lt-now" id="ltNowMark">🎧</div>
       <div class="lt-top-actions">
         <div class="lt-status" id="ltStatus">雪青</div>
         <div class="lt-bg-btn" id="ltBgBtn" title="换背景">🎨</div>
       </div>
+      <div class="lt-theme-btn" id="ltThemeBtn" title="切换深/浅色">🌙</div>
     </div>
 
     <!-- 双人连接区 -->
     <div class="lt-connect">
       <div class="lt-avatar-box">
         <div class="lt-avatar" id="ltAvatar1" title="点击更换头像">🎵</div>
-        <div class="lt-name" id="ltName1">疏月</div>
+        <div class="lt-name" id="ltName1" contenteditable="true" title="点击改名">疏月</div>
       </div>
       <div class="lt-arc" id="ltArc">
         <svg viewBox="0 0 90 50" preserveAspectRatio="none">
@@ -676,7 +710,7 @@
       </div>
       <div class="lt-avatar-box">
         <div class="lt-avatar" id="ltAvatar2" title="点击更换头像">🎧</div>
-        <div class="lt-name" id="ltName2">加加</div>
+        <div class="lt-name" id="ltName2" contenteditable="true" title="点击改名">加加</div>
       </div>
     </div>
 
@@ -1014,6 +1048,7 @@
   var STORE_KEY = 'lt_store_v1';
   var store = {
     bg: '', avatar1: '', avatar2: '', status: '雪青',
+    theme: 'dark',
     name1: '疏月', name2: '加加',
     bubble1: BUBBLE_POOL_1, bubble2: BUBBLE_POOL_2,
     bubbleIdx1: 0, bubbleIdx2: 0,
@@ -1044,6 +1079,9 @@
     if(store['avatar2']){
       var a2 = dq('#ltAvatar2'); a2['innerHTML'] = '<img src="'+store['avatar2']+'" alt="">';
     }
+    /* 主题 */
+    dq('#ltApp')['setAttribute']('data-theme', store['theme'] || 'dark');
+    var _tb = dq('#ltThemeBtn'); if(_tb) _tb['textContent'] = (store['theme'] === 'light') ? '☀️' : '🌙';
     /* 状态 / 名字 */
     dq('#ltStatus')['textContent'] = store['status'];
     dq('#ltName1')['textContent'] = store['name1'];
@@ -1130,6 +1168,21 @@
     e['target']['value'] = '';
   });
 
+  /* ================= 名字就地编辑 ================= */
+  function bindNameEdit(sel, key){
+    var el = dq(sel);
+    el['addEventListener']('blur', function(){
+      var v = el['textContent']['trim']();
+      if(v){ store[key] = v; saveStore(); }
+      else { el['textContent'] = store[key]; }
+    });
+    el['addEventListener']('keydown', function(e){
+      if(e['key'] === 'Enter'){ e['preventDefault'](); el['blur'](); }
+    });
+  }
+  bindNameEdit('#ltName1', 'name1');
+  bindNameEdit('#ltName2', 'name2');
+
   /* ================= 状态文案编辑 ================= */
   dq('#ltStatus')['addEventListener']('click', function(){
     openModal(
@@ -1151,6 +1204,14 @@
         closeModal();
       } else if(act === 'cancel'){ closeModal(); }
     });
+  });
+
+  /* ================= 主题切换 ================= */
+  dq('#ltThemeBtn')['addEventListener']('click', function(){
+    store['theme'] = (store['theme'] === 'light') ? 'dark' : 'light';
+    saveStore();
+    dq('#ltApp')['setAttribute']('data-theme', store['theme']);
+    dq('#ltThemeBtn')['textContent'] = (store['theme'] === 'light') ? '☀️' : '🌙';
   });
 
   /* ================= 气泡 = 实时对话速览（不再手动编辑） ================= */
