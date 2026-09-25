@@ -376,6 +376,13 @@
   display: grid; place-items: center; font-size: 10px; color: var(--lt-muted); text-align: center; line-height: 1.5;
 }
 .listen-together .lt-edit-cover-preview img { width: 100%; height: 100%; object-fit: cover; }
+.listen-together .lt-edit-lrc-input {
+  width: 100%; min-height: 110px; margin: 6px 0 10px; resize: vertical;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px; color: var(--lt-text); font-size: 13px; line-height: 1.7;
+  padding: 10px 12px; outline: none; font-family: var(--lt-font-cn); box-sizing: border-box;
+}
+.listen-together .lt-edit-lrc-input:focus { border-color: rgba(255,255,255,0.28); }
 /* ---- 列表项编辑按钮 ---- */
 .listen-together .lt-pl-item .lt-pl-edit { color: var(--lt-faint); font-size: 14px; padding: 4px 6px; cursor: pointer; touch-action: manipulation; flex: none; }
 
@@ -483,10 +490,7 @@
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), 0 10px 30px rgba(0,0,0,0.5);
 }
 .listen-together .lt-vinyl .lt-vinyl-cover img { width: 100%; height: 100%; object-fit: cover; }
-.listen-together .lt-vinyl .lt-vinyl-hole {
-  position: absolute; width: 10px; height: 10px; border-radius: 50%;
-  background: #0a0a0f; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10);
-}
+.listen-together .lt-vinyl .lt-vinyl-hole { display: none; }
 
 /* 歌词：黑胶下方两行（上一句小灰 + 当前句大白） */
 .listen-together .lt-lyrics-duo {
@@ -662,6 +666,27 @@
 .listen-together .lt-tab.active { color: var(--lt-text); }
 .listen-together .lt-tab .lt-tab-icon { font-size: 18px; opacity: 0.7; }
 .listen-together .lt-tab.active .lt-tab-icon { opacity: 1; }
+/* 导航收起：整体下滑隐藏，露出的位置放一条细把手 */
+.listen-together .lt-tabbar.collapsed {
+  transform: translateY(100%); opacity: 0; pointer-events: none;
+}
+.listen-together .lt-tabbar-fold {
+  position: absolute; top: -15px; right: 14px;
+  width: 30px; height: 22px; border-radius: 8px 8px 0 0;
+  background: rgba(20,20,30,0.92); border: 1px solid rgba(255,255,255,0.08); border-bottom: none;
+  display: grid; place-items: center; font-size: 11px; color: var(--lt-faint);
+  cursor: pointer; touch-action: manipulation; z-index: 1;
+}
+.listen-together .lt-tabbar-fold:hover { color: var(--lt-text); }
+.listen-together .lt-tabbar-handle {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 49;
+  width: 46px; height: 5px; border-radius: 999px;
+  background: rgba(255,255,255,0.25); cursor: pointer; touch-action: manipulation;
+  display: none; transition: .22s;
+}
+.listen-together .lt-tabbar-handle:hover { background: rgba(255,255,255,0.45); }
+.listen-together .lt-tabbar.collapsed + .lt-tabbar-handle { display: block; }
 
 /* ---- Toast ---- */
 .listen-together .lt-toast {
@@ -1115,11 +1140,14 @@
 
   <!-- 底部导航栏 -->
   <div class="lt-tabbar" id="ltTabbar">
+    <div class="lt-tabbar-fold" id="ltTabbarFold" title="收起导航">▾</div>
     <div class="lt-tab active"><span class="lt-tab-icon">🌙</span>此刻</div>
     <div class="lt-tab"><span class="lt-tab-icon">📋</span>歌单</div>
     <div class="lt-tab"><span class="lt-tab-icon">🎵</span>曲库</div>
     <div class="lt-tab"><span class="lt-tab-icon">🎧</span>一起听</div>
   </div>
+  <!-- 收起导航后露出的细把手（点击重新展开） -->
+  <div class="lt-tabbar-handle" id="ltTabbarHandle" title="展开导航"></div>
 
   <!-- Toast -->
   <div class="lt-toast" id="ltToast"></div>
@@ -1689,6 +1717,7 @@
         (t['lrc'] ? '<div class="lt-mini-btn" id="ltEditLrcClear" style="text-align:center;">🗑 清除歌词</div>' : '') +
         '<div class="lt-edit-lrc-state" id="ltEditLrcState">' + (t['lrc'] ? '已有歌词' : '还没有歌词') + '</div>' +
       '</div>' +
+      '<textarea class="lt-edit-lrc-input" id="ltEditLrcText" placeholder="也可以直接在这里粘贴歌词，支持 [00:00.00] 时间轴格式">' + escapeHtml(t['lrc'] || '') + '</textarea>' +
       '<div class="lt-modal-btns">' +
         '<div class="lt-modal-btn" data-act="cancel">取消</div>' +
         '<div class="lt-modal-btn primary" data-act="ok">保存</div>' +
@@ -1725,6 +1754,7 @@
       r['onload'] = function(){
         newLrc = r['result'];
         var st = dq('#ltEditLrcState'); if(st) st['textContent'] = '已载入：' + (f['name'] || '歌词文件') + '（保存后生效）';
+        var ta = dq('#ltEditLrcText'); if(ta) ta['value'] = newLrc;
       };
       r['readAsText'](f);
       e2['target']['value'] = '';
@@ -1734,6 +1764,7 @@
       lrcClearBtn['addEventListener']('click', function(){
         newLrc = '';
         var st = dq('#ltEditLrcState'); if(st) st['textContent'] = '歌词已清除（保存后生效）';
+        var ta = dq('#ltEditLrcText'); if(ta) ta['value'] = '';
       });
     }
     dq('#ltModalBox')['addEventListener']('click', function(ev){
@@ -1744,7 +1775,9 @@
         t['title'] = ti;
         t['artist'] = dq('#ltEditArtist')['value']['trim']();
         if(newCover !== undefined) t['cover'] = newCover;
-        if(newLrc !== undefined) t['lrc'] = newLrc;
+        var lrcTextVal = dq('#ltEditLrcText') ? dq('#ltEditLrcText')['value']['trim']() : '';
+        if(lrcTextVal){ t['lrc'] = lrcTextVal; }
+        else if(newLrc !== undefined){ t['lrc'] = newLrc; }
         savePlaylist();
         renderPlaylistPage(); renderLibraryPage(); renderStack();
         if(idx === i) loadTrack(i, false);
@@ -2458,13 +2491,13 @@
     var v = inp['value']['trim']();
     if(!v) return;
     pushMsg('me', v);
-    setBubble(1, v);
+    setBubble(2, v);
     inp['value'] = '';
     maybeRemember(v);
 
     if(apiConfig['apiKey']){
       var m = dce('div'); m['className'] = 'lt-msg them';
-      setBubble(2, '正在思考…');
+      setBubble(1, '正在思考…');
       var b = dce('div'); b['className'] = 'lt-bub'; b['textContent'] = '正在思考…';
       var meta = dce('div'); meta['className'] = 'lt-meta';
       meta['textContent'] = store['name2'] + ' · ' + nowTime();
@@ -2474,7 +2507,7 @@
       callApi(apiMsgs,
         function(reply){
           b['textContent'] = reply;
-          setBubble(2, reply);
+          setBubble(1, reply);
           msgs['scrollTop'] = msgs['scrollHeight'];
           chatHistory['push']({role:'user', content: v});
           chatHistory['push']({role:'assistant', content: reply});
@@ -2482,7 +2515,7 @@
         },
         function(err){
           b['textContent'] = '（连接出了点问题：' + err + '）';
-          setBubble(2, '嗯…信号不太好');
+          setBubble(1, '嗯…信号不太好');
           msgs['scrollTop'] = msgs['scrollHeight'];
         }
       );
@@ -2491,7 +2524,7 @@
       chatHistory['push']({role:'user', content: v});
       chatHistory['push']({role:'assistant', content: reply});
       if(chatHistory['length'] > 20) chatHistory = chatHistory['slice'](-20);
-      setTimeout(function(){ pushMsg('them', reply); setBubble(2, reply); }, 700 + MATH['floor'](MATH['random']()*600));
+      setTimeout(function(){ pushMsg('them', reply); setBubble(1, reply); }, 700 + MATH['floor'](MATH['random']()*600));
     }
   }
   dq('#ltSend')['addEventListener']('click', sendMessage);
@@ -2530,12 +2563,13 @@
     var v = chatFloatInput['value']['trim']();
     if(!v) return;
     floatPush('me', v);
+    setBubble(2, v);
     chatFloatInput['value'] = '';
     closeChatFloat();
     maybeRemember(v);
     if(apiConfig['apiKey']){
       var m = dce('div'); m['className'] = 'lt-msg them';
-      setBubble(2, '正在思考…');
+      setBubble(1, '正在思考…');
       var b = dce('div'); b['className'] = 'lt-bub'; b['textContent'] = '正在思考…';
       var meta = dce('div'); meta['className'] = 'lt-meta';
       meta['textContent'] = store['name2'] + ' · ' + nowTime();
@@ -2545,7 +2579,7 @@
       callApi(apiMsgs,
         function(reply){
           b['textContent'] = reply;
-          setBubble(2, reply);
+          setBubble(1, reply);
           chatFloatMsgs['scrollTop'] = chatFloatMsgs['scrollHeight'];
           chatHistory['push']({role:'user', content: v});
           chatHistory['push']({role:'assistant', content: reply});
@@ -2553,7 +2587,7 @@
         },
         function(err){
           b['textContent'] = '（连接出了点问题：' + err + '）';
-          setBubble(2, '嗯…信号不太好');
+          setBubble(1, '嗯…信号不太好');
           chatFloatMsgs['scrollTop'] = chatFloatMsgs['scrollHeight'];
         }
       );
@@ -2562,13 +2596,29 @@
       chatHistory['push']({role:'user', content: v});
       chatHistory['push']({role:'assistant', content: reply});
       if(chatHistory['length'] > 20) chatHistory = chatHistory['slice'](-20);
-      setTimeout(function(){ floatPush('them', reply); setBubble(2, reply); }, 700 + MATH['floor'](MATH['random']()*600));
+      setTimeout(function(){ floatPush('them', reply); setBubble(1, reply); }, 700 + MATH['floor'](MATH['random']()*600));
     }
   }
   dq('#ltChatFloatSend')['addEventListener']('click', sendFloatMessage);
   dq('#ltChatFloatInput')['addEventListener']('keydown', function(e){
     if(e['key'] === 'Enter'){ e['preventDefault'](); sendFloatMessage(); }
   });
+
+  /* ---- 底部导航收起/展开 ---- */
+  (function(){
+    var bar = dq('#ltTabbar');
+    if(!bar) return;
+    var fold = dq('#ltTabbarFold');
+    var handle = dq('#ltTabbarHandle');
+    function collapse(){
+      bar['classList']['add']('collapsed');
+    }
+    function expand(){
+      bar['classList']['remove']('collapsed');
+    }
+    if(fold) fold['addEventListener']('click', function(e){ e['stopPropagation'](); collapse(); });
+    if(handle) handle['addEventListener']('click', function(e){ e['stopPropagation'](); expand(); });
+  })();
 
   function localReply(text){
     var t = text['trim']();
