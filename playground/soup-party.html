@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>海龟汤 | 加加的游戏间 v2.0.0</title>
+<style>
+/* ===================================================================
+   海龟汤 · 聊天对话版 · 暗色电影感
+   =================================================================== */
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; overflow:hidden; }
+body {
+  font-family: Georgia, "Songti SC", "宋体", "PingFang SC", "Microsoft YaHei", serif;
+  background: linear-gradient(168deg, #0a0a0f 0%, #12121a 50%, #1a1a24 100%);
+  color: #e8e8ee;
+  letter-spacing: 0.02em;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+body::before {
+  content:''; position: fixed; inset:0;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgba(201,169,110,0.22), transparent),
+    radial-gradient(1px 1px at 38% 72%, rgba(255,255,255,0.12), transparent),
+    radial-gradient(1px 1px at 67% 31%, rgba(201,169,110,0.16), transparent),
+    radial-gradient(1px 1px at 85% 84%, rgba(255,255,255,0.10), transparent),
+    radial-gradient(1px 1px at 23% 53%, rgba(201,169,110,0.12), transparent),
+    radial-gradient(1px 1px at 52% 12%, rgba(255,255,255,0.08), transparent),
+    radial-gradient(1px 1px at 78% 60%, rgba(201,169,110,0.10), transparent);
+  pointer-events:none; z-index:0;
+}
+
+/* ===== 主容器 ===== */
+.sp-app {
+  position: relative; z-index:1;
+  height: 100vh; display:flex; flex-direction:column;
+}
+
+/* ===== 顶部联系人栏 ===== */
+.sp-contact-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 12px 16px 10px;
+  background: rgba(10,10,15,0.72);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  z-index:10;
+}
+.sp-contact {
+  display:flex; align-items:center; gap:10px;
+  cursor:pointer;
+}
+.sp-avatar {
+  width:38px; height:38px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; flex-shrink:0; overflow:hidden;
+  background: rgba(201,169,110,0.14);
+  border: 1px solid rgba(201,169,110,0.12);
+}
+.sp-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.sp-contact-info { display:flex; flex-direction:column; gap:1px; }
+.sp-contact-name {
+  font-size:14px; font-weight:600; color:#e8e8ee; letter-spacing:0.04em;
+}
+.sp-contact-status {
+  font-size:10px; color:#c9a96e; letter-spacing:0.08em;
+}
+.sp-tabs { display:flex; gap:3px; background:rgba(255,255,255,0.04); border-radius:10px; padding:3px; }
+.sp-tab {
+  border:none; background:transparent; color:#8a8a98;
+  font-family:inherit; font-size:11px; letter-spacing:0.04em;
+  padding: 6px 12px; border-radius:8px; cursor:pointer;
+  transition: all .3s ease;
+}
+.sp-tab.active { background:rgba(201,169,110,0.16); color:#c9a96e; }
+
+/* ===== 聊天面板 ===== */
+.sp-panel { display:none; flex:1; flex-direction:column; overflow:hidden; }
+.sp-panel.active { display:flex; }
+.sp-chat-area {
+  flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding: 12px 14px 6px;
+  display:flex; flex-direction:column; gap:14px;
+}
+
+/* ===== 消息气泡 ===== */
+.sp-msg {
+  display:flex; align-items:flex-start; gap:8px;
+  animation: spFadeUp .35s ease;
+}
+@keyframes spFadeUp { from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:translateY(0); } }
+.sp-msg .sp-msg-ava {
+  width:32px; height:32px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; flex-shrink:0; margin-top:2px; overflow:hidden;
+}
+.sp-msg .sp-msg-ava img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.sp-msg.left .sp-msg-ava { background: rgba(201,169,110,0.14); }
+.sp-msg.right { flex-direction:row-reverse; }
+.sp-msg.right .sp-msg-ava { background: rgba(232,232,238,0.10); }
+.sp-msg-content { display:flex; flex-direction:column; gap:2px; max-width:78%; }
+.sp-msg.right .sp-msg-content { align-items:flex-end; }
+.sp-msg-name {
+  font-size:10px; color:#6a6a78; letter-spacing:0.04em;
+  padding: 0 4px;
+}
+.sp-msg.right .sp-msg-name { color:#6a6a78; }
+.sp-bubble {
+  padding: 10px 14px; border-radius: 16px;
+  font-size:14px; line-height:1.6; word-break:break-word;
+}
+.sp-msg.left .sp-bubble {
+  background: rgba(30,30,40,0.72);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-bottom-left-radius: 5px;
+  color: #e8e8ee;
+}
+.sp-msg.right .sp-bubble {
+  background: rgba(201,169,110,0.14);
+  border: 1px solid rgba(201,169,110,0.10);
+  border-bottom-right-radius: 5px;
+  color: #e8e8ee;
+}
+/* 答案样式 */
+.sp-bubble.sp-answer { font-weight:600; letter-spacing:0.04em; }
+.sp-bubble.sp-answer-yes { color:#7bc98a; }
+.sp-bubble.sp-answer-no { color:#d97070; }
+.sp-bubble.sp-answer-irr { color:#8a8a98; }
+.sp-bubble.sp-answer-part { color:#c9a96e; }
+
+/* 汤面卡片（在气泡里） */
+.sp-bubble.sp-story {
+  background: rgba(201,169,110,0.08);
+  border: 1px solid rgba(201,169,110,0.12);
+  border-radius: 16px;
+  padding: 16px 18px;
+  max-width: 86%;
+}
+.sp-bubble.sp-story .sp-story-label {
+  font-size:10px; text-transform:uppercase; letter-spacing:0.18em;
+  color:#c9a96e; margin-bottom:8px;
+}
+.sp-bubble.sp-story .sp-story-text { font-size:14px; line-height:1.7; }
+
+/* 揭晓汤底（在气泡里） */
+.sp-bubble.sp-reveal {
+  background: rgba(201,169,110,0.10);
+  border: 1px solid rgba(201,169,110,0.16);
+  border-radius: 16px;
+  padding: 16px 18px;
+  max-width: 86%;
+}
+.sp-bubble.sp-reveal .sp-reveal-label {
+  font-size:10px; text-transform:uppercase; letter-spacing:0.18em;
+  color:#c9a96e; margin-bottom:8px;
+}
+.sp-bubble.sp-reveal .sp-reveal-text { font-size:14px; line-height:1.7; }
+
+/* 卡片型消息（发牌/投票/设置/结果） */
+.sp-bubble.sp-card-msg {
+  background: rgba(30,30,40,0.55);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 18px;
+  padding: 16px 18px;
+  max-width: 88%;
+  width: 100%;
+}
+
+/* ===== 底部操作栏 ===== */
+.sp-dock {
+  padding: 8px 12px 14px;
+  background: rgba(10,10,15,0.80);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  z-index:10;
+}
+.sp-quickrow { display:flex; gap:6px; margin-bottom:8px; }
+.sp-qbtn {
+  flex:1; border:1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.03); color:#8a8a98;
+  font-family:inherit; font-size:13px; padding:9px 0; border-radius:11px;
+  cursor:pointer; transition:all .2s ease; letter-spacing:0.03em;
+}
+.sp-qbtn:active { transform:scale(0.96); }
+.sp-qbtn.q-yes { color:#7bc98a; border-color:rgba(123,201,138,0.18); }
+.sp-qbtn.q-yes:active { background:rgba(123,201,138,0.10); }
+.sp-qbtn.q-no { color:#d97070; border-color:rgba(217,112,112,0.18); }
+.sp-qbtn.q-no:active { background:rgba(217,112,112,0.10); }
+.sp-qbtn.q-irr { color:#8a8a98; }
+.sp-qbtn.q-irr:active { background:rgba(138,138,152,0.10); }
+.sp-qbtn.q-part { color:#c9a96e; border-color:rgba(201,169,110,0.18); }
+.sp-qbtn.q-part:active { background:rgba(201,169,110,0.10); }
+
+.sp-input-row { display:flex; gap:8px; align-items:center; }
+.sp-input {
+  flex:1; border:1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.04); color:#e8e8ee;
+  font-family:inherit; font-size:14px; padding:11px 14px;
+  border-radius:13px; outline:none; transition:border-color .25s ease;
+}
+.sp-input::placeholder { color:#6a6a78; }
+.sp-input:focus { border-color:rgba(201,169,110,0.30); }
+.sp-send {
+  border:none; background:rgba(201,169,110,0.20); color:#c9a96e;
+  font-family:inherit; font-size:18px; width:42px; height:42px;
+  border-radius:12px; cursor:pointer; display:flex; align-items:center;
+  justify-content:center; transition:all .2s ease; flex-shrink:0;
+}
+.sp-send:active { transform:scale(0.92); background:rgba(201,169,110,0.30); }
+
+.sp-subrow { display:flex; gap:6px; margin-top:8px; }
+.sp-sbtn {
+  flex:1; border:1px solid rgba(255,255,255,0.06);
+  background:transparent; color:#8a8a98; font-family:inherit;
+  font-size:12px; letter-spacing:0.04em; padding:8px 0; border-radius:10px;
+  cursor:pointer; transition:all .2s ease;
+}
+.sp-sbtn:active { background:rgba(255,255,255,0.04); }
+.sp-sbtn.sp-gold { color:#c9a96e; border-color:rgba(201,169,110,0.14); }
+
+/* ===== 设置弹窗 ===== */
+.sp-modal {
+  position:fixed; inset:0; z-index:1000;
+  display:flex; align-items:center; justify-content:center;
+}
+.sp-modal-bg {
+  position:absolute; inset:0;
+  background:rgba(0,0,0,0.60); backdrop-filter:blur(6px);
+}
+.sp-modal-card {
+  position:relative; width:90%; max-width:340px;
+  background: linear-gradient(160deg, rgba(20,20,28,0.95), rgba(30,30,40,0.95));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px; padding: 24px 20px;
+}
+.sp-modal-card h3 {
+  font-size:16px; color:#c9a96e; letter-spacing:0.08em;
+  margin-bottom:20px; font-weight:600; text-align:center;
+}
+.sp-setting-group {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.sp-setting-group:last-of-type { border-bottom:none; margin-bottom:16px; }
+.sp-setting-group > label {
+  font-size:11px; color:#8a8a98; letter-spacing:0.08em;
+  display:block; margin-bottom:10px;
+}
+.sp-avatar-pick { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.sp-avatar-preview {
+  width:44px; height:44px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; overflow:hidden;
+  background: rgba(201,169,110,0.14);
+  border: 1px solid rgba(201,169,110,0.12);
+}
+.sp-avatar-preview img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.sp-emoji-input {
+  width:60px; border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.04); color:#e8e8ee;
+  font-family:inherit; font-size:16px; text-align:center;
+  padding:8px 0; border-radius:10px; outline:none;
+}
+.sp-upload-btn {
+  font-size:11px; color:#c9a96e; letter-spacing:0.04em;
+  border:1px solid rgba(201,169,110,0.14); border-radius:10px;
+  padding:8px 12px; cursor:pointer; transition:all .2s ease;
+}
+.sp-upload-btn:active { background:rgba(201,169,110,0.10); }
+.sp-name-setting {
+  width:100%; border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.04); color:#e8e8ee;
+  font-family:inherit; font-size:14px; padding:10px 14px;
+  border-radius:11px; outline:none;
+}
+.sp-name-setting::placeholder { color:#6a6a78; }
+.sp-name-setting:focus { border-color:rgba(201,169,110,0.25); }
+.sp-save-btn {
+  width:100%; border:none;
+  background:linear-gradient(135deg, rgba(201,169,110,0.22), rgba(201,169,110,0.12));
+  color:#c9a96e; font-family:inherit; font-size:14px; font-weight:600;
+  letter-spacing:0.06em; padding:12px 0; border-radius:13px; cursor:pointer;
+  transition:all .2s ease;
+}
+.sp-save-btn:active { transform:scale(0.97); }
+
+
+
+/* 水印 */
+.sp-watermark {
+  position:fixed; bottom:4px; right:8px;
+  font-size:9px; color:rgba(201,169,110,0.30);
+  letter-spacing:0.1em; z-index:999; pointer-events:none;
+}
+
+/* ===== 主题切换按钮 ===== */
+.sp-theme-toggle {
+  width:32px; height:32px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; cursor:pointer; flex-shrink:0;
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06);
+  color:#c9a96e; transition:all .25s ease;
+}
+.sp-theme-toggle:active { transform:scale(0.88); }
+
+/* ===== 浅色主题 ===== */
+body.light {
+  background: linear-gradient(168deg, #f2f0ea 0%, #eae7dd 50%, #ddd9cc 100%);
+  color: #2a2a30;
+}
+body.light::before {
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgba(160,133,69,0.16), transparent),
+    radial-gradient(1px 1px at 38% 72%, rgba(0,0,0,0.05), transparent),
+    radial-gradient(1px 1px at 67% 31%, rgba(160,133,69,0.12), transparent),
+    radial-gradient(1px 1px at 85% 84%, rgba(0,0,0,0.04), transparent);
+}
+body.light .sp-contact-bar { background:rgba(240,238,232,0.80); border-bottom-color:rgba(0,0,0,0.07); }
+body.light .sp-contact-name { color:#2a2a30; }
+body.light .sp-contact-status { color:#a08545; }
+body.light .sp-avatar { background:rgba(201,169,110,0.18); border-color:rgba(201,169,110,0.15); }
+body.light .sp-theme-toggle { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.08); color:#a08545; }
+body.light .sp-tabs { background:rgba(0,0,0,0.04); }
+body.light .sp-tab { color:#6a6a78; }
+body.light .sp-tab.active { background:rgba(201,169,110,0.20); color:#a08545; }
+body.light .sp-msg.left .sp-msg-ava { background:rgba(201,169,110,0.18); }
+body.light .sp-msg.right .sp-msg-ava { background:rgba(42,42,48,0.08); }
+body.light .sp-msg-name { color:#8a8a98; }
+body.light .sp-msg.left .sp-bubble {
+  background:rgba(255,255,255,0.88); border-color:rgba(0,0,0,0.06); color:#2a2a30;
+}
+body.light .sp-msg.right .sp-bubble {
+  background:rgba(201,169,110,0.18); border-color:rgba(201,169,110,0.12); color:#2a2a30;
+}
+body.light .sp-bubble.sp-story { background:rgba(201,169,110,0.10); border-color:rgba(201,169,110,0.15); }
+body.light .sp-bubble.sp-story .sp-story-label { color:#a08545; }
+body.light .sp-bubble.sp-reveal { background:rgba(201,169,110,0.10); border-color:rgba(201,169,110,0.18); }
+body.light .sp-bubble.sp-reveal .sp-reveal-label { color:#a08545; }
+body.light .sp-bubble.sp-answer-yes { color:#4a9a5a; }
+body.light .sp-bubble.sp-answer-no { color:#c45a5a; }
+body.light .sp-bubble.sp-answer-irr { color:#8a8a98; }
+body.light .sp-bubble.sp-answer-part { color:#a08545; }
+body.light .sp-bubble.sp-card-msg { background:rgba(255,255,255,0.82); border-color:rgba(0,0,0,0.06); }
+body.light .sp-dock { background:rgba(240,238,232,0.88); border-top-color:rgba(0,0,0,0.06); }
+body.light .sp-qbtn { background:rgba(0,0,0,0.03); border-color:rgba(0,0,0,0.06); color:#6a6a78; }
+body.light .sp-qbtn.q-yes { color:#4a9a5a; border-color:rgba(74,154,90,0.20); }
+body.light .sp-qbtn.q-no { color:#c45a5a; border-color:rgba(196,90,90,0.20); }
+body.light .sp-qbtn.q-part { color:#a08545; border-color:rgba(160,133,69,0.20); }
+body.light .sp-input { background:rgba(255,255,255,0.70); border-color:rgba(0,0,0,0.08); color:#2a2a30; }
+body.light .sp-input::placeholder { color:#8a8a98; }
+body.light .sp-input:focus { border-color:rgba(201,169,110,0.35); }
+body.light .sp-send { background:rgba(201,169,110,0.22); color:#a08545; }
+body.light .sp-sbtn { border-color:rgba(0,0,0,0.08); color:#6a6a78; }
+body.light .sp-sbtn.sp-gold { color:#a08545; border-color:rgba(160,133,69,0.18); }
+body.light .sp-watermark { color:rgba(160,133,69,0.30); }
+body.light .sp-modal-bg { background:rgba(0,0,0,0.35); }
+body.light .sp-modal-card {
+  background:linear-gradient(160deg, rgba(248,246,240,0.97), rgba(235,232,220,0.97));
+  border-color:rgba(0,0,0,0.08);
+}
+body.light .sp-modal-card h3 { color:#a08545; }
+body.light .sp-setting-group { border-bottom-color:rgba(0,0,0,0.06); }
+body.light .sp-setting-group > label { color:#8a8a98; }
+body.light .sp-avatar-preview { background:rgba(201,169,110,0.18); }
+body.light .sp-emoji-input { background:rgba(255,255,255,0.70); border-color:rgba(0,0,0,0.08); color:#2a2a30; }
+body.light .sp-name-setting { background:rgba(255,255,255,0.70); border-color:rgba(0,0,0,0.08); color:#2a2a30; }
+body.light .sp-name-setting::placeholder { color:#8a8a98; }
+body.light .sp-name-setting:focus { border-color:rgba(201,169,110,0.25); }
+body.light .sp-upload-btn { color:#a08545; border-color:rgba(160,133,69,0.18); }
+body.light .sp-save-btn { background:linear-gradient(135deg, rgba(201,169,110,0.25), rgba(201,169,110,0.15)); color:#a08545; }
+
+</style>
+</head>
+<body>
+
+<div class="sp-app">
+  <!-- 顶部联系人栏 -->
+  <div class="sp-contact-bar">
+    <div class="sp-contact" id="sp-contact-btn">
+      <div class="sp-avatar" id="top-host-ava">🐾</div>
+      <div class="sp-contact-info">
+        <div class="sp-contact-name" id="top-host-name">江予朔</div>
+        <div class="sp-contact-status" id="top-status">点击设置头像</div>
+      </div>
+    </div>
+    <div class="sp-tabs">
+      <button class="sp-tab active" data-tab="soup">海龟汤</button>
+    </div>
+    <div class="sp-theme-toggle" id="sp-theme-toggle">☾</div>
+  </div>
+
+  <!-- 海龟汤面板 -->
+  <div class="sp-panel active" id="panel-soup">
+    <div class="sp-chat-area" id="soup-chat"></div>
+    <div class="sp-dock">
+      <div class="sp-quickrow" id="soup-quickrow" style="display:none">
+        <button class="sp-qbtn q-yes" data-ans="是">✓ 是</button>
+        <button class="sp-qbtn q-no" data-ans="不是">✗ 不是</button>
+        <button class="sp-qbtn q-irr" data-ans="无关">○ 无关</button>
+        <button class="sp-qbtn q-part" data-ans="部分正确">◐ 部分</button>
+      </div>
+      <div class="sp-input-row">
+        <input class="sp-input" id="soup-input" placeholder="提问或猜汤底…" maxlength="200">
+        <button class="sp-send" id="soup-send">▸</button>
+      </div>
+      <div class="sp-subrow">
+        <button class="sp-sbtn sp-gold" id="soup-guess">我要猜汤底</button>
+        <button class="sp-sbtn sp-gold" id="soup-reveal">揭晓汤底</button>
+        <button class="sp-sbtn" id="soup-next">换一题</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 设置弹窗 -->
+<div class="sp-modal" id="sp-modal" style="display:none">
+  <div class="sp-modal-bg" id="sp-modal-bg"></div>
+  <div class="sp-modal-card">
+    <h3>头像与昵称</h3>
+    <div class="sp-setting-group">
+      <label>主持人（对方）</label>
+      <div class="sp-avatar-pick">
+        <div class="sp-avatar-preview" id="host-preview">🐾</div>
+        <input type="text" class="sp-emoji-input" id="host-emoji-input" placeholder="emoji" maxlength="4">
+        <label class="sp-upload-btn">上传头像<input type="file" accept="image/*" id="host-file" style="display:none"></label>
+      </div>
+      <input type="text" class="sp-name-setting" id="host-name-input" placeholder="对方名字" value="江予朔">
+    </div>
+    <div class="sp-setting-group">
+      <label>我</label>
+      <div class="sp-avatar-pick">
+        <div class="sp-avatar-preview" id="player-preview">🐱</div>
+        <input type="text" class="sp-emoji-input" id="player-emoji-input" placeholder="emoji" maxlength="4">
+        <label class="sp-upload-btn">上传头像<input type="file" accept="image/*" id="player-file" style="display:none"></label>
+      </div>
+      <input type="text" class="sp-name-setting" id="player-name-input" placeholder="我的名字" value="加加">
+    </div>
+    <div class="sp-setting-group">
+      <label>AI 主持人（选填，填了就自动回答）</label>
+      <input type="text" class="sp-name-setting" id="api-key-input" placeholder="DeepSeek API Key" style="margin-bottom:8px">
+      <input type="text" class="sp-name-setting" id="api-base-input" placeholder="API 地址（默认 https://api.deepseek.com）" style="margin-bottom:8px">
+      <input type="text" class="sp-name-setting" id="api-model-input" placeholder="模型名（默认 deepseek-chat）">
+      <div style="font-size:11px;color:#6a6a78;margin-top:8px;letter-spacing:0.02em;line-height:1.5">填了Key，AI主持人就会自动判断你的提问并回答。不填就手动选。</div>
+    </div>
+    <button class="sp-save-btn" id="sp-save-settings">保存</button>
+  </div>
+</div>
+
+<div class="sp-watermark">🐾 v2.0.0</div>
+
+<script>
+/* ===================================================================
+   安全 localStorage
+   =================================================================== */
+var spStore = (function(){
+  var s = null;
+  try { s = window['localStorage']; var _t='__sp_t__'; s.setItem(_t,'1'); s.removeItem(_t); }
+  catch(e){ s = null; }
+  return {
+    get: function(key, def){
+      try{ if(!s) return def; var v=s.getItem(key); return v?JSON.parse(v):def; }
+      catch(e){ return def; }
+    },
+    set: function(key, val){
+      try{ if(!s) return; s.setItem(key, JSON.stringify(val)); }
+      catch(e){}
+    }
+  };
+})();
+
+/* ===================================================================
+   全局头像/名字
+   =================================================================== */
+var spProfile = {
+  hostAvatar: '🐾',
+  hostName: '江予朔',
+  playerAvatar: '🐱',
+  playerName: '加加'
+};
+var spAPI = spStore.get('sp-api', { key:'', base:'https://api.deepseek.com', model:'deepseek-chat' });
+var spTheme = spStore.get('sp-theme', 'dark');
+(function(){
+  var saved = spStore.get('sp-profile', null);
+  if(saved){
+    spProfile = saved;
+  }
+})();
+
+function spAvatarHTML(avatar, cls){
+  var c = cls || '';
+  if(avatar && avatar['indexOf']('data:') === 0){
+    return '<div class="' + c + '"><img src="' + avatar + '"></div>';
+  }
+  return '<div class="' + c + '">' + (avatar || '🐾') + '</div>';
+}
+
+function spApplyProfile(){
+  var topAva = document['getElementById']('top-host-ava');
+  topAva['innerHTML'] = spProfile['hostAvatar']['indexOf']('data:')===0
+    ? '<img src="' + spProfile['hostAvatar'] + '">'
+    : spProfile['hostAvatar'];
+  document['getElementById']('top-host-name')['textContent'] = spProfile['hostName'];
+  document['getElementById']('top-status')['textContent'] = '主持人 · 在线';
+}
+
+function spApplyTheme(){
+  if(spTheme === 'light'){
+    document['body']['className'] = 'light';
+  } else {
+    document['body']['className'] = '';
+  }
+  var t = document['getElementById']('sp-theme-toggle');
+  if(t) t['textContent'] = spTheme === 'light' ? '☀' : '☾';
+}
+
+/* ===================================================================
+   海龟汤题库
+   =================================================================== */
+var SOUPS = [
+  { title:"半根火柴", story:"一个人倒在沙漠里，死了。手里紧握着半根火柴。周围没有任何其他痕迹。", truth:"他和朋友坐热气球飞越沙漠，热气球漏气超重。他们扔光行李还是超重，于是抽签决定谁跳下去。折断火柴做签，他抽到了那根短的——半根火柴。他自愿跳下热气球，摔死在沙漠里。" },
+  { title:"企鹅肉", story:"一个男人去南极考察，回程时在科考站吃了一顿企鹅肉。吃完后沉默良久，当晚自杀了。", truth:"他曾和同伴被困荒岛，同伴给了他'企鹅肉'充饥。后来他在南极吃到真正的企鹅肉，发现味道完全不同——他意识到当年吃的是同伴的肉。" },
+  { title:"水草", story:"一个男子在湖里游泳时脚被水草缠住，拼命挣脱游上了岸。几年后故地重游，发现那片湖里根本没有水草。他当场跳湖自杀。", truth:"他当年游泳时脚被缠住的不是水草，而是他女朋友的头发。他拼命挣扎时把女朋友踹开了，女朋友淹死。几年后他才知道真相。" },
+  { title:"绿饮料", story:"一个男子走进酒吧，要了一杯绿色的酒。喝了一口，冲出酒吧跳楼自杀了。", truth:"他曾被困荒岛，靠同伴给的'海龟肉'活下来。在酒吧喝到绿色酒，尝出和当年那块'肉'一模一样的味道——他明白当年吃的是同伴。" },
+  { title:"生日蛋糕", story:"一个小男孩过八岁生日，父母买了蛋糕插上蜡烛，关了灯。他许愿吹灭蜡烛——然后他哭了。", truth:"他是盲人。吹灭蜡烛前还有微弱烛光，他能模糊看到一点。吹灭后彻底黑暗，他以为视力刚刚彻底消失了，所以哭了。" },
+  { title:"红色高跟鞋", story:"一个女人穿着红色高跟鞋走进电梯。电梯正常到了十楼，门开了。但她被发现死在电梯里。", truth:"她身材非常矮小，平时靠穿高跟鞋才能勉强够到电梯按钮。到了十楼她脱了高跟鞋，发现够不到任何按钮也够不到紧急呼叫钮，被困在里面最终死亡。" },
+  { title:"满月", story:"满月之夜，一个年轻男子站在自家阳台上，抬头看着月亮笑了。然后他翻过栏杆跳了下去。", truth:"他是狼人，满月会变身。他笑是因为变身前短暂的清醒里，终于不用再伪装成人类。跳下去是变身后的本能。" },
+  { title:"钢琴家", story:"一位钢琴家在音乐会上演奏。弹到一半突然停下，愣在钢琴前。然后走出音乐厅，当天自杀了。", truth:"他弹的那首曲子是他已故女儿写的，女儿几个月前车祸去世。他一直在用否认的机制逃避女儿已死的事实。弹到这首曲子记忆突然涌回来，他崩溃了。" },
+  { title:"一碗牛肉面", story:"一个逃犯隐姓埋名逃亡十年。某天走进一家陌生面馆，点了一碗牛肉面。吃了一口，放下筷子，安静地报了警。", truth:"十年前在监狱死囚牢的最后一餐就是这个味道——面条粗细、牛肉切法一模一样。这家面馆老板就是当年的监狱厨子，说明警方一直在附近布控，他无路可逃了。" },
+  { title:"照片", story:"一个男人翻出一张老照片，看了看笑了。过一会儿又哭了。然后拿起刀自杀了。", truth:"照片是他和妻子的合影，妻子几个月前去世下葬。他笑是想起美好时光。但随后发现照片里妻子的眼睛似乎在动——他意识到妻子下葬时还活着，被活埋了。" },
+  { title:"雨伞", story:"一个囚犯在监狱里撑开了一把伞。几天后他被执行了死刑。", truth:"撑伞是他和外面同伙约定的越狱信号。这次越狱失败了，他被抓回来加刑后执行死刑。" },
+  { title:"第十声敲门", story:"一个独居女人住在十楼。夜里有人敲门，她开门没人。关上门。过了一会儿又敲门，开门还是没人。如此重复九次。第十次敲门时她打开门——然后她死了。", truth:"敲门的人挂在窗外，每次她开门查看他就往上爬一层。到第十次时他已经爬到了她的窗户前，她一开门就被杀了。" },
+  { title:"两条金鱼", story:"一个男人出差回来，发现鱼缸里两条金鱼都死了。他看了一眼，转身去厨房拿刀杀了妻子。", truth:"他长期出差，妻子在家和情人同居。他回来时情人刚走，但情人喂了过量鱼食导致金鱼撑死。妻子说这几天没人在家不可能喂鱼，但金鱼是刚死的。他逼问后妻子承认了情人。" },
+  { title:"红色房间", story:"一个男人走进一间全红色的房间——红色的墙、地板、家具。然后他死了。", truth:"他是个色盲，走进的其实是全白的房间。但他以为到处都是血。他有严重的心脏病，被'满屋的血'吓到心脏病发作而死。" },
+  { title:"最后一班地铁", story:"一个女人每天坐最后一班地铁回家。某天到终点站发现整节车厢只剩她一人。她走出车厢后尖叫着报了警。", truth:"她是盲人，靠听车厢里其他乘客的声音确认到站。那天一直有个'乘客'在——其实是个已经死了的人，她以为那人睡着了。到终点站她摸过去想叫醒那人，摸到了冰冷的尸体。" }
+];
+
+
+/* ===================================================================
+   海龟汤模式
+   =================================================================== */
+var soupState = { idx:-1, soup:null, chat:[], revealed:false, askCount:0, waitAnswer:false };
+
+function spHasAPI(){
+  return (spAPI['key'] && spAPI['key']['length'] > 0) || spAPI['base']['charAt'](0) === '/';
+}
+function spCallAI(prompt, maxTokens){
+  return fetch(spAPI['base'] + '/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (spAPI['key']||'') },
+    body: JSON.stringify({ model: spAPI['model'], messages: [{role:'user', content:prompt}], max_tokens: maxTokens, temperature: 1 })
+  }).then(function(r){ if(!r['ok']) throw new Error('HTTP '+r['status']); return r['json'](); })
+    .then(function(d){ return d['choices'][0]['message']['content']['trim'](); });
+}
+function soupFromAI(){
+  var avoid = '';
+  for(var i=0;i<SOUPS.length;i++) avoid += (i? '、':'') + SOUPS[i]['title'];
+  var prompt = '为海龟汤游戏出一道全新的原创情境谜题。要求：汤面简短、有反差感；汤底在现实逻辑内自洽，经得起玩家用是/不是的问题层层推理；不要超自然设定；不要和这些经典题重复：' + avoid + '。只输出 JSON：{"title":"题目名","story":"汤面","truth":"汤底"}，不要输出任何其他内容。';
+  return spCallAI(prompt, 450)['then'](function(raw){
+    var m = raw['match'](/\{[\s\S]*\}/);
+    var o = JSON['parse'](m ? m[0] : raw);
+    if(!o || !o['story'] || !o['truth']) throw new Error('格式不对');
+    return { title: String(o['title']||'新汤'), story: String(o['story']), truth: String(o['truth']) };
+  });
+}
+function soupOpen(soup){
+  soupPushRaw('left', spProfile['hostName'], '来了。今天的海龟汤——', null);
+  soupPushRaw('left', spProfile['hostName'], '', 'story', soup['story']);
+  soupPushRaw('left', spProfile['hostName'], '提问吧。是/不是/无关，我来回答。', null);
+}
+
+function soupInit(){
+  soupState = { idx:-1, soup:null, chat:[], revealed:false, askCount:0, waitAnswer:false };
+  soupPick();
+}
+
+function soupPick(){
+  var idx = Math.floor(Math.random()*SOUPS.length);
+  if(idx === soupState['idx']) idx = (idx+1)%SOUPS.length;
+  soupState['idx'] = idx;
+  soupState['soup'] = SOUPS[idx];
+  soupState['chat'] = [];
+  soupState['revealed'] = false;
+  soupState['askCount'] = 0;
+  soupState['waitAnswer'] = false;
+  // 主持人开场（先上库存题保底）
+  soupOpen(soupState['soup']);
+  soupRender();
+  // 有接口就现熬一锅新汤，熬成换上去，失败就吃现成的
+  if(spHasAPI()){
+    soupPushRaw('left', spProfile['hostName'], '等等，我去灶上现熬一锅新的，稍等——', null);
+    soupRender();
+    soupFromAI()['then'](function(s){
+      if(soupState['revealed']) return;
+      soupState['soup'] = s;
+      soupState['chat'] = [];
+      soupOpen(s);
+      soupRender();
+    })['catch'](function(){
+      var c = soupState['chat'];
+      if(c['length'] && c[c['length']-1]['text']['indexOf']('熬一锅')>=0) c['pop']();
+      soupRender();
+    });
+  }
+}
+
+function soupPushRaw(side, name, text, special, extra){
+  soupState['chat'].push({ side:side, name:name, text:text, special:special||null, extra:extra||null });
+}
+
+function soupPush(side, name, text, special, extra){
+  soupPushRaw(side, name, text, special, extra);
+  soupRender();
+}
+
+function soupRender(){
+  var area = document['getElementById']('soup-chat');
+  var html = '';
+  for(var i=0; i<soupState['chat'].length; i++){
+    var m = soupState['chat'][i];
+    html += '<div class="sp-msg ' + m['side'] + '">';
+    var ava = m['side']==='left' ? spProfile['hostAvatar'] : spProfile['playerAvatar'];
+    html += spAvatarHTML(ava, 'sp-msg-ava');
+    html += '<div class="sp-msg-content">';
+    html += '<div class="sp-msg-name">' + m['name'] + '</div>';
+    if(m['special'] === 'story'){
+      html += '<div class="sp-bubble sp-story"><div class="sp-story-label">汤 面</div><div class="sp-story-text">' + m['extra'] + '</div></div>';
+    } else if(m['special'] === 'reveal'){
+      html += '<div class="sp-bubble sp-reveal"><div class="sp-reveal-label">汤 底</div><div class="sp-reveal-text">' + m['extra'] + '</div></div>';
+    } else if(m['special'] === 'answer'){
+      var cls = 'sp-bubble sp-answer sp-answer-' + m['extra'];
+      html += '<div class="' + cls + '">' + m['text'] + '</div>';
+    } else {
+      html += '<div class="sp-bubble">' + m['text'] + '</div>';
+    }
+    html += '</div></div>';
+  }
+  area['innerHTML'] = html;
+  area['scrollTop'] = area['scrollHeight'];
+
+  var qr = document['getElementById']('soup-quickrow');
+  var hasAPI = spHasAPI();
+  qr['style']['display'] = (soupState['waitAnswer'] && !hasAPI) ? 'flex' : 'none';
+  var input = document['getElementById']('soup-input');
+  if(soupState['waitAnswer']){
+    input['placeholder'] = hasAPI ? 'AI 正在思考…' : '（用上方按钮替我回答）';
+    input['disabled'] = !hasAPI;
+  } else {
+    input['placeholder'] = '提问或猜汤底…';
+    input['disabled'] = false;
+  }
+}
+
+function soupSend(){
+  if(soupState['waitAnswer']) return;
+  var input = document['getElementById']('soup-input');
+  var text = input['value']['trim']();
+  if(!text) return;
+
+  if(input['getAttribute']('data-mode') === 'guess'){
+    soupPush('right', spProfile['playerName'], '我猜汤底：' + text);
+    var soup = soupState['soup'];
+    var guessClean = text['replace'](/[^一-龥a-zA-Z0-9]/g,'');
+    var truthClean = soup['truth']['replace'](/[^一-龥a-zA-Z0-9]/g,'');
+    var correct = false;
+    if(guessClean['length'] >= 4 && truthClean['indexOf'](guessClean['substr'](0,5)) >= 0) correct = true;
+    if(correct){
+      soupPush('left', spProfile['hostName'], '对了。你赢了。', 'answer', 'yes');
+    } else {
+      soupPush('left', spProfile['hostName'], '不对，继续问。', 'answer', 'no');
+    }
+    input['removeAttribute']('data-mode');
+    input['value'] = '';
+    soupRender();
+    return;
+  }
+
+  // 正常提问
+  soupPush('right', spProfile['playerName'], text);
+  soupState['askCount']++;
+  input['value'] = '';
+  soupState['waitAnswer'] = true;
+
+  var hasAPI = spHasAPI();
+  if(hasAPI){
+    // AI自动回答
+    soupPush('left', spProfile['hostName'], '…');
+    soupRender();
+    var soup = soupState['soup'];
+    var prompt = '你是海龟汤游戏的主持人。汤底（真相）是：' + soup['truth'] + '\n\n玩家提问："' + text + '"\n\n请根据汤底判断该回答"是"、"不是"、"无关"还是"部分正确"。只回答这四个词之一，不要说任何其他话。';
+    fetch(spAPI['base'] + '/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (spAPI['key']||'') },
+      body: JSON.stringify({ model: spAPI['model'], messages: [{role:'user', content:prompt}], max_tokens: 20, temperature: 0 })
+    }).then(function(r){ return r['json'](); }).then(function(d){
+      var ans = d['choices'][0]['message']['content']['trim']();
+      var chat = soupState['chat'];
+      if(chat['length']>0 && chat[chat['length']-1]['text']==='…') chat['pop']();
+      var ansType = 'irr';
+      var display = '无关';
+      if(ans['indexOf']('部分')>=0){ ansType='part'; display='部分正确'; }
+      else if(ans['indexOf']('不是')>=0){ ansType='no'; display='不是'; }
+      else if(ans['indexOf']('是')>=0){ ansType='yes'; display='是'; }
+      else if(ans['indexOf']('无关')>=0){ ansType='irr'; display='无关'; }
+      soupPush('left', spProfile['hostName'], display, 'answer', ansType);
+      soupState['waitAnswer'] = false;
+      soupRender();
+    })['catch'](function(e){
+      var chat = soupState['chat'];
+      if(chat['length']>0 && chat[chat['length']-1]['text']==='…') chat['pop']();
+      soupPush('left', spProfile['hostName'], '（API不通，手动回答吧）');
+      soupRender();
+    });
+  } else {
+    // 手动模式
+    soupPush('left', spProfile['hostName'], '让我想想…（点下方按钮回答）');
+    soupRender();
+  }
+}
+
+function soupAnswer(ans){
+  if(!soupState['waitAnswer']) return;
+  var chat = soupState['chat'];
+  if(chat['length']>0 && chat[chat['length']-1]['text']['indexOf']('点下方按钮')>=0){
+    chat['pop']();
+  }
+  var ansType = 'irr';
+  if(ans==='是') ansType='yes';
+  else if(ans==='不是') ansType='no';
+  else if(ans==='部分正确') ansType='part';
+  soupPush('left', spProfile['hostName'], ans, 'answer', ansType);
+  soupState['waitAnswer'] = false;
+  soupRender();
+}
+
+function soupReveal(){
+  if(soupState['revealed']) return;
+  soupState['revealed'] = true;
+  soupState['waitAnswer'] = false;
+  var soup = soupState['soup'];
+  soupPush('left', spProfile['hostName'], '好，揭晓——', null);
+  soupPush('left', spProfile['hostName'], '', 'reveal', soup['truth']);
+  soupRender();
+}
+
+function soupGuess(){
+  var input = document['getElementById']('soup-input');
+  input['setAttribute']('data-mode','guess');
+  input['placeholder'] = '输入你猜的汤底…';
+  input['disabled'] = false;
+  input['focus']();
+}
+
+/* ===================================================================
+   设置弹窗
+   =================================================================== */
+function spOpenModal(){
+  var modal = document['getElementById']('sp-modal');
+  modal['style']['display'] = 'flex';
+  // 填入当前值
+  document['getElementById']('host-name-input')['value'] = spProfile['hostName'];
+  document['getElementById']('player-name-input')['value'] = spProfile['playerName'];
+  var hp = document['getElementById']('host-preview');
+  var pp = document['getElementById']('player-preview');
+  if(spProfile['hostAvatar']['indexOf']('data:')===0){
+    hp['innerHTML'] = '<img src="'+spProfile['hostAvatar']+'">';
+  } else {
+    hp['textContent'] = spProfile['hostAvatar'];
+  }
+  if(spProfile['playerAvatar']['indexOf']('data:')===0){
+    pp['innerHTML'] = '<img src="'+spProfile['playerAvatar']+'">';
+  } else {
+    pp['textContent'] = spProfile['playerAvatar'];
+  }
+  document['getElementById']('host-emoji-input')['value'] = spProfile['hostAvatar']['indexOf']('data:')===0 ? '' : spProfile['hostAvatar'];
+  document['getElementById']('player-emoji-input')['value'] = spProfile['playerAvatar']['indexOf']('data:')===0 ? '' : spProfile['playerAvatar'];
+  document['getElementById']('api-key-input')['value'] = spAPI['key'];
+  document['getElementById']('api-base-input')['value'] = spAPI['base'];
+  document['getElementById']('api-model-input')['value'] = spAPI['model'];
+}
+
+function spCloseModal(){
+  document['getElementById']('sp-modal')['style']['display'] = 'none';
+}
+
+function spSaveSettings(){
+  spProfile['hostName'] = document['getElementById']('host-name-input')['value']['trim']() || '江予朔';
+  spProfile['playerName'] = document['getElementById']('player-name-input')['value']['trim']() || '加加';
+  // emoji输入优先，如果填了就用
+  var he = document['getElementById']('host-emoji-input')['value']['trim']();
+  var pe = document['getElementById']('player-emoji-input')['value']['trim']();
+  if(he) spProfile['hostAvatar'] = he;
+  if(pe) spProfile['playerAvatar'] = pe;
+  spStore.set('sp-profile', spProfile);
+  spAPI['key'] = document['getElementById']('api-key-input')['value']['trim']();
+  spAPI['base'] = document['getElementById']('api-base-input')['value']['trim']() || 'https://api.deepseek.com';
+  spAPI['model'] = document['getElementById']('api-model-input')['value']['trim']() || 'deepseek-chat';
+  spStore.set('sp-api', spAPI);
+  spApplyProfile();
+  spCloseModal();
+  // 重新渲染聊天（更新头像和名字）
+  soupRender();
+}
+
+/* ===================================================================
+   Tab 切换
+   =================================================================== */
+function spSwitchTab(tab){
+  var tabs = document['querySelectorAll']('.sp-tab');
+  for(var i=0;i<tabs['length'];i++){
+    tabs[i]['className'] = tabs[i]['className']['replace']('active','')['trim']();
+    if(tabs[i]['getAttribute']('data-tab')===tab) tabs[i]['className'] += ' active';
+  }
+  var panels = document['querySelectorAll']('.sp-panel');
+  for(var i=0;i<panels['length'];i++){
+    panels[i]['className'] = panels[i]['className']['replace']('active','')['trim']();
+  }
+  var panel = document['getElementById']('panel-'+tab);
+  if(panel) panel['className'] += ' active';
+}
+
+/* ===================================================================
+   初始化
+   =================================================================== */
+document['addEventListener']('DOMContentLoaded', function(){
+  spApplyProfile();
+  spApplyTheme();
+  document['getElementById']('sp-theme-toggle')['addEventListener']('click', function(){
+    spTheme = spTheme === 'light' ? 'dark' : 'light';
+    spStore.set('sp-theme', spTheme);
+    spApplyTheme();
+  });
+
+  // Tab
+  var tabs = document['querySelectorAll']('.sp-tab');
+  for(var i=0;i<tabs['length'];i++){
+    (function(tab){
+      tab['addEventListener']('click', function(){
+        spSwitchTab(tab['getAttribute']('data-tab'));
+      });
+    })(tabs[i]);
+  }
+
+  // 设置弹窗
+  document['getElementById']('sp-contact-btn')['addEventListener']('click', spOpenModal);
+  document['getElementById']('sp-modal-bg')['addEventListener']('click', spCloseModal);
+  document['getElementById']('sp-save-settings')['addEventListener']('click', spSaveSettings);
+
+  // emoji实时预览
+  document['getElementById']('host-emoji-input')['addEventListener']('input', function(e){
+    var v = e['target']['value']['trim']();
+    if(v) document['getElementById']('host-preview')['textContent'] = v;
+  });
+  document['getElementById']('player-emoji-input')['addEventListener']('input', function(e){
+    var v = e['target']['value']['trim']();
+    if(v) document['getElementById']('player-preview')['textContent'] = v;
+  });
+
+  // 图片上传
+  document['getElementById']('host-file')['addEventListener']('change', function(e){
+    var file = e['target']['files'][0];
+    if(file){
+      var reader = new FileReader();
+      reader['onload'] = function(ev){
+        var data = ev['target']['result'];
+        document['getElementById']('host-preview')['innerHTML'] = '<img src="'+data+'">';
+        spProfile['hostAvatar'] = data; // 临时存，保存时确认
+      };
+      reader['readAsDataURL'](file);
+    }
+  });
+  document['getElementById']('player-file')['addEventListener']('change', function(e){
+    var file = e['target']['files'][0];
+    if(file){
+      var reader = new FileReader();
+      reader['onload'] = function(ev){
+        var data = ev['target']['result'];
+        document['getElementById']('player-preview')['innerHTML'] = '<img src="'+data+'">';
+        spProfile['playerAvatar'] = data;
+      };
+      reader['readAsDataURL'](file);
+    }
+  });
+
+  // 海龟汤
+  soupInit();
+  document['getElementById']('soup-send')['addEventListener']('click', soupSend);
+  document['getElementById']('soup-input')['addEventListener']('keydown', function(e){
+    if(e['key']==='Enter') soupSend();
+  });
+  document['getElementById']('soup-quickrow')['addEventListener']('click', function(e){
+    var t = e['target'];
+    if(t && t['getAttribute']('data-ans')) soupAnswer(t['getAttribute']('data-ans'));
+  });
+  document['getElementById']('soup-guess')['addEventListener']('click', soupGuess);
+  document['getElementById']('soup-reveal')['addEventListener']('click', soupReveal);
+  document['getElementById']('soup-next')['addEventListener']('click', soupInit);
+
+});
+</script>
+</body>
+</html>
