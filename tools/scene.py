@@ -147,23 +147,38 @@ def best_window(pts, win):
 
 
 def align_sentences(path, n_lines):
-    """silencedetect 切句, 段数对不上自动换阈值重试"""
-    trials = [("-35dB", "0.30"), ("-32dB", "0.25"), ("-38dB", "0.35"), ("-30dB", "0.22")]
+    """silencedetect 切句。
+    v4 嗓子气口多(10-09: 13句被切成34段), 教训:
+    1) 阈值组要多试, 收"段数>=句数且最接近"的那组;
+    2) 多出来的碎段必是句中气口 -> 把时长最短的段并进前一段, 直到剩 n_lines 段。"""
+    trials = [("-35dB", "0.30"), ("-28dB", "0.80"), ("-26dB", "1.00"),
+              ("-32dB", "0.25"), ("-38dB", "0.35"), ("-30dB", "0.22")]
+    total = file_dur(path)
+    best = None  # (seg_count, thr, dur, cuts)
     for thr, dur in trials:
         _, _, err = ff("-i", path, "-af", "silencedetect=noise=%s:d=%s" % (thr, dur), "-f", "null", "-")
         sil = [(float(a), float(b)) for a, b in
                re.findall(r"silence_start:\s*([\d.]+).*?silence_end:\s*([\d.]+)", err, re.S)]
-        total = file_dur(path)
         cuts, prev = [], 0.0
         for s, e in sil:
-            cuts.append((prev, (s + e) / 2)); prev = (s + e) / 2
+            mid = (s + e) / 2
+            if mid <= prev or mid >= total: continue
+            cuts.append((prev, mid)); prev = mid
         cuts.append((prev, total))
-        if len(cuts) == n_lines:
-            return cuts, thr, dur
-        log("  对齐失败: 阈值%s/%s切出%d段, 需要%d段" % (thr, dur, len(cuts), n_lines))
-    log("!! 三轮阈值都对不上。诊断信息:")
-    for i, (s, e) in enumerate(cuts): log("   段%02d  %.2f-%.2f" % (i + 1, s, e))
-    sys.exit(6)
+        log("  阈值%s/%s -> %d段" % (thr, dur, len(cuts)))
+        if len(cuts) >= n_lines and (best is None or len(cuts) < best[0]):
+            best = (len(cuts), thr, dur, cuts)
+    if best is None:
+        log("!! 所有阈值切出的段都少于 %d 句, 没法并。诊断:" % n_lines)
+        for i, (s, e) in enumerate(cuts): log("   段%02d  %.2f-%.2f" % (i + 1, s, e))
+        sys.exit(6)
+    _, thr, dur, cuts = best
+    while len(cuts) > n_lines:
+        i = min(range(len(cuts)), key=lambda k: cuts[k][1] - cuts[k][0])
+        if i == 0: cuts[1] = (cuts[0][0], cuts[1][1])
+        else:      cuts[i - 1] = (cuts[i - 1][0], cuts[i][1])
+        cuts.pop(i)
+    return cuts, thr, dur
 
 
 def file_dur(path):
@@ -238,9 +253,12 @@ def main():
         fake = [(i * 4.0, i * 4.0 + 3.0) for i in range(len(clean))]
     else:
         text = "\n\n".join(clean)
-        log("合成中...")
-        sz = synth_stream(text, "voice_raw.mp3")
-        log("人声落地 %d bytes" % sz)
+        if os.path.exists("voice_raw.mp3") and os.path.getsize("voice_raw.mp3") > 5000:
+            log("voice_raw.mp3 已在 (%d bytes), 跳过合成" % os.path.getsize("voice_raw.mp3"))
+        else:
+            log("合成中...")
+            sz = synth_stream(text, "voice_raw.mp3")
+            log("人声落地 %d bytes" % sz)
         cuts, thr, dur = align_sentences("voice_raw.mp3", len(clean))
         log("切句 OK (阈值 %s/%s)" % (thr, dur))
         fake = cuts
