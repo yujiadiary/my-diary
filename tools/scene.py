@@ -69,30 +69,41 @@ def ff(*args, timeout=180):
     return p.returncode, p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace")
 
 
-def synth_stream(text, out, prev=None, nxt=None):
-    """v4 整段流式合成, 边收边写防下行被掐"""
+def synth_stream(text, out, prev=None, nxt=None, tries=25, wait=18):
+    """v4 整段流式合成, 边收边写防下行被掐。
+    梯子黑洞经验(10-08): SSL EOF 是网不是内容, 死磕重试抢到多少是多少。"""
+    import time
     body = {"text": text, "model_id": MODEL,
             "voice_settings": {"stability": 0.35, "similarity_boost": 0.8},
             "output_format": "mp3_44100_128"}
     if prev: body["previous_text"] = prev
     if nxt:  body["next_text"] = nxt
-    req = urllib.request.Request(
-        "https://api.elevenlabs.io/v1/text-to-speech/" + VID + "/stream",
-        data=json.dumps(body).encode(), headers={"xi-api-key": KEY, "Content-Type": "application/json"},
-        method="POST")
-    n = 0
-    try:
-        r = urllib.request.urlopen(req, timeout=300)
-        with open(out, "wb") as f:
-            while True:
-                c = r.read(4096)
-                if not c: break
-                f.write(c); f.flush(); n += len(c)
-    except urllib.error.HTTPError as e:
-        log("HTTP-ERR", e.code, e.read()[:300].decode(errors="replace")); sys.exit(3)
-    except Exception as e:
-        log("BROKE at", n, repr(e)); sys.exit(4 if n == 0 else 5)
-    return n
+    for attempt in range(1, tries + 1):
+        n = 0
+        try:
+            req = urllib.request.Request(
+                "https://api.elevenlabs.io/v1/text-to-speech/" + VID + "/stream",
+                data=json.dumps(body).encode(), headers={"xi-api-key": KEY, "Content-Type": "application/json"},
+                method="POST")
+            r = urllib.request.urlopen(req, timeout=300)
+            with open(out, "wb") as f:
+                while True:
+                    c = r.read(4096)
+                    if not c: break
+                    f.write(c); f.flush(); n += len(c)
+            if n > 5000:
+                return n
+            log("落地太短 %dB, 当失败" % n)
+        except urllib.error.HTTPError as e:
+            msg = e.read()[:300].decode(errors="replace")
+            log("HTTP-ERR", e.code, msg)
+            if e.code not in (429, 500, 502, 503, 504):
+                sys.exit(3)  # 内容/鉴权问题, 重试没用
+        except Exception as e:
+            log("BROKE at", n, repr(e))
+        log("第%d/%d次失败, %ds后再试" % (attempt, tries, wait))
+        time.sleep(wait)
+    log("重试用尽, 放弃"); sys.exit(4)
 
 
 def voice_peak(path):
