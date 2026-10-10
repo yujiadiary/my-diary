@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#e8e0cd">
+<title>执笔 · 和 AI 一起写小说</title>
+<style>
+/* ============ 可调视觉参数 ============ */
+.novel-app{
+  --paper-a:#f5f0e6; --paper-b:#ede4d3; --paper-line:#d8cdb4;
+  --ink:#332f28; --muted:#8d8574; --line:#ddd2ba;
+  --card:#fffdf6; --accent:#a4713a; --accent-soft:#efe3cd;
+  --ok:#5a7a4d; --bad:#b04a3e;
+}
+.novel-app{
+  position:fixed; inset:0; display:flex; flex-direction:column;
+  background:var(--paper-a); color:var(--ink);
+  font-family:Georgia,"Songti SC","Noto Serif SC","Source Han Serif SC",serif;
+  letter-spacing:.03em; line-height:1.8;
+  -webkit-tap-highlight-color:transparent; overflow:hidden;
+}
+.novel-app [hidden]{display:none !important;}
+.novel-app button{font:inherit;touch-action:manipulation;cursor:pointer;}
+.novel-app input,.novel-app textarea,.novel-app select{font:inherit;color:var(--ink);touch-action:manipulation;}
+.novel-app .na-file{position:fixed;right:0;bottom:0;width:2px;height:2px;opacity:0;pointer-events:none;}
+/* ============ 顶栏 / 导航 / Toast ============ */
+.novel-app .na-top{flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);background:linear-gradient(var(--paper-a),var(--paper-b));}
+.novel-app .na-top .ttl{font-size:17px;font-weight:700;letter-spacing:.12em;}
+.novel-app .na-top .sp{flex:1;}
+.novel-app .na-chip{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--card);white-space:nowrap;}
+.novel-app .na-view{display:none;flex:1;min-height:0;flex-direction:column;}
+.novel-app .na-view.on{display:flex;}
+.novel-app .na-tabbar{flex:none;display:flex;border-top:1px solid var(--line);background:linear-gradient(var(--paper-b),var(--paper-a));padding-bottom:env(safe-area-inset-bottom);}
+.novel-app .na-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;background:none;border:none;color:var(--muted);font-size:11px;letter-spacing:.15em;}
+.novel-app .na-tab svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.novel-app .na-tab.on{color:var(--accent);}
+.novel-app .na-toast{position:absolute;left:50%;bottom:76px;transform:translateX(-50%);background:rgba(40,36,28,.93);color:#f7f2e6;padding:9px 16px;border-radius:999px;font-size:13px;max-width:86vw;text-align:center;z-index:99;}
+/* ================= 小说页 ================= */
+.novel-app .nv-stage{flex:1;min-height:0;position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  perspective:1100px; perspective-origin:50% 40%;
+  background:
+   radial-gradient(120% 80% at 50% 0%,rgba(255,255,255,.55),transparent 55%),
+   radial-gradient(130% 70% at 50% 108%,rgba(90,70,40,.20),transparent 55%),
+   linear-gradient(160deg,#eae3d2,#d8ccb0);}
+.novel-app .nv-stage-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;}
+.novel-app .nv-stage-bg img{width:100%;height:100%;object-fit:cover;opacity:var(--stage-op,.45);}
+.novel-app.na-dark .nv-stage-bg img{filter:brightness(.8) saturate(.9);}
+.novel-app .nv-bookzone{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;padding:12px;}
+.novel-app .nv-book3d{
+  --bw:min(58vw,34vh,240px); --bh:calc(var(--bw)*1.42); --bd:46px;
+  width:var(--bw); height:var(--bh); position:relative;
+  transform-style:preserve-3d;
+  transform:rotateX(-4deg) rotateY(-22deg);
+  animation:naFloat 9s ease-in-out infinite;
+  cursor:pointer;
+}
+@keyframes naFloat{
+  0%,100%{transform:rotateX(-4deg) rotateY(-22deg);}
+  50%{transform:rotateX(-2deg) rotateY(-17deg);}
+}
+@media (prefers-reduced-motion:reduce){.novel-app .nv-book3d{animation:none;}}
+.novel-app .nv-book3d.opening{animation:none;transform:rotateX(-3deg) rotateY(-20deg);}
+.novel-app .nv-bface{position:absolute;backface-visibility:hidden;}
+.novel-app .nv-bend{left:0;top:0;width:100%;height:100%;
+  transform:translateZ(calc(var(--bd)/-2));
+  background:linear-gradient(105deg,#f7f2e4,#e7ddc6);}
+.novel-app .nv-bspine{left:0;top:0;width:var(--bd);height:100%;transform-origin:left center;
+  transform:translateZ(calc(var(--bd)/-2)) rotateY(-90deg);
+  background:linear-gradient(180deg,#e6e6e4,#cfcfcd);}
+.novel-app .nv-bedge{right:0;top:0;width:var(--bd);height:100%;transform-origin:right center;
+  transform:translateZ(calc(var(--bd)/-2)) rotateY(90deg);
+  background:
+   linear-gradient(90deg,rgba(120,100,60,.20),rgba(120,100,60,0) 24%,rgba(120,100,60,0) 72%,rgba(120,100,60,.24)),
+   repeating-linear-gradient(90deg,#fbf7ec 0 2px,#e2d7bd 2px 3px);}
+.novel-app .nv-btop{left:0;top:0;width:100%;height:var(--bd);transform-origin:center top;
+  transform:translateZ(calc(var(--bd)/-2)) rotateX(90deg);
+  background:
+   linear-gradient(180deg,rgba(120,100,60,.18),rgba(120,100,60,0) 32%),
+   repeating-linear-gradient(0deg,#fbf7ec 0 2px,#e2d7bd 2px 3px);}
+.novel-app .nv-bcover{position:absolute;inset:0;transform-origin:left center;transform-style:preserve-3d;
+  transform:translateZ(calc(var(--bd)/2));
+  border-radius:2px 6px 6px 2px; overflow:hidden;
+  background:linear-gradient(100deg,#fdfdfc 0%,#f4f4f2 55%,#e7e7e5 100%);
+  backface-visibility:hidden;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.03), inset 3px 0 6px rgba(0,0,0,.04), inset -3px 0 8px rgba(0,0,0,.06);
+  transition:transform .78s cubic-bezier(.55,.06,.28,1);}
+.novel-app .nv-book3d.opening .nv-bcover{transform:translateZ(calc(var(--bd)/2)) rotateY(-150deg);}
+.novel-app .nv-bcover .bgimg{position:absolute;inset:0;background-size:cover;background-position:center;}
+.novel-app .nv-bcover .shade{position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(100deg,rgba(255,255,255,.10),rgba(0,0,0,.08) 80%);}
+.novel-app .nv-shadow{width:calc(var(--bw,220px)*1.18);height:24px;border-radius:50%;
+  background:radial-gradient(ellipse at center,rgba(40,30,15,.36),transparent 65%);filter:blur(6px);margin-top:-2px;}
+/* ---- 目录 ---- */
+.novel-app .nv-toc{position:absolute;inset:0;display:flex;flex-direction:column;
+  background:
+   repeating-linear-gradient(0deg,rgba(120,100,60,.03) 0 2px,transparent 2px 4px),
+   linear-gradient(var(--paper-a),var(--paper-b));}
+.novel-app .nv-thead{flex:none;display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);}
+.novel-app .nv-back{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 14px;font-size:13px;color:var(--ink);}
+.novel-app .nv-ttitle{font-size:16px;letter-spacing:.25em;}
+.novel-app .nv-toclist{flex:1;overflow-y:auto;padding:14px 18px;}
+.novel-app .nv-tocitem{display:flex;align-items:baseline;gap:10px;width:100%;text-align:left;background:none;border:none;border-bottom:1px dashed var(--paper-line);padding:13px 4px;font-size:16px;color:var(--ink);}
+.novel-app .nv-tocitem .dots{flex:1;border-bottom:1px dotted var(--paper-line);transform:translateY(-4px);}
+.novel-app .nv-tocitem .pg{font-size:12px;color:var(--muted);}
+.novel-app .nv-tosempty{color:var(--muted);font-size:14px;text-align:center;padding:40px 20px;line-height:2;}
+/* ---- 正文阅读器 ---- */
+.novel-app .nv-reader{position:absolute;inset:0;display:flex;flex-direction:column;
+  background:
+   repeating-linear-gradient(0deg,rgba(120,100,60,.03) 0 2px,transparent 2px 4px),
+   linear-gradient(var(--paper-a),var(--paper-b));
+  box-shadow:inset 8px 0 14px -10px rgba(90,70,40,.35);}
+.novel-app .nv-paper-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;}
+.novel-app .nv-paper-bg img{width:100%;height:100%;object-fit:cover;opacity:var(--bg-op,.35);}
+.novel-app .nv-phead{flex:none;display:flex;align-items:center;gap:8px;padding:10px 12px;position:relative;z-index:2;}
+.novel-app .nv-psec{flex:1;font-size:12px;color:var(--muted);letter-spacing:.2em;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.novel-app .nv-pagebody{flex:1;min-height:0;overflow-y:auto;position:relative;z-index:1;padding:10px 26px 26px 34px;font-size:17px;
+  transition:transform .25s ease,opacity .25s ease;}
+.novel-app .nv-pagebody p{margin:0 0 1em;text-indent:2em;}
+.novel-app .nv-pagebody p.nv-sec{font-weight:700;letter-spacing:.15em;text-indent:0;margin:1.2em 0 .8em;}
+.novel-app .nv-rempty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--muted);font-size:15px;text-align:center;}
+.novel-app .nv-rfoot{flex:none;display:flex;align-items:center;justify-content:space-between;padding:8px 16px calc(8px + env(safe-area-inset-bottom));position:relative;z-index:2;}
+.novel-app .nv-pgbtn{width:42px;height:34px;border:1px solid var(--line);background:var(--card);border-radius:999px;color:var(--ink);font-size:15px;}
+.novel-app .nv-pginfo{font-size:12.5px;color:var(--muted);letter-spacing:.2em;}
+.novel-app .nv-anim-n{animation:naFlipN .3s ease;}
+.novel-app .nv-anim-p{animation:naFlipP .3s ease;}
+@keyframes naFlipN{from{opacity:.15;transform:translateX(30px);box-shadow:-18px 0 30px rgba(80,60,30,.25);}to{opacity:1;transform:none;}}
+@keyframes naFlipP{from{opacity:.15;transform:translateX(-30px);box-shadow:18px 0 30px rgba(80,60,30,.25);}to{opacity:1;transform:none;}}
+/* ================= 动笔页 ================= */
+.novel-app .wr{flex:1;min-height:0;display:flex;flex-direction:column;}
+.novel-app .wr-editor{flex:none;padding:10px 14px 6px;border-bottom:1px solid var(--line);background:linear-gradient(var(--paper-a),rgba(245,240,230,.6));}
+.novel-app .wr-titlerow{display:flex;align-items:center;gap:10px;}
+.novel-app .wr-title{flex:1;min-width:0;border:none;background:none;outline:none;font-size:18px;font-weight:700;letter-spacing:.1em;padding:4px 0;border-bottom:1px solid transparent;}
+.novel-app .wr-title:focus{border-bottom-color:var(--accent);}
+.novel-app .wr-count{font-size:12px;color:var(--muted);border:1px solid var(--line);background:var(--card);border-radius:999px;padding:2px 10px;white-space:nowrap;}
+.novel-app .wr-editor textarea{width:100%;height:24vh;min-height:150px;border:none;background:none;outline:none;resize:none;font-size:16.5px;line-height:1.9;padding:8px 2px;}
+.novel-app .wr-targetrow{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);padding-bottom:6px;}
+.novel-app .wr-target{width:74px;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:3px 8px;font-size:13px;outline:none;}
+.novel-app .wr-endhint{margin-left:auto;color:var(--bad);display:none;}
+.novel-app .wr-endhint.show{display:inline;}
+.novel-app .wr-newchap{flex:none;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:3px 10px;font-size:12.5px;color:var(--ink);margin-left:6px;}
+.novel-app .wr-newchap:active{border-color:var(--accent);color:var(--accent);}
+.novel-app .wr-chat{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--card);}
+.novel-app .wr-msgs{flex:1;min-height:0;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;}
+.novel-app .na-msg{display:flex;flex-direction:column;max-width:92%;}
+.novel-app .na-msg.me{align-self:flex-end;align-items:flex-end;}
+.novel-app .na-msg.ai{align-self:flex-start;align-items:flex-start;}
+.novel-app .na-bubble{padding:9px 13px;border-radius:14px;font-size:14.5px;line-height:1.75;white-space:pre-wrap;word-break:break-word;max-width:100%;}
+.novel-app .na-msg.me .na-bubble{background:var(--ink);color:#f7f2e6;border-bottom-right-radius:4px;}
+.novel-app .na-msg.ai .na-bubble{background:#f4eedd;border:1px solid var(--line);border-bottom-left-radius:4px;}
+.novel-app .na-msg.err .na-bubble{background:#f7e8e4;border-color:#e0b7ae;color:var(--bad);}
+.novel-app .na-acts{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;}
+.novel-app .na-act{border:1px solid var(--line);background:var(--card);border-radius:999px;font-size:11.5px;padding:3px 10px;color:var(--muted);}
+.novel-app .na-act:active{color:var(--accent);border-color:var(--accent);}
+.novel-app .wr-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13.5px;text-align:center;padding:0 30px;line-height:2.1;}
+.novel-app .wr-quick{flex:none;display:flex;gap:8px;padding:6px 12px 0;}
+.novel-app .wr-quick button{flex:1;border:1px solid var(--line);background:var(--paper-a);border-radius:12px;padding:7px 4px;font-size:12.5px;letter-spacing:.04em;color:var(--ink);}
+.novel-app .wr-quick button:active{border-color:var(--accent);color:var(--accent);}
+.novel-app .wr-cache{flex:none;display:flex;align-items:center;gap:6px;padding:5px 14px 0;font-size:11px;color:var(--muted);}
+.novel-app .wr-cache .dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--muted);}
+.novel-app .wr-cache.ok .dot{background:var(--ok);}
+.novel-app .wr-cache.warn .dot{background:var(--bad);}
+.novel-app .wr-inputrow{flex:none;display:flex;gap:8px;padding:8px 12px calc(10px + env(safe-area-inset-bottom));}
+.novel-app .wr-input{flex:1;min-width:0;border:1px solid var(--line);border-radius:999px;padding:9px 15px;font-size:16px;background:#fff;outline:none;}
+.novel-app .wr-input:focus{border-color:var(--accent);}
+.novel-app .wr-send{border:none;background:var(--ink);color:#f7f2e6;border-radius:999px;padding:0 18px;font-size:14px;letter-spacing:.1em;}
+.novel-app .wr-send:disabled{opacity:.5;}
+/* ================= 设置页 ================= */
+.novel-app .st{flex:1;min-height:0;overflow-y:auto;padding:14px 14px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px;}
+.novel-app .st-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.novel-app .st-h{font-size:13px;letter-spacing:.3em;color:var(--muted);}
+.novel-app .st-row{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--muted);}
+.novel-app .st-row input,.novel-app .st-row select,.novel-app .st-row textarea{border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:16px;background:#fff;outline:none;width:100%;}
+.novel-app .st-row textarea{font-size:14px;line-height:1.7;resize:vertical;min-height:72px;}
+.novel-app .st-row input:focus,.novel-app .st-row select:focus,.novel-app .st-row textarea:focus{border-color:var(--accent);}
+.novel-app .st-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.novel-app .st-hint{font-size:11.5px;color:var(--muted);line-height:1.8;margin-top:-2px;}
+.novel-app .st-btns{display:flex;gap:8px;flex-wrap:wrap;}
+.novel-app .st-btn{border:1px solid var(--line);background:var(--paper-a);border-radius:999px;padding:8px 16px;font-size:13.5px;}
+.novel-app .st-btn.pri{background:var(--ink);color:#f7f2e6;border-color:var(--ink);}
+.novel-app .st-btn.warn{color:var(--bad);border-color:#dcc0b8;background:#fbf1ee;}
+.novel-app .st-btn:disabled{opacity:.5;}
+.novel-app .st-testok{font-size:12px;color:var(--ok);}
+.novel-app .st-testbad{font-size:12px;color:var(--bad);}
+.novel-app .st-rng{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted);}
+.novel-app .st-rng input[type=range]{flex:1;accent-color:var(--accent);}
+.novel-app .st-prev{height:64px;border-radius:10px;border:1px solid var(--line);background-size:cover;background-position:center;}
+.novel-app .st-seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);}
+.novel-app .st-seg button{flex:1;border:none;background:none;padding:9px 4px;font-size:13px;color:var(--muted);border-right:1px solid var(--line);letter-spacing:.05em;}
+.novel-app .st-seg button:last-child{border-right:none;}
+.novel-app .st-seg button.on{background:var(--accent-soft);color:var(--accent);font-weight:700;}
+@media (max-width:380px){
+  .novel-app .wr-quick button{font-size:11.5px;padding:6px 2px;}
+}
+/* ================= 黑夜模式 ================= */
+.novel-app.na-dark{
+  --paper-a:#211d17; --paper-b:#1a1712; --paper-line:#3b352a;
+  --ink:#e7e0cf; --muted:#988f7d; --line:#3b352a;
+  --card:#2b261e; --accent:#cf9450; --accent-soft:#43351f;
+  --ok:#93b87e; --bad:#dc7a68;
+}
+.novel-app.na-dark .nv-stage{
+  background:
+   radial-gradient(120% 80% at 50% 0%,rgba(255,255,255,.05),transparent 55%),
+   radial-gradient(130% 70% at 50% 108%,rgba(0,0,0,.5),transparent 55%),
+   linear-gradient(160deg,#262119,#131009);}
+.novel-app.na-dark .nv-shadow{background:radial-gradient(ellipse at center,rgba(0,0,0,.65),transparent 65%);}
+.novel-app.na-dark .na-toast{background:rgba(238,231,215,.95);color:#26211a;}
+.novel-app.na-dark .na-msg.ai .na-bubble{background:#332d23;border-color:var(--line);}
+.novel-app.na-dark .na-msg.me .na-bubble{background:#e7e0cf;color:#26211a;}
+.novel-app.na-dark .na-msg.err .na-bubble{background:#3c2822;border-color:#5f423a;}
+.novel-app.na-dark .wr-input,
+.novel-app.na-dark .st-row input,
+.novel-app.na-dark .st-row select,
+.novel-app.na-dark .st-row textarea{background:#1d1913;border-color:var(--line);color:var(--ink);}
+.novel-app.na-dark .wr-send,
+.novel-app.na-dark .st-btn.pri{background:#e7e0cf;color:#26211a;border-color:#e7e0cf;}
+.novel-app.na-dark .st-btn{background:var(--card);}
+.novel-app.na-dark .st-btn.warn{background:#33231d;border-color:#5a3f36;color:var(--bad);}
+.novel-app.na-dark .wr-editor{background:linear-gradient(var(--paper-a),rgba(33,29,23,.6));}
+.novel-app.na-dark .wr-quick button{background:var(--card);}
+</style>
+<style>html.jj-embed .novel-app .na-top{display:none;}</style>
+<script>try{if(window.self!==window.top){document.documentElement.classList.add('jj-embed');}}catch(e){}</script>
+</head>
+<body>
+<div class="novel-app" id="naRoot">
+
+  <header class="na-top">
+    <span class="ttl">执 笔</span><span class="sp"></span>
+    <span class="na-chip" id="naTopInfo">和 AI 一起写小说</span>
+  </header>
+
+  <!-- ===== 页一：小说 ===== -->
+  <section class="na-view on" id="viewBook">
+    <div class="nv-stage" id="nvStage">
+      <div class="nv-stage-bg" id="nvStageBg"><img id="nvStageImg" alt=""></div>
+      <div class="nv-bookzone" id="nvBookzone">
+        <div class="nv-book3d" id="nvBook3d" role="button" aria-label="翻开这本书">
+          <div class="nv-bface nv-bend"></div>
+          <div class="nv-bface nv-bspine"></div>
+          <div class="nv-bface nv-btop"></div>
+          <div class="nv-bface nv-bedge"></div>
+          <div class="nv-bcover" id="nvCover">
+            <div class="bgimg" id="nvCoverBg"></div>
+            <div class="shade"></div>
+          </div>
+        </div>
+        <div class="nv-shadow"></div>
+      </div>
+
+      <div class="nv-toc" id="nvToc" hidden>
+        <div class="nv-thead">
+          <button class="nv-back" id="btnTocBack">‹ 合上书</button>
+          <span class="nv-ttitle">目 录</span>
+        </div>
+        <div class="nv-toclist" id="nvTocList"></div>
+      </div>
+      <div class="nv-reader" id="nvReader" hidden>
+        <div class="nv-paper-bg" id="nvPaperBg"><img id="nvPaperImg" alt=""></div>
+        <div class="nv-phead">
+          <button class="nv-back" id="btnReaderBack">‹ 目录</button>
+          <span class="nv-psec" id="nvCurSec"></span>
+        </div>
+        <div class="nv-pagebody" id="nvPageBody"></div>
+        <div class="nv-rfoot">
+          <button class="nv-pgbtn" id="btnPrevPage">‹</button>
+          <span class="nv-pginfo" id="nvPageInfo">第 1 / 1 页</span>
+          <button class="nv-pgbtn" id="btnNextPage">›</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 页二：动笔（合集模式：一章 = 一篇独立短篇） ===== -->
+  <section class="na-view" id="viewWrite">
+    <div class="wr">
+      <div class="wr-editor">
+        <div class="wr-titlerow">
+          <input class="wr-title" id="wrTitle" placeholder="书名（合集标题）…" maxlength="40">
+          <span class="wr-count" id="wrCount">0 字</span>
+        </div>
+        <textarea id="wrEditor" placeholder="在这里写下你的故事…（每章一篇独立短篇；写完点「＋新章节」开下一篇）"></textarea>
+        <div class="wr-targetrow">
+          <span>本章目标字数</span>
+          <input class="wr-target" id="wrTarget" type="number" min="0" step="500" value="8000">
+          <span class="wr-endhint" id="wrEndHint">✍️ 该收尾了</span>
+          <button class="wr-newchap" id="btnNewChapter">＋新章节</button>
+        </div>
+      </div>
+      <div class="wr-chat">
+        <div class="wr-msgs" id="naMsgs"></div>
+        <div class="wr-quick">
+          <button id="btnQuickWrite">让 Ta 写</button>
+          <button id="btnQuickTwist">想反转</button>
+          <button id="btnQuickPolish">精修这段</button>
+          <button id="btnFinalize">📌 定稿设定</button>
+        </div>
+        <div class="wr-cache" id="wrCache">
+          <span class="dot"></span><span id="cacheTxt">首次调用后显示缓存状态</span>
+        </div>
+        <form class="wr-inputrow" id="wrForm">
+          <input class="wr-input" id="wrInput" placeholder="说说你这篇的设定或想法…" autocomplete="off">
+          <button class="wr-send" id="wrSend" type="submit">发送</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 页三：设置 ===== -->
+  <section class="na-view" id="viewSet">
+    <div class="st">
+      <div class="st-card">
+        <div class="st-h">外 观</div>
+        <div class="st-seg" id="themeSeg">
+          <button data-theme="auto">跟随系统</button>
+          <button data-theme="light">☀️ 白天</button>
+          <button data-theme="dark">🌙 黑夜</button>
+        </div>
+        <span class="st-hint">黑夜模式护眼；「跟随系统」会随手机的深色模式自动切换。</span>
+      </div>
+
+      <div class="st-card">
+        <div class="st-h">书架桌面背景</div>
+        <div class="st-btns">
+          <button class="st-btn" id="btnStageUp">上传背景图</button>
+          <button class="st-btn" id="btnStageRm">恢复默认</button>
+        </div>
+        <input type="file" accept="image/*" id="fileStage" class="na-file">
+        <div class="st-prev" id="stagePrev" hidden></div>
+        <div class="st-rng"><span>透明度</span><input type="range" id="rngStage" min="5" max="100" step="5" value="45"><span id="rngStageVal">45%</span></div>
+        <span class="st-hint">小说首页立体书展示那一屏的桌面。白天 / 黑夜各存一张，上传时存进当前外观档位。</span>
+      </div>
+
+      <div class="st-card">
+        <div class="st-h">API 连接</div>
+        <label class="st-row">服务商
+          <select id="stProvider">
+            <option value="deepseek">DeepSeek</option>
+            <option value="zhipu">智谱</option>
+            <option value="siliconflow">硅基流动</option>
+            <option value="custom">自定义</option>
+          </select>
+        </label>
+        <label class="st-row">API 地址（Base URL）<input id="stBase" type="url" placeholder="https://api.deepseek.com/v1" spellcheck="false"></label>
+        <label class="st-row">API Key<input id="stKey" type="password" placeholder="sk-…" spellcheck="false"></label>
+        <label class="st-row">模型名称<input id="stModel" type="text" placeholder="deepseek-chat" spellcheck="false"></label>
+        <div class="st-grid">
+          <label class="st-row">温度（默认 0.7）<input id="stTemp" type="number" min="0" max="2" step="0.1" value="0.7"></label>
+          <label class="st-row">最大输出长度<input id="stMax" type="number" min="100" step="128" value="2048"></label>
+        </div>
+        <div class="st-btns">
+          <button class="st-btn" id="btnTest">🔌 测试连接</button>
+          <button class="st-btn pri" id="btnSaveApi">保存</button>
+        </div>
+        <span class="st-hint" id="stTestState"></span>
+        <span class="st-hint">Key 仅保存在本机浏览器，不会上传到任何服务器。所有服务商均走 OpenAI 兼容格式。</span>
+      </div>
+
+      <div class="st-card">
+        <div class="st-h">AI 人设</div>
+        <label class="st-row">系统提示词<textarea id="stPersona"></textarea></label>
+        <div class="st-btns">
+          <button class="st-btn" id="btnPersonaReset">恢复默认</button>
+          <button class="st-btn pri" id="btnSavePersona">保存</button>
+        </div>
+      </div>
+
+      <div class="st-card">
+        <div class="st-h">封面图片</div>
+        <div class="st-btns">
+          <button class="st-btn" id="btnCoverUp">上传封面图</button>
+          <button class="st-btn" id="btnCoverRm">移除封面</button>
+        </div>
+        <input type="file" accept="image/*" id="fileCover" class="na-file">
+        <span class="st-hint">默认是空白书衣；上传后照片会自动压缩并整面铺在封面上。</span>
+      </div>
+
+      <div class="st-card">
+        <div class="st-h">本篇设定</div>
+        <label class="st-row">设定草稿（未定稿时按尾部截取携带）<textarea id="stIdeaDraft" placeholder="这一篇的题材、人物、冲突、基调…"></textarea></label>
+        <label class="st-row">设定精华（「📌 定稿设定」的结果，可手改）<textarea id="stIdeaFinal" placeholder="定稿后每次调用只带这一段"></textarea></label>
+        <div class="st-btns"><button class="st-btn pri" id="btnSaveStory">保存</button></div>
+        <span class="st-hint">合集模式：每章是独立短篇，设定按章生效。「＋新章节」会清空设定与对话、开始下一篇（正文保留）。</span>
+      </div>
+
+      <div class="st-card">
+        <div class="st-h">省 Token 参数</div>
+        <div class="st-grid">
+          <label class="st-row">设定上限（字）<input id="stIdea" type="number" min="50" step="50" value="200"></label>
+          <label class="st-row">正文窗口（字）<input id="stTail" type="number" min="200" step="100" value="1500"></label>
+          <label class="st-row">对话历史上限（轮）<input id="stRounds" type="number" min="1" max="12" step="1" value="6"></label>
+        </div>
+        <label class="st-row" style="display:flex;flex-direction:row;align-items:center;gap:8px;cursor:pointer;">
+          <input id="stDiscussTail" type="checkbox" style="width:auto;flex:none;">
+          <span>讨论时带上本章结尾（反转/剧情讨论让 AI 看到你写到哪；每轮多花一次「正文窗口」的量，不影响前缀缓存）</span>
+        </label>
+        <div class="st-btns"><button class="st-btn pri" id="btnSaveParams">保存</button></div>
+        <span class="st-hint">前缀 = 人设 + 本篇设定，非常稳定，只在改动时重建一次。「对话历史上限」= AI 看到的上下文长度；「正文窗口」= 续写时携带的当前章正文字数（只带本章，不串篇）。</span>
+      </div>
+
+      <div class="st-card">
+        <div class="st-h">阅读页背景</div>
+        <div class="st-btns">
+          <button class="st-btn" id="btnBgUp">上传背景图</button>
+          <button class="st-btn" id="btnBgRm">移除背景</button>
+        </div>
+        <input type="file" accept="image/*" id="fileBg" class="na-file">
+        <div class="st-prev" id="paperPrev" hidden></div>
+        <div class="st-rng"><span>透明度</span><input type="range" id="rngBg" min="5" max="100" step="5" value="35"><span id="rngBgVal">35%</span></div>
+        <span class="st-hint">翻开书后的正文纸面背景，铺在文字底下。默认 35% 较淡，想明显拉高滑块。</span>
+      </div>
+
+      <div class="st-card">
+        <div class="st-h">数据管理</div>
+        <div class="st-btns">
+          <button class="st-btn" id="btnExport">📤 导出小说</button>
+          <button class="st-btn warn" id="btnWipe">清空所有数据</button>
+        </div>
+        <span class="st-hint" id="stStoreState">正文 / 封面 / 背景存 IndexedDB，其余存 localStorage，修改后自动保存。</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 底部导航 ===== -->
+  <nav class="na-tabbar" id="naTabbar">
+    <button class="na-tab on" data-tab="book">
+      <svg viewBox="0 0 24 24"><path d="M5 4.5h5.5A1.5 1.5 0 0 1 12 6v13.5H6.5A1.5 1.5 0 0 1 5 18V4.5z"/><path d="M19 4.5h-5.5A1.5 1.5 0 0 0 12 6v13.5h5.5A1.5 1.5 0 0 0 19 18V4.5z"/></svg>
+      <span>小说</span>
+    </button>
+    <button class="na-tab" data-tab="write">
+      <svg viewBox="0 0 24 24"><path d="M5 19l1.2-4.2L16.8 4.2a1.6 1.6 0 0 1 2.3 0l.7.7a1.6 1.6 0 0 1 0 2.3L9.2 17.8 5 19z"/><path d="M14.5 6.5l3 3"/></svg>
+      <span>动笔</span>
+    </button>
+    <button class="na-tab" data-tab="set">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.4"/><path d="M12 3.2v2.3M12 18.5v2.3M3.2 12h2.3M18.5 12h2.3M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8l-1.6 1.6M7.4 16.6l-1.6 1.6"/></svg>
+      <span>设置</span>
+    </button>
+  </nav>
+
+  <div class="na-toast" id="naToast" hidden></div>
+</div>
+
+<script>
+'use strict';
+/* ==================================================================
+   可调核心参数
+================================================================== */
+var CFG = {
+  pageChars: 320,
+  lsPrefix: 'nvx_',
+  idbName: 'novelToolDB',
+  openMs: 720,
+  swipeMin: 55,
+  imgMaxEdge: 1280,
+  imgQuality: 0.82,
+  metaColorLight: '#e8e0cd',
+  metaColorDark: '#1b1813',
+  defaults: {
+    provider:'deepseek', baseURL:'https://api.deepseek.com/v1',
+    apiKey:'', model:'deepseek-chat', temperature:0.7, maxTokens:2048
+  },
+  defaultPersona:'你是一个擅长知乎风格独立短篇的写作伙伴，文风紧凑、有反转、有情绪张力，说话口语化，每次讨论不超过 150 字。每个短篇自成一体，不与之前的篇章延续剧情。',
+  providers:{
+    deepseek:{url:'https://api.deepseek.com/v1', model:'deepseek-chat'},
+    zhipu:{url:'https://open.bigmodel.cn/api/paas/v4', model:'glm-4-flash'},
+    siliconflow:{url:'https://api.siliconflow.cn/v1', model:'deepseek-ai/DeepSeek-V3'},
+    custom:{url:'', model:''}
+  }
+};
+
+var S = {
+  tab:'book',
+  theme:'auto',
+  stageBg:{light:'', dark:''},
+  stageOp:{light:0.45, dark:0.45},
+  meta:{title:'', target:8000},
+  text:'',
+  idea:{draft:'', final:''},
+  lastSysHash:null,
+  chat:[],
+  settings:Object['assign']({}, CFG['defaults']),
+  persona:CFG['defaultPersona'],
+  params:{idea:200, tail:1500, rounds:6},
+  bgOpacity:0.35,
+  coverURL:'', bgURL:'',
+  reader:{page:0, pages:[], sections:[]},
+  busy:false,
+  abort:null
+};
+
+/* ================= 小工具 ================= */
+function $(id){ return document['getElementById'](id); }
+var toastTimer=null;
+function toast(t,ms){ var el=$('naToast'); el['textContent']=t; el['hidden']=false; clearTimeout(toastTimer); toastTimer=setTimeout(function(){el['hidden']=true;}, ms||2400); }
+function esc(s){ return (s||'')['replace'](/&/g,'&amp;')['replace'](/</g,'&lt;')['replace'](/>/g,'&gt;'); }
+function clipTail(s,n){ s=(s||'')['trim'](); return s['length']>n ? s['slice'](-n) : s; }
+function debounce(fn,ms){ var t=null; return function(){ var a=arguments,self=this; clearTimeout(t); t=setTimeout(function(){ fn['apply'](self,a); },ms); }; }
+function setPrev(id,url){ var p=$(id); if(!p) return; if(url){ p['style']['backgroundImage']='url('+url+')'; p['hidden']=false; } else { p['style']['backgroundImage']='none'; p['hidden']=true; } }
+function isAbortErr(e){ return !!e && (e['name']==='AbortError' || /abort/i['test'](String(e['message']||''))); }
+
+/* ================= 大对象存储（IndexedDB → localStorage → 内存） ================= */
+var _idb=null, _idbBroken=false, _memStore={}, _storeMode='idb';
+function idbOpen(){
+  return new Promise(function(res,rej){
+    if(_idb) return res(_idb);
+    if(_idbBroken) return rej(new Error('IDB 不可用'));
+    if(!window['indexedDB']){ _idbBroken=true; return rej(new Error('IDB 不可用')); }
+    var rq;
+    try{ rq=window['indexedDB']['open'](CFG['idbName'],1); }
+    catch(e){ _idbBroken=true; return rej(e); }
+    rq['onupgradeneeded']=function(e){ e['target']['result']['createObjectStore']('kv'); };
+    rq['onsuccess']=function(e){ _idb=e['target']['result']; res(_idb); };
+    rq['onerror']=function(){ _idbBroken=true; rej(rq['error']||new Error('IDB 打开失败')); };
+  });
+}
+function _lsKey(k){ return CFG['lsPrefix']+'idb_'+k; }
+function idbSet(k,v){
+  return idbOpen()['then'](function(db){
+    return new Promise(function(res,rej){
+      var tx=db['transaction']('kv','readwrite');
+      tx['objectStore']('kv')['put'](v,k);
+      tx['oncomplete']=function(){res();};
+      tx['onerror']=function(){rej(tx['error']);};
+    });
+  })['catch'](function(){
+    try{ localStorage['setItem'](_lsKey(k), JSON['stringify'](v)); _storeMode='local'; }
+    catch(e){ _memStore[k]=v; _storeMode='mem'; }
+  });
+}
+function idbGet(k){
+  return idbOpen()['then'](function(db){
+    return new Promise(function(res,rej){
+      var rq=db['transaction']('kv','readonly')['objectStore']('kv')['get'](k);
+      rq['onsuccess']=function(){ res(rq['result']); };
+      rq['onerror']=function(){ rej(rq['error']); };
+    });
+  })['catch'](function(){
+    try{
+      var v=localStorage['getItem'](_lsKey(k));
+      if(v!=null) return JSON['parse'](v);
+    }catch(e){}
+    return _memStore[k];
+  });
+}
+function idbDel(k){
+  return idbOpen()['then'](function(db){
+    return new Promise(function(res,rej){
+      var tx=db['transaction']('kv','readwrite');
+      tx['objectStore']('kv')['delete'](k);
+      tx['oncomplete']=function(){res();};
+      tx['onerror']=function(){rej(tx['error']);};
+    });
+  })['catch'](function(){
+    try{ localStorage['removeItem'](_lsKey(k)); }catch(e){}
+    delete _memStore[k];
+  });
+}
+function detectStore(cb){
+  idbSet('__probe__',1)['then'](function(){ cb(_storeMode); });
+}
+
+/* ================= localStorage（小数据） ================= */
+function lsGet(k,fb){ try{ var v=localStorage['getItem'](CFG['lsPrefix']+k); return v==null?fb:JSON['parse'](v); }catch(e){ return fb; } }
+function lsSet(k,v){ try{ localStorage['setItem'](CFG['lsPrefix']+k, JSON['stringify'](v)); }catch(e){} }
+function lsDel(k){ try{ localStorage['removeItem'](CFG['lsPrefix']+k); }catch(e){} }
+function saveMeta(){ lsSet('meta',S['meta']); }
+function saveIdea(){ lsSet('idea',S['idea']); }
+function saveChat(){ lsSet('chat', S['chat']['slice'](-(S['params']['rounds']*2))); }
+function saveApi(){ lsSet('api',S['settings']); }
+function savePersona(){ lsSet('persona',S['persona']); }
+function saveParams(){ lsSet('params',S['params']); }
+function saveBg(){ lsSet('bg',{opacity:S['bgOpacity']}); }
+var saveTextDebounced=debounce(function(){ idbSet('novel',{title:S['meta']['title'], text:S['text'], target:S['meta']['target']})['catch'](function(){}); },500);
+
+/* ================= 白天 / 黑夜 ================= */
+function effDark(){
+  return (S['theme']==='dark') ||
+    (S['theme']==='auto' && window['matchMedia'] && window['matchMedia']('(prefers-color-scheme: dark)')['matches']);
+}
+function applyTheme(){
+  var dark=effDark();
+  $('naRoot')['classList']['toggle']('na-dark', dark);
+  var m=document['querySelector']('meta[name="theme-color"]');
+  if(m) m['setAttribute']('content', dark ? CFG['metaColorDark'] : CFG['metaColorLight']);
+  applyStageBg();
+}
+function syncThemeSeg(){
+  var seg=$('themeSeg'); if(!seg) return;
+  var bs=seg['querySelectorAll']('button');
+  for(var i=0;i<bs['length'];i++){ bs[i]['classList']['toggle']('on', bs[i]['getAttribute']('data-theme')===S['theme']); }
+}
+function setTheme(t){
+  S['theme']=t; lsSet('theme',t);
+  applyTheme(); syncThemeSeg();
+  toast(t==='dark' ? '🌙 已切换黑夜模式' : (t==='light' ? '☀️ 已切换白天模式' : '已跟随系统外观'));
+}
+
+/* ================= 书架桌面背景 ================= */
+function applyStageBg(){
+  var img=$('nvStageImg');
+  var k=effDark()?'dark':'light';
+  var url=S['stageBg'][k];
+  if(url){ img['src']=url; img['style']['display']='block'; }
+  else{ img['removeAttribute']('src'); img['style']['display']='none'; }
+  var op=S['stageOp'][k];
+  $('nvStageBg')['style']['setProperty']('--stage-op', String(op));
+  var r=$('rngStage');
+  if(r){ r['value']=String(Math['round'](op*100)); $('rngStageVal')['textContent']=Math['round'](op*100)+'%'; }
+  setPrev('stagePrev', url);
+}
+
+/* ================= Tab 切换 ================= */
+function switchTab(name){
+  S['tab']=name; lsSet('tab',name);
+  var map={book:'viewBook', write:'viewWrite', set:'viewSet'};
+  ['book','write','set']['forEach'](function(k){
+    $(map[k])['classList']['toggle']('on', k===name);
+  });
+  var tabs=$('naTabbar')['querySelectorAll']('.na-tab');
+  for(var i=0;i<tabs['length'];i++){ tabs[i]['classList']['toggle']('on', tabs[i]['getAttribute']('data-tab')===name); }
+  if(name==='book'){ refreshBook(); }
+  if(name==='write'){ renderChat(); updateCount(); }
+}
+
+/* ================= 小说页 ================= */
+function showStage(which){
+  $('nvBookzone')['hidden'] = which!=='book';
+  $('nvToc')['hidden']      = which!=='toc';
+  $('nvReader')['hidden']   = which!=='reader';
+}
+function applyCover(){
+  var c=$('nvCoverBg');
+  c['style']['backgroundImage'] = S['coverURL'] ? ('url('+S['coverURL']+')') : 'none';
+}
+function applyPaperBg(){
+  var img=$('nvPaperImg');
+  if(S['bgURL']){ img['src']=S['bgURL']; img['style']['display']='block'; }
+  else{ img['removeAttribute']('src'); img['style']['display']='none'; }
+  $('nvPaperBg')['style']['setProperty']('--bg-op', String(S['bgOpacity']));
+  setPrev('paperPrev', S['bgURL']);
+}
+
+/* 分页 */
+function paginate(text){
+  var pages=[], sections=[];
+  var paras=text['split']('\n'), pos=0;
+  var blocks=[], curLen=0, pageStart=0;
+  function flush(){
+    if(!blocks['length']) return;
+    pages['push']({html:blocks['join'](''), start:pageStart});
+    blocks=[]; curLen=0;
+  }
+  for(var i=0;i<paras['length'];i++){
+    var p=paras[i], segStart=pos;
+    pos+=p['length']+1;
+    var t=p['trim']();
+    if(!t){ continue; }
+    var isSec=/^(第[一二三四五六七八九十百0-9]+\s*[节章]|#{2,3}\s*\S)/['test'](t);
+    if(isSec){ sections['push']({label:t['replace'](/^#{2,3}\s*/,''), offset:segStart}); }
+    var chunks=[];
+    for(var j=0;j<p['length'];j+=CFG['pageChars']){ chunks['push'](p['slice'](j,j+CFG['pageChars'])); }
+    if(!chunks['length']) chunks=[''];
+    for(var c=0;c<chunks['length'];c++){
+      var ch=chunks[c];
+      if(curLen && curLen+ch['length']>CFG['pageChars']){ flush(); pageStart=segStart+c*CFG['pageChars']; }
+      if(!blocks['length'] && !pages['length'] && c===0){ pageStart=segStart; }
+      var cls=(isSec&&c===0)?' class="nv-sec"':'';
+      blocks['push']('<p'+cls+'>'+esc(ch)+'</p>');
+      curLen+=ch['length'];
+    }
+  }
+  flush();
+  return {pages:pages, sections:sections};
+}
+
+function openCover(){
+  $('nvBook3d')['classList']['remove']('opening');
+  showStage('book');
+}
+function openToc(){
+  showStage('toc');
+  renderTocList();
+}
+function renderTocList(){
+  var list=$('nvTocList'); list['innerHTML']='';
+  if(!S['text']['trim']()){
+    list['innerHTML']='<div class="nv-tosempty">正文还是空的。<br>去「动笔」页写下第一句，或让 AI 来开头。</div>';
+    return;
+  }
+  var pg=paginate(S['text']); S['reader']['pages']=pg['pages']; S['reader']['sections']=pg['sections'];
+  function item(label,page){
+    var b=document['createElement']('button'); b['className']='nv-tocitem';
+    b['innerHTML']='<span>'+esc(label)+'</span><span class="dots"></span><span class="pg">P.'+(page+1)+'</span>';
+    b['addEventListener']('click',function(){ openReader(page); });
+    list['appendChild'](b);
+  }
+  item('正文 · 开篇',0);
+  var secs=S['reader']['sections'];
+  for(var i=0;i<secs['length'];i++){
+    (function(sec){
+      var page=0;
+      for(var j=S['reader']['pages']['length']-1;j>=0;j--){
+        if(S['reader']['pages'][j]['start']<=sec['offset']){ page=j; break; }
+      }
+      item(sec['label'],page);
+    })(secs[i]);
+  }
+}
+function openReader(page){
+  if(!S['text']['trim']()){ toast('正文还是空的，先去「动笔」写点什么'); return; }
+  var pg=paginate(S['text']);
+  S['reader']['pages']=pg['pages']; S['reader']['sections']=pg['sections'];
+  S['reader']['page']=Math['max'](0, Math['min'](page||0, pg['pages']['length']-1));
+  showStage('reader');
+  renderPage(0);
+}
+function enterBook(){
+  var b=$('nvBook3d');
+  b['classList']['add']('opening');
+  setTimeout(function(){
+    b['classList']['remove']('opening');
+    openToc();
+  }, CFG['openMs']);
+}
+function curSecName(){
+  var page=S['reader']['page'], name='正文';
+  var secs=S['reader']['sections'], pages=S['reader']['pages'];
+  for(var i=0;i<secs['length'];i++){
+    for(var j=pages['length']-1;j>=0;j--){
+      if(pages[j]['start']<=secs[i]['offset']){ if(j<=page) name=secs[i]['label']; break; }
+    }
+  }
+  return name;
+}
+function renderPage(anim){
+  var body=$('nvPageBody'), pages=S['reader']['pages'];
+  if(!pages['length']){
+    body['innerHTML']='<div class="nv-rempty">这一页还没有内容<br>去「动笔」写点什么吧</div>';
+    $('nvPageInfo')['textContent']='第 1 / 1 页'; $('nvCurSec')['textContent']='';
+    return;
+  }
+  S['reader']['page']=Math['max'](0, Math['min'](S['reader']['page'], pages['length']-1));
+  body['innerHTML']=pages[S['reader']['page']]['html'];
+  body['scrollTop']=0;
+  $('nvPageInfo')['textContent']='第 '+(S['reader']['page']+1)+' / '+pages['length']+' 页';
+  $('nvCurSec')['textContent']=curSecName();
+  if(anim){
+    body['classList']['remove']('nv-anim-n'); body['classList']['remove']('nv-anim-p');
+    void body['offsetWidth'];
+    body['classList']['add'](anim>0?'nv-anim-n':'nv-anim-p');
+  }
+}
+function flip(d){
+  if($('nvReader')['hidden']) return;
+  var pages=S['reader']['pages'];
+  var np=S['reader']['page']+d;
+  if(np<0){ openCover(); return; }
+  if(np>=pages['length']){ toast('已经读到最新内容'); return; }
+  S['reader']['page']=np; renderPage(d);
+}
+function refreshBook(){
+  if(!$('nvReader')['hidden']){
+    if(!S['text']['trim']()){ openCover(); return; }
+    var keep=S['reader']['page'];
+    var pg=paginate(S['text']);
+    S['reader']['pages']=pg['pages']; S['reader']['sections']=pg['sections'];
+    S['reader']['page']=Math['min'](keep, Math['max'](0,pg['pages']['length']-1));
+    renderPage(0);
+  }
+}
+function bindGestures(){
+  var stg=$('nvStage'), sx=0, sy=0, on=false;
+  stg['addEventListener']('touchstart',function(e){
+    if(e['touches']['length']!==1) return;
+    sx=e['touches'][0]['clientX']; sy=e['touches'][0]['clientY']; on=true;
+  },{passive:true});
+  stg['addEventListener']('touchend',function(e){
+    if(!on) return; on=false;
+    var t=e['changedTouches'][0], dx=t['clientX']-sx, dy=t['clientY']-sy;
+    if(Math['abs'](dx)<CFG['swipeMin'] || Math['abs'](dy)>80) return;
+    if(!$('nvToc')['hidden']){ if(dx>0) openCover(); return; }
+    if(!$('nvReader')['hidden']) return;
+    if($('nvBookzone')['hidden']) return;
+    if(dx<0) enterBook();
+  },{passive:true});
+  var rx=0, ry=0, ron=false;
+  $('nvReader')['addEventListener']('touchstart',function(e){
+    if(e['touches']['length']!==1) return;
+    rx=e['touches'][0]['clientX']; ry=e['touches'][0]['clientY']; ron=true;
+  },{passive:true});
+  $('nvReader')['addEventListener']('touchend',function(e){
+    if(!ron) return; ron=false;
+    var t=e['changedTouches'][0], dx=t['clientX']-rx, dy=t['clientY']-ry;
+    if(Math['abs'](dx)>50 && Math['abs'](dy)<70){ if(dx<0) flip(1); else flip(-1); }
+  },{passive:true});
+  $('nvPageBody')['addEventListener']('click',function(e){
+    if($('nvReader')['hidden']) return;
+    if(window['getSelection'] && String(window['getSelection']())['length']>0) return;
+    var r=this['getBoundingClientRect']();
+    var x=e['clientX']-r['left'];
+    if(x<r['width']*0.32) flip(-1);
+    else if(x>r['width']*0.68) flip(1);
+  });
+}
+
+/* ================= 动笔页 ================= */
+/* ★ 当前章正文：从最后一个「第N章」标记到结尾（合集模式核心） */
+function curChapterText(){
+  var t=S['text'];
+  var ms=t['match'](/第[0-9一二三四五六七八九十百]+章[^\n]*/g);
+  if(!ms) return t;
+  var last=t['lastIndexOf'](ms[ms['length']-1]);
+  return t['slice'](last);
+}
+/* 当前章除标题行外的正文 */
+function curChapterBody(){
+  return curChapterText()['replace'](/^[^\n]*章[^\n]*\n?/,'')['trim']();
+}
+function updateCount(){
+  var n=S['text']['length'];
+  $('wrCount')['textContent']=n+' 字';
+  $('naTopInfo')['textContent']=S['meta']['title'] ? ('《'+S['meta']['title']+'》· '+n+' 字') : ('未命名 · '+n+' 字');
+  var target=Number($('wrTarget')['value'])||0;
+  var chapLen=curChapterBody()['length'];
+  var hint=$('wrEndHint');
+  if(target>0 && chapLen>=target){ hint['textContent']='📕 本章已达目标，收尾吧'; hint['classList']['add']('show'); }
+  else if(target>0 && chapLen>=target*0.85){ hint['textContent']='✍️ 该收尾了'; hint['classList']['add']('show'); }
+  else{ hint['classList']['remove']('show'); }
+}
+function onTextChanged(){
+  S['text']=$('wrEditor')['value'];
+  saveTextDebounced();
+  updateCount();
+}
+
+/* ==================================================================
+   上下文构建（合集模式：前缀 = 人设 + 本篇设定，无大纲）
+================================================================== */
+function buildSystem(){
+  var parts=[S['persona']];
+  var idea=S['idea']['final'] || clipTail(S['idea']['draft'], S['params']['idea']);
+  if(idea) parts['push']('【本篇设定】\n'+idea);
+  parts['push']('工作方式：当前章节是一篇独立的短篇小说，与书中其他篇章没有剧情连续。按用户每条消息的任务要求行事。要求写正文/续写/重写时：直接输出正文，不解释、不复述；讨论设定或情节时：口语化、简短（尽量不超过150字），不要主动写正文。');
+  return parts['join']('\n\n');
+}
+/* ★ 写作任务只带当前章正文，绝不串到上一篇 */
+function finalUserContent(task, instr){
+  if(task==='write'){
+    var chap=curChapterBody();
+    var tail=clipTail(chap, S['params']['tail']);
+    return (tail ? ('【本章已有正文（以此为准，接续写作）】\n'+tail+'\n\n') : '')+'【写作指令】\n'+instr;
+  }
+  if(task==='discuss' && S['params']['discussTail']){
+    var tail2=clipTail(curChapterBody(), S['params']['tail']);
+    if(tail2) return '【本章已有正文（结尾部分，讨论时以此为据，不要复述原文）】\n'+tail2+'\n\n【指令】\n'+instr;
+  }
+  return instr;
+}
+function buildMessages(task, instr){
+  var msgs=[{'role':'system','content':buildSystem()}];
+  var hist=S['chat']['slice'](0,-1);
+  var take=S['params']['rounds']*2;
+  if(hist['length']>take) hist=hist['slice'](-take);
+  for(var i=0;i<hist['length'];i++){
+    if(hist[i]['err']) continue;
+    msgs['push']({'role':hist[i]['role'],'content':hist[i]['mark']||hist[i]['content']});
+  }
+  msgs['push']({'role':'user','content':finalUserContent(task, instr)});
+  return msgs;
+}
+
+/* ================= 缓存状态灯 ================= */
+function sysHash(s){ var h=5381; for(var i=0;i<s['length'];i++){ h=(((h<<5)+h)+s['charCodeAt'](i))|0; } return h; }
+function setCacheState(st,txt){
+  var w=$('wrCache');
+  w['classList']['remove']('ok'); w['classList']['remove']('warn');
+  if(st) w['classList']['add'](st);
+  $('cacheTxt')['textContent']=txt;
+}
+
+/* ================= LLM 调用 ================= */
+async function callLLM(messages, maxTokens, temperature, modelOverride, signal){
+  var base=(S['settings']['baseURL']||'')['trim']()['replace'](/\/+$/,'');
+  var model=(modelOverride||S['settings']['model']||'')['trim']();
+  var res=await fetch(base+'/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+(S['settings']['apiKey']||'')['trim']()},
+    body:JSON['stringify']({model:model, messages:messages, temperature:temperature, max_tokens:maxTokens}),
+    signal:signal
+  });
+  if(!res['ok']){
+    var detail='';
+    try{ var j=await res['json'](); detail=(j['error']&&j['error']['message'])||j['message']||''; }catch(e){}
+    throw new Error('HTTP '+res['status']+(detail?' · '+detail:''));
+  }
+  var data=await res['json']();
+  var out=(data['choices']&&data['choices'][0]&&data['choices'][0]['message']&&data['choices'][0]['message']['content']||'')['trim']();
+  if(!out) throw new Error('模型返回了空内容');
+  return out;
+}
+
+/* ================= 聊天 ================= */
+function renderChat(){
+  var box=$('naMsgs'); box['innerHTML']='';
+  if(!S['chat']['length']){
+    var d=document['createElement']('div'); d['className']='wr-empty';
+    d['textContent']='合集模式：一章 = 一篇独立短篇。\n① 在下面聊这一篇的设定 → ② 点「📌 定稿设定」→ ③ 点「让 Ta 写」出正文（可反复）。\n写完点「＋新章节」：正文进书、设定和对话重置，直接开下一篇。';
+    box['appendChild'](d); return;
+  }
+  S['chat']['forEach'](function(m,idx){ box['appendChild'](msgEl(m,idx)); });
+  box['scrollTop']=box['scrollHeight'];
+}
+function msgEl(m,idx){
+  var d=document['createElement']('div');
+  d['className']='na-msg '+(m['role']==='user'?'me':'ai')+(m['err']?' err':'');
+  var b=document['createElement']('div'); b['className']='na-bubble'; b['textContent']=m['content'];
+  d['appendChild'](b);
+  if(m['role']==='assistant' && !m['err']){
+    var acts=document['createElement']('div'); acts['className']='na-acts';
+    var defs=[
+      {act:'copy', label:'复制'},
+      {act:(m['action']==='replace'?'replace':'insert'), label:(m['action']==='replace'?'替换选中':'插入正文')}
+    ];
+    defs['forEach'](function(def){
+      var bt=document['createElement']('button'); bt['className']='na-act'; bt['textContent']=def['label'];
+      bt['setAttribute']('data-i',String(idx)); bt['setAttribute']('data-act',def['act']);
+      acts['appendChild'](bt);
+    });
+    d['appendChild'](acts);
+  }
+  return d;
+}
+function bindChatActions(){
+  $('naMsgs')['addEventListener']('click',function(e){
+    var bt=e['target']['closest']('.na-act'); if(!bt) return;
+    var idx=Number(bt['getAttribute']('data-i')), act=bt['getAttribute']('data-act');
+    var m=S['chat'][idx]; if(!m) return;
+    if(act==='copy'){ copyText(m['content']); }
+    else if(act==='insert'||act==='replace'){ applyToText(m); }
+  });
+}
+function copyText(t){
+  var done=function(){ toast('已复制'); };
+  if(navigator['clipboard']&&navigator['clipboard']['writeText']){ navigator['clipboard']['writeText'](t)['then'](done)['catch'](function(){ fallbackCopy(t); done(); }); }
+  else{ fallbackCopy(t); done(); }
+}
+function fallbackCopy(t){
+  var ta=document['createElement']('textarea'); ta['value']=t;
+  ta['style']['position']='fixed'; ta['style']['opacity']='0';
+  document['body']['appendChild'](ta); ta['select']();
+  try{ document['execCommand']('copy'); }catch(e){}
+  document['body']['removeChild'](ta);
+}
+function applyToText(m){
+  var t=S['text'];
+  if(m['action']==='replace' && m['ref'] && t['substr'](m['ref']['start'], m['ref']['len'])===m['ref']['text']){
+    S['text']=t['slice'](0,m['ref']['start'])+m['content']+t['slice'](m['ref']['start']+m['ref']['len']);
+  }else{
+    if(m['action']==='replace') toast('原选中段已变化，改为追加到末尾');
+    S['text']=(t['replace'](/\s+$/,'')+(t?'\n\n':''))+m['content'];
+  }
+  $('wrEditor')['value']=S['text']; onTextChanged();
+  toast('已写入正文');
+}
+function setBusy(b){
+  S['busy']=b;
+  var btn=$('wrSend');
+  btn['disabled']=false;
+  btn['textContent']=b ? '■ 停止' : '发送';
+  S['abort'] = b ? (typeof AbortController!=='undefined' ? new AbortController() : null) : null;
+}
+
+/* ================= 新章节（合集模式：重置本章上下文） ================= */
+var chapArm=false, chapTimer=null;
+function newChapter(){
+  if(S['busy']){ toast('AI 正在生成，请先「■ 停止」或等待完成'); return; }
+  if(!chapArm){
+    chapArm=true;
+    $('btnNewChapter')['textContent']='确认开新篇？';
+    clearTimeout(chapTimer);
+    chapTimer=setTimeout(function(){ chapArm=false; $('btnNewChapter')['textContent']='＋新章节'; },4000);
+    return;
+  }
+  clearTimeout(chapTimer); chapArm=false;
+  $('btnNewChapter')['textContent']='＋新章节';
+  var n=((S['text']['match'](/第[0-9一二三四五六七八九十百]+章/g))||[])['length']+1;
+  S['text']=S['text']['replace'](/\s+$/,'')+(S['text']['trim']()?'\n\n':'')+'第'+n+'章 ';
+  $('wrEditor')['value']=S['text'];
+  onTextChanged();
+  var had=S['chat']['length']>0 || S['idea']['draft'] || S['idea']['final'];
+  S['chat']=[]; saveChat(); renderChat();
+  S['idea']={draft:'',final:''}; saveIdea();     /* ★ 新篇 = 新设定 */
+  S['lastSysHash']=null; lsDel('syshash');       /* 旧前缀作废，首条消息重建 */
+  setCacheState('','⚪ 新篇：首次调用后显示缓存状态');
+  var ta=$('wrEditor');
+  ta['focus']();
+  try{ ta['setSelectionRange'](S['text']['length'], S['text']['length']); }catch(e){}
+  toast('第'+n+'篇已开：正文已进书，设定与对话已重置'+(had?'':''));
+}
+
+async function sendMessage(visible, opts){
+  opts=opts||{};
+  if(S['busy']) return;
+  if(!S['settings']['apiKey']){ toast('请先在「设置」里保存 API 配置'); switchTab('set'); return; }
+  var task=opts['task']||'discuss';
+  S['chat']['push']({'role':'user','content':visible});
+  renderChat(); saveChat();
+  setBusy(true);
+  var signal=(S['abort'] ? S['abort']['signal'] : undefined);
+  var sys=buildSystem();
+  var h=sysHash(sys);
+  if(S['lastSysHash']==null){ setCacheState('','⚪ 首次调用，正在建立缓存'); }
+  else if(h!==S['lastSysHash']){ setCacheState('warn','🔴 人设/设定已变，本次重建缓存'); }
+  else if(S['chat']['length']>S['params']['rounds']*2+1){ setCacheState('warn','🟡 前缀一致，但对话窗口已滚动，缓存重建中'); }
+  else{ setCacheState('ok','🟢 前缀一致，缓存命中中'); }
+  try{
+    var msgs=buildMessages(task, opts['apiInstr']||visible);
+    var reply=await callLLM(msgs, S['settings']['maxTokens'], S['settings']['temperature'], null, signal);
+    S['chat']['push']({'role':'assistant','content':reply,'action':opts['action']||null,'ref':opts['ref']||null,'mark':(opts['task']==='write'?('（已续写 '+reply['length']+' 字，已并入本章正文）'):null)});
+    saveChat(); renderChat();
+    S['lastSysHash']=h; lsSet('syshash',h);
+    if(opts['after']) opts['after'](reply);
+  }catch(err){
+    if(isAbortErr(err)){
+      S['chat']['pop']();
+      saveChat(); renderChat();
+      toast('已停止本次生成');
+    }else{
+      S['chat']['push']({'role':'assistant','content':'⚠️ 调用失败：'+err['message'],'err':true});
+      saveChat(); renderChat();
+    }
+  }finally{
+    setBusy(false);
+  }
+}
+function quickWrite(){
+  var body=curChapterBody();
+  if(!body && !S['idea']['final'] && !S['idea']['draft']){ toast('先在下面聊出这一篇的设定，或直接写下第一句'); return; }
+  var target=Number($('wrTarget')['value'])||0;
+  var near=target>0 && body['length']>=target*0.85;
+  var instr;
+  if(!body){
+    instr='请根据【本篇设定】为这篇独立短篇写下开头 300~600 字：直接从场景或冲突切入，多短句、多细节、有画面感；不要解释设定、不要写章节标题。';
+  }else{
+    instr='请接着本章正文继续写 300~600 字：延续已有语气与节奏，多短句、多细节、有画面感，推动情节；不要总结、不要复述。'
+      +(near?'\n注意：本章字数已接近目标（'+body['length']+'/'+target+'），请顺势向结局收束。':'');
+  }
+  sendMessage(body?'✍️ 让 Ta 写':'✍️ 让 Ta 开头', {task:'write', action:'insert', apiInstr:instr});
+}
+function quickTwist(){
+  sendMessage('🎬 想反转', {task:'discuss', apiInstr:'请为本篇提供 2~3 个反转方向：每个方向用一两句话说明「反转是什么 + 为什么成立（呼应已有设定）」，编号列出，不要展开写正文。'});
+}
+function quickPolish(){
+  var ta=$('wrEditor');
+  var s=ta['selectionStart'], e=ta['selectionEnd'];
+  var seg='';
+  if(e>s){ seg=S['text']['slice'](s,e); }
+  else{
+    var chap=curChapterText();
+    var arr=chap['split']('\n');
+    for(var i=arr['length']-1;i>=0;i--){ if(arr[i]['trim']()){ seg=arr[i]; break; } }
+    toast('未选中文字，默认精修本章最后一段');
+  }
+  if(!seg['trim']()){ toast('本章还没有可精修的内容'); return; }
+  var start=S['text']['lastIndexOf'](seg);
+  var ref=(start>=0)?{start:start, len:seg['length'], text:seg}:null;
+  var instr='请按知乎短篇风格重写下面这段文字：节奏更紧、情绪更足、句子更利落，可以调整语序但不要改变事实与情节走向。直接输出重写后的段落，不要任何解释。\n【待重写段落】\n'+seg;
+  sendMessage('✨ 精修'+(e>s?'选中段':'最后一段'), {task:'polish', action:'replace', ref:ref, apiInstr:instr});
+}
+async function finalizeIdea(){
+  if(S['busy']) return;
+  if(!S['idea']['draft'] && !S['chat']['length']){ toast('先和 AI 聊出一些设定再定稿'); return; }
+  if(!S['settings']['apiKey']){ toast('请先配置 API'); switchTab('set'); return; }
+  setBusy(true);
+  var signal=(S['abort'] ? S['abort']['signal'] : undefined);
+  try{
+    var instr='请把下面的设定草稿与最近讨论结论，压缩成不超过 '+S['params']['idea']+' 字的【本篇设定精华】：必须保留题材、主要人物关系、核心冲突、基调；只输出精华本身，不要解释。\n【设定草稿】\n'+(S['idea']['draft']||'（尚无草稿，请依据最近讨论归纳）');
+    var msgs=buildMessages('discuss', instr);
+    var r=await callLLM(msgs, 400, 0.4, null, signal);
+    S['idea']['final']=r; saveIdea();
+    S['chat']['push']({'role':'assistant','content':'📌 本篇设定已定稿（之后每次调用只带这 '+S['params']['idea']+' 字精华）：\n'+r});
+    saveChat(); renderChat();
+    toast('设定已定稿，可以让 Ta 写了');
+  }catch(err){
+    if(isAbortErr(err)){ toast('已停止'); }
+    else{ toast('定稿失败：'+err['message']); }
+  }
+  finally{ setBusy(false); }
+}
+
+/* ================= 设置页 ================= */
+function fillSettingsForm(){
+  $('stProvider')['value']=S['settings']['provider'];
+  $('stBase')['value']=S['settings']['baseURL'];
+  $('stKey')['value']=S['settings']['apiKey'];
+  $('stModel')['value']=S['settings']['model'];
+  $('stTemp')['value']=String(S['settings']['temperature']);
+  $('stMax')['value']=String(S['settings']['maxTokens']);
+  $('stPersona')['value']=S['persona'];
+  $('stIdeaDraft')['value']=S['idea']['draft']||'';
+  $('stIdeaFinal')['value']=S['idea']['final']||'';
+  $('stIdea')['value']=String(S['params']['idea']);
+  $('stTail')['value']=String(S['params']['tail']);
+  $('stRounds')['value']=String(S['params']['rounds']);
+  $('stDiscussTail')['checked']=!!S['params']['discussTail'];
+  $('rngBg')['value']=String(Math['round'](S['bgOpacity']*100));
+  $('rngBgVal')['textContent']=Math['round'](S['bgOpacity']*100)+'%';
+  syncThemeSeg();
+  applyStageBg();
+}
+function readSettingsForm(){
+  S['settings']['provider']=$('stProvider')['value'];
+  S['settings']['baseURL']=$('stBase')['value']['trim']()||CFG['defaults']['baseURL'];
+  S['settings']['apiKey']=$('stKey')['value']['trim']();
+  S['settings']['model']=$('stModel')['value']['trim']()||'deepseek-chat';
+  S['settings']['temperature']=Math['min'](2,Math['max'](0,Number($('stTemp')['value'])||0.7));
+  S['settings']['maxTokens']=Math['max'](100,Number($('stMax')['value'])||2048);
+  S['persona']=$('stPersona')['value']['trim']()||CFG['defaultPersona'];
+  S['params']['idea']=Math['max'](50,Number($('stIdea')['value'])||200);
+  S['params']['tail']=Math['max'](200,Number($('stTail')['value'])||1500);
+  S['params']['rounds']=Math['min'](12,Math['max'](1,Number($('stRounds')['value'])||6));
+  S['params']['discussTail']=!!$('stDiscussTail')['checked'];
+}
+async function testConnection(){
+  var bt=$('btnTest');
+  readSettingsForm();
+  if(!S['settings']['baseURL']){ toast('请先填写 API 地址'); return; }
+  if(!S['settings']['apiKey']){ toast('请先填写 API Key'); return; }
+  bt['disabled']=true; bt['textContent']='测试中…';
+  var st=$('stTestState'); st['textContent']=''; st['className']='st-hint';
+  var t0=Date.now();
+  try{
+    var r=await callLLM([{'role':'user','content':'收到请只回复两个字：成功'}], 16, 0, null);
+    st['textContent']='✅ 连接成功（'+(Date.now()-t0)+'ms）：'+r['slice'](0,30);
+    st['className']='st-testok';
+  }catch(err){
+    var hint=(err instanceof TypeError)?'（网络错误或跨域受限，建议部署到自己域名下使用）':'';
+    st['textContent']='❌ 连接失败：'+err['message']+hint;
+    st['className']='st-testbad';
+  }finally{
+    bt['disabled']=false; bt['textContent']='🔌 测试连接';
+  }
+}
+function compressImage(dataUrl, cb){
+  var img=new Image();
+  img['onload']=function(){
+    try{
+      var max=CFG['imgMaxEdge'], w=img['width'], h=img['height'];
+      var sc=Math['min'](1, max/Math['max'](w,h));
+      var cw=Math['round'](w*sc), ch=Math['round'](h*sc);
+      var cv=document['createElement']('canvas');
+      cv['width']=cw; cv['height']=ch;
+      cv['getContext']('2d')['drawImage'](img,0,0,cw,ch);
+      cb(cv['toDataURL']('image/jpeg', CFG['imgQuality']));
+    }catch(e){ cb(dataUrl); }
+  };
+  img['onerror']=function(){ cb(dataUrl); };
+  img['src']=dataUrl;
+}
+function bindFile(inputId, cb){
+  $(inputId)['addEventListener']('change',function(){
+    var f=this['files']&&this['files'][0]; if(!f) return;
+    if(f['size']>25*1024*1024){ toast('图片太大了（>25MB）'); this['value']=''; return; }
+    var rd=new FileReader();
+    rd['onload']=function(){ compressImage(String(rd['result']), cb); };
+    rd['onerror']=function(){ toast('读取图片失败'); };
+    rd['readAsDataURL'](f);
+    this['value']='';
+  });
+}
+function exportNovel(){
+  var txt=(S['meta']['title']||'未命名合集')+'\n\n'+S['text'];
+  function downloadTxt(t){
+    try{
+      var blob=new Blob([t],{type:'text/plain;charset=utf-8'});
+      var a=document['createElement']('a');
+      a['href']=URL['createObjectURL'](blob);
+      a['download']=(S['meta']['title']||'小说合集')+'.txt';
+      document['body']['appendChild'](a); a['click']();
+      setTimeout(function(){ URL['revokeObjectURL'](a['href']); document['body']['removeChild'](a); },800);
+      toast('已下载 .txt');
+    }catch(e){ toast('导出失败'); }
+  }
+  if(navigator['clipboard']&&navigator['clipboard']['writeText']){ navigator['clipboard']['writeText'](txt)['then'](function(){ toast('全文已复制到剪贴板'); },function(){ downloadTxt(txt); }); }
+  else{ downloadTxt(txt); }
+}
+var wipeArmed=false, wipeTimer=null;
+function wipeAll(){
+  if(!wipeArmed){
+    wipeArmed=true;
+    $('btnWipe')['textContent']='⚠️ 再点一次确认清空';
+    clearTimeout(wipeTimer);
+    wipeTimer=setTimeout(function(){ wipeArmed=false; $('btnWipe')['textContent']='清空所有数据'; },5000);
+    return;
+  }
+  clearTimeout(wipeTimer); wipeArmed=false; $('btnWipe')['textContent']='清空所有数据';
+  ['meta','idea','chat','api','persona','params','bg','tab','theme','stageop','syshash']['forEach'](lsDel);
+  ['novel','cover','bgimg','stagebg_light','stagebg_dark']['forEach'](function(k){
+    idbDel(k)['catch'](function(){});
+    lsDel('idb_'+k);
+    delete _memStore[k];
+  });
+  S['meta']={title:'',target:8000}; S['text']=''; S['idea']={draft:'',final:''};
+  S['lastSysHash']=null;
+  S['chat']=[]; S['coverURL']=''; S['bgURL']='';
+  S['stageBg']={light:'',dark:''}; S['stageOp']={light:0.45,dark:0.45};
+  S['theme']='auto';
+  setCacheState('','首次调用后显示缓存状态');
+  applyTheme(); syncThemeSeg();
+  applyCover(); applyPaperBg(); openCover(); renderChat(); updateCount(); fillSettingsForm();
+  toast('已清空所有数据');
+}
+
+/* ================= 事件绑定 ================= */
+function bindAll(){
+  var tabs=$('naTabbar')['querySelectorAll']('.na-tab');
+  for(var i=0;i<tabs['length'];i++){
+    (function(bt){ bt['addEventListener']('click',function(){ switchTab(bt['getAttribute']('data-tab')); }); })(tabs[i]);
+  }
+  var seg=$('themeSeg');
+  if(seg){
+    var sbs=seg['querySelectorAll']('button');
+    for(var s=0;s<sbs['length'];s++){
+      (function(bt){ bt['addEventListener']('click',function(){ setTheme(bt['getAttribute']('data-theme')); }); })(sbs[s]);
+    }
+  }
+  /* 书架桌面背景 */
+  $('btnStageUp')['addEventListener']('click',function(){ $('fileStage')['click'](); });
+  bindFile('fileStage',function(url){
+    var k=effDark()?'dark':'light';
+    S['stageBg'][k]=url;
+    applyStageBg();
+    idbSet('stagebg_'+k, url)['then'](function(){
+      toast(k==='dark'?'🌙 黑夜桌面已保存':'☀️ 白天桌面已保存');
+    })['catch'](function(){ toast('已显示，但本环境无法保存，刷新会丢'); });
+  });
+  $('btnStageRm')['addEventListener']('click',function(){
+    var k=effDark()?'dark':'light';
+    S['stageBg'][k]='';
+    applyStageBg();
+    idbDel('stagebg_'+k)['catch'](function(){}); lsDel('idb_stagebg_'+k); delete _memStore['stagebg_'+k];
+    toast('已恢复默认桌面');
+  });
+  $('rngStage')['addEventListener']('input',function(){
+    var k=effDark()?'dark':'light';
+    S['stageOp'][k]=Number(this['value'])/100;
+    $('rngStageVal')['textContent']=this['value']+'%';
+    $('nvStageBg')['style']['setProperty']('--stage-op', String(S['stageOp'][k]));
+    lsSet('stageop', S['stageOp']);
+  });
+  $('nvBook3d')['addEventListener']('click',enterBook);
+  $('btnTocBack')['addEventListener']('click',openCover);
+  $('btnReaderBack')['addEventListener']('click',openToc);
+  $('btnPrevPage')['addEventListener']('click',function(){ flip(-1); });
+  $('btnNextPage')['addEventListener']('click',function(){ flip(1); });
+  bindGestures();
+  document['addEventListener']('keydown',function(e){
+    if($('nvReader')['hidden']) return;
+    if(e['key']==='ArrowRight') flip(1);
+    else if(e['key']==='ArrowLeft') flip(-1);
+  });
+  /* 新章节 */
+  $('btnNewChapter')['addEventListener']('click',newChapter);
+  /* 封面 */
+  $('btnCoverUp')['addEventListener']('click',function(){ $('fileCover')['click'](); });
+  bindFile('fileCover',function(url){
+    S['coverURL']=url; applyCover();
+    idbSet('cover',url)['then'](function(){
+      if(_storeMode==='mem') toast('封面已显示，但本环境无法保存，刷新会丢');
+      else toast('封面已保存');
+    });
+  });
+  $('btnCoverRm')['addEventListener']('click',function(){
+    S['coverURL']=''; applyCover();
+    idbDel('cover')['catch'](function(){}); lsDel('idb_cover'); delete _memStore['cover'];
+    toast('已恢复空白书衣');
+  });
+  /* 编辑器 */
+  $('wrEditor')['addEventListener']('input',onTextChanged);
+  $('wrTitle')['addEventListener']('input',function(){
+    S['meta']['title']=this['value']['trim'](); saveMeta(); saveTextDebounced(); updateCount();
+  });
+  $('wrTarget')['addEventListener']('change',function(){
+    S['meta']['target']=Math['max'](0,Number(this['value'])||0); saveMeta(); saveTextDebounced(); updateCount();
+  });
+  /* 聊天 */
+  $('wrForm')['addEventListener']('submit',function(e){
+    e['preventDefault']();
+    if(S['busy']){ if(S['abort']) S['abort']['abort'](); return; }
+    var t=$('wrInput')['value']['trim'](); if(!t) return;
+    $('wrInput')['value']='';
+    sendMessage(t,{task:'discuss'});
+  });
+  $('btnQuickWrite')['addEventListener']('click',quickWrite);
+  $('btnQuickTwist')['addEventListener']('click',quickTwist);
+  $('btnQuickPolish')['addEventListener']('click',quickPolish);
+  $('btnFinalize')['addEventListener']('click',finalizeIdea);
+  bindChatActions();
+  /* 设置页 */
+  $('stProvider')['addEventListener']('change',function(){
+    var p=CFG['providers'][this['value']];
+    if(p&&p['url']){ $('stBase')['value']=p['url']; $('stModel')['value']=p['model']; }
+  });
+  $('btnTest')['addEventListener']('click',testConnection);
+  $('btnSaveApi')['addEventListener']('click',function(){ readSettingsForm(); saveApi(); toast('API 配置已保存'); });
+  $('btnPersonaReset')['addEventListener']('click',function(){ $('stPersona')['value']=CFG['defaultPersona']; toast('已恢复默认人设（记得点保存）'); });
+  $('btnSavePersona')['addEventListener']('click',function(){ readSettingsForm(); savePersona(); toast('人设已保存'); });
+  $('btnSaveStory')['addEventListener']('click',function(){
+    S['idea']['draft']=$('stIdeaDraft')['value']['trim']();
+    S['idea']['final']=$('stIdeaFinal')['value']['trim']();
+    saveIdea(); toast('本篇设定已保存');
+  });
+  $('btnSaveParams')['addEventListener']('click',function(){ readSettingsForm(); saveParams(); saveApi(); saveChat(); toast('参数已保存'); });
+  /* 阅读页背景 */
+  $('btnBgUp')['addEventListener']('click',function(){ $('fileBg')['click'](); });
+  bindFile('fileBg',function(url){ S['bgURL']=url; applyPaperBg(); idbSet('bgimg',url)['catch'](function(){}); toast('已更新，去阅读页查看效果'); });
+  $('btnBgRm')['addEventListener']('click',function(){
+    S['bgURL']=''; applyPaperBg();
+    idbDel('bgimg')['catch'](function(){}); lsDel('idb_bgimg'); delete _memStore['bgimg'];
+    toast('已移除背景');
+  });
+  $('rngBg')['addEventListener']('input',function(){
+    S['bgOpacity']=Number(this['value'])/100;
+    $('rngBgVal')['textContent']=this['value']+'%';
+    applyPaperBg(); saveBgDebounced();
+  });
+  /* 数据 */
+  $('btnExport')['addEventListener']('click',exportNovel);
+  $('btnWipe')['addEventListener']('click',wipeAll);
+  window['addEventListener']('pageshow',function(e){
+    if(e['persisted']){ try{ openCover(); }catch(x){} }
+  });
+}
+var saveBgDebounced=debounce(saveBg,400);
+
+/* ================= 初始化（带重试） ================= */
+function loadAll(){
+  S['meta']=Object['assign']({title:'',target:8000}, lsGet('meta',{}));
+  S['idea']=Object['assign']({draft:'',final:''}, lsGet('idea',{}));
+  S['lastSysHash']=lsGet('syshash',null);
+  S['chat']=lsGet('chat',[])||[];
+  S['settings']=Object['assign']({}, CFG['defaults'], lsGet('api',{}));
+  S['persona']=lsGet('persona',CFG['defaultPersona']);
+  S['params']=Object['assign']({idea:200,tail:1500,rounds:6,discussTail:false}, lsGet('params',{}));
+  S['bgOpacity']=(lsGet('bg',{opacity:0.35})||{})['opacity'];
+  S['theme']=lsGet('theme','auto');
+  S['stageOp']=Object['assign']({light:0.45,dark:0.45}, lsGet('stageop',{}));
+  S['stageBg']={light:'',dark:''};
+}
+function applyAll(){
+  $('wrTitle')['value']=S['meta']['title'];
+  $('wrTarget')['value']=String(S['meta']['target']||8000);
+  $('wrEditor')['value']=S['text'];
+  fillSettingsForm();
+  applyCover(); applyPaperBg();
+  applyTheme(); syncThemeSeg();
+  renderChat(); updateCount();
+  switchTab(lsGet('tab','book'));
+}
+function initApp(){
+  loadAll();
+  bindAll();
+  applyAll();
+  if(window['matchMedia']){
+    var mq=window['matchMedia']('(prefers-color-scheme: dark)');
+    var onMM=function(){ if(S['theme']==='auto') applyTheme(); };
+    if(mq['addEventListener']) mq['addEventListener']('change',onMM);
+    else if(mq['addListener']) mq['addListener'](onMM);
+  }
+  idbGet('novel')['then'](function(v){
+    if(v){ S['text']=v['text']||''; if(!S['meta']['title']){ S['meta']['title']=v['title']||''; $('wrTitle')['value']=S['meta']['title']; } updateCount(); refreshBook(); }
+  })['catch'](function(){});
+  idbGet('cover')['then'](function(v){ if(v){ S['coverURL']=v; applyCover(); } })['catch'](function(){});
+  idbGet('bgimg')['then'](function(v){ if(v){ S['bgURL']=v; applyPaperBg(); } })['catch'](function(){});
+  idbGet('stagebg_light')['then'](function(v){ if(v){ S['stageBg']['light']=v; applyStageBg(); } })['catch'](function(){});
+  idbGet('stagebg_dark')['then'](function(v){ if(v){ S['stageBg']['dark']=v; applyStageBg(); } })['catch'](function(){});
+  detectStore(function(level){
+    var h=$('stStoreState');
+    if(level==='idb') h['textContent']='存储正常：正文 / 封面 / 背景存 IndexedDB，其余存 localStorage。';
+    else if(level==='local') h['textContent']='当前环境不支持 IndexedDB，已自动改用 localStorage 保存正文 / 封面 / 背景，数据不会丢。';
+    else h['textContent']='⚠️ 当前环境限制了本地存储，数据仅本次会话有效；建议用 Safari 正常打开或部署到 GitHub Pages 使用。';
+  });
+}
+(function bootstrap(attempt){
+  var root=$('naRoot');
+  var ok=root && $('viewBook') && $('viewWrite') && $('viewSet') && $('naTabbar') && $('wrEditor') && $('naMsgs') && $('nvBook3d') && $('nvStageBg') && $('wrCache') && $('btnNewChapter');
+  if(!ok){
+    if(attempt<20){ setTimeout(function(){ bootstrap(attempt+1); },150); }
+    return;
+  }
+  try{ initApp(); }
+  catch(e){ if(attempt<20){ setTimeout(function(){ bootstrap(attempt+1); },150); } }
+})(0);
+</script>
+</body>
+</html>

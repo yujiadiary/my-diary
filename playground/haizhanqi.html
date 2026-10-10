@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>海战棋 · 淡粉异形舰队版</title>
+<style>
+:root{
+  --bg1:#fff7fa; --bg2:#ffe9f2; --bg3:#ffd9e8;
+  --ink:#8a4f6d; --ink-soft:#b98ba1;
+  --pink:#f27fae; --pink-deep:#d1568c;
+  --water:#fffdfd; --water-border:#f4cddd;
+  --miss:#e7bdd0;
+  --cell:min(calc((100vw - 88px)/10), 34px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:linear-gradient(170deg,var(--bg1),var(--bg2) 45%,var(--bg3));
+  color:var(--ink);min-height:100vh}
+#app{max-width:520px;margin:0 auto;padding:12px 14px 150px}
+.hidden{display:none!important}
+.topbar{display:flex;align-items:center;justify-content:space-between}
+.topbar h1{font-size:17px;margin:0;letter-spacing:3px;color:var(--pink-deep)}
+.icon-btn{width:38px;height:38px;border-radius:50%;border:none;background:#fff;color:var(--pink-deep);
+  font-size:17px;box-shadow:0 2px 8px #e8a8c466;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.icon-btn:active{transform:scale(.94)}
+.hero h2{font-size:30px;margin:12px 0 2px;letter-spacing:5px;color:#c24d7f}
+.hero p{margin:0 0 10px;color:var(--ink-soft)}
+details.howto{background:#ffffffcc;border-radius:16px;padding:12px 16px;box-shadow:0 2px 8px #e8a8c42e}
+details.howto summary{cursor:pointer;font-weight:800;list-style:none;color:#c24d7f}
+details.howto summary::-webkit-details-marker{display:none}
+details.howto summary::before{content:'▶ ';font-size:12px}
+details.howto[open] summary::before{content:'▼ '}
+details.howto ol{margin:10px 0 0;padding-left:20px;color:var(--ink-soft);font-size:13px;line-height:1.9}
+.shape-demo{font-family:monospace;line-height:1.3;color:#c24d7f;font-weight:700}
+.tabs{display:flex;background:#ffffffcc;border-radius:999px;padding:5px;margin:14px 0 6px;box-shadow:0 2px 10px #e8a8c433}
+.tab{flex:1;border:none;background:transparent;padding:10px 0;border-radius:999px;font-size:15px;
+  font-weight:700;color:var(--ink-soft);cursor:pointer}
+.tab.active{background:linear-gradient(135deg,#f9a8c9,#ef7fb0);color:#fff;box-shadow:0 3px 10px #ef7fb055}
+.status{margin:10px auto;padding:10px 14px;background:#ffffffcc;border-radius:999px;text-align:center;
+  font-size:13.5px;box-shadow:0 2px 8px #e8a8c42e;max-width:480px;line-height:1.5}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;justify-content:center}
+.chip{background:#fff;border-radius:999px;padding:4px 10px;font-size:12px;box-shadow:0 1px 4px #e8a8c455}
+.chip.sunk{opacity:.55;text-decoration:line-through}
+.chip.selc{background:#ffd9e8;outline:2px solid var(--pink)}
+.board-card{background:#ffffffcc;border-radius:20px;padding:12px;box-shadow:0 6px 20px #e8a8c42e;
+  margin:8px auto 0;width:fit-content}
+.board{display:grid;grid-template-columns:22px repeat(10,var(--cell));gap:3px;justify-content:center;user-select:none}
+.label{display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink-soft);font-weight:700}
+.cell{width:var(--cell);height:var(--cell);border-radius:6px;background:var(--water);
+  border:1.5px solid var(--water-border);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .12s;touch-action:manipulation}
+.cell.miss::after{content:'';display:block;width:24%;height:24%;border-radius:50%;background:var(--miss)}
+.ico{font-size:calc(var(--cell)*.46);line-height:1;filter:drop-shadow(0 1px 1px #0002);pointer-events:none}
+/* 异形战舰：格子拼出来的船，5 种涂装 */
+.shp{border-color:#7a2b52}
+.sc0{background:#a83262}.sc1{background:#b83f6e}.sc2{background:#c94e7d}
+.sc3{background:#d66690}.sc4{background:#e17fa4}
+.ishit{background:radial-gradient(circle at 40% 35%,#ff2e63,#c9104d)!important;border-color:#93063a!important}
+.issunk{background:#5e2342!important;border-color:#40152e!important}
+.ghosty{opacity:.55;border-style:dashed}
+.preview-ok{background:#f5a8c8!important;border-color:#e9659f!important;opacity:.8}
+.preview-bad{background:#ff9a9a!important;border-color:#e05555!important;opacity:.8}
+@keyframes cellPulse{0%,100%{box-shadow:0 0 0 2px #fff,0 0 6px 2px #f27fae}50%{box-shadow:0 0 0 2px #fff,0 0 12px 5px #f27fae}}
+.selc{animation:cellPulse 1s infinite}
+.controls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0;align-items:center}
+.dir-group{display:flex;gap:6px;background:#ffffffcc;border-radius:14px;padding:4px;box-shadow:0 2px 8px #e8a8c433}
+.btn{border:none;border-radius:14px;padding:10px 14px;font-size:14px;cursor:pointer;background:#fff;
+  color:var(--pink-deep);box-shadow:0 2px 8px #e8a8c455;font-weight:600}
+.btn.primary{background:linear-gradient(135deg,#f9a8c9,#e9659f);color:#fff}
+.dir-btn.active{background:linear-gradient(135deg,#f9a8c9,#e9659f);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:active{transform:scale(.96)}
+.toast{position:fixed;top:14px;left:50%;transform:translate(-50%,-90px);background:#fff;color:var(--ink);
+  padding:10px 18px;border-radius:999px;box-shadow:0 6px 20px #d1568c40;font-size:14px;font-weight:600;
+  z-index:60;transition:transform .25s;max-width:88vw;text-align:center}
+.toast.show{transform:translate(-50%,0)}
+.toast.warn{background:#ffe0ec;color:#c0306a}
+.overlay{position:fixed;inset:0;background:#8a4f6d55;display:flex;align-items:center;justify-content:center;
+  z-index:80;padding:20px}
+.overlay-card{background:#fff;border-radius:24px;padding:30px 34px;text-align:center;box-shadow:0 20px 60px #0003;max-width:320px}
+#ovEmoji{font-size:44px}
+.overlay-card h3{margin:8px 0 6px;font-size:22px}
+.overlay-card p{color:var(--ink-soft);font-size:14px;margin:0 0 16px}
+.chat-panel{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(560px,100%);
+  background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -8px 30px #d1568c33;z-index:50;
+  display:flex;flex-direction:column;height:min(62vh,440px);transition:height .28s;overflow:hidden;
+  padding-bottom:env(safe-area-inset-bottom)}
+.chat-panel.collapsed{height:56px}
+.chat-header{display:flex;align-items:center;gap:8px;padding:15px 16px;cursor:pointer;flex:none}
+.chat-title{font-weight:800;color:#c24d7f}
+.chat-badge{background:var(--pink-deep);color:#fff;font-size:11px;border-radius:999px;padding:1px 7px;display:none}
+.chat-badge.on{display:inline-block}
+.chat-mode{margin-left:auto;font-size:12px;color:var(--ink-soft)}
+.chev{color:var(--pink-deep);transition:transform .25s;font-size:13px}
+.chat-panel:not(.collapsed) .chev{transform:rotate(180deg)}
+.chat-body{display:flex;flex-direction:column;flex:1;min-height:0}
+.chat-msgs{flex:1;overflow-y:auto;padding:4px 14px 10px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:80%;padding:9px 13px;border-radius:16px;font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.msg.ai{background:#ffe8f1;border-bottom-left-radius:4px;align-self:flex-start}
+.msg.me{background:linear-gradient(135deg,#f9a8c9,#e9659f);color:#fff;border-bottom-right-radius:4px;align-self:flex-end}
+.chat-input-row{display:flex;gap:8px;padding:10px 12px 12px;flex:none}
+.chat-input-row input{flex:1;border:2px solid #f3bfda;border-radius:999px;padding:10px 14px;font-size:14px;
+  outline:none;color:var(--ink);min-width:0}
+.chat-input-row input:focus{border-color:var(--pink)}
+.chat-input-row button{border:none;border-radius:999px;padding:0 18px;font-weight:700;cursor:pointer;
+  background:linear-gradient(135deg,#f9a8c9,#e9659f);color:#fff}
+.chat-input-row button:disabled{opacity:.5}
+.modal{position:fixed;inset:0;background:#8a4f6d55;display:flex;align-items:center;justify-content:center;
+  z-index:90;padding:20px}
+.modal-card{background:#fff;border-radius:22px;padding:22px;width:100%;max-width:400px;box-shadow:0 20px 60px #0004}
+.modal-card h3{margin:0 0 12px;color:#c24d7f}
+.modal-card label{display:block;font-size:12px;color:var(--ink-soft);margin:10px 0 4px;font-weight:700}
+.modal-card input{width:100%;border:2px solid #f3bfda;border-radius:12px;padding:10px 12px;font-size:14px;outline:none;color:var(--ink)}
+.modal-card input:focus{border-color:var(--pink)}
+.hint{font-size:12px;color:var(--ink-soft);line-height:1.7;background:#ffeef5;border-radius:10px;padding:8px 10px;margin-top:10px}
+.modal-actions{display:flex;gap:10px;margin-top:14px;justify-content:flex-end}
+</style>
+</head>
+<body>
+<noscript><div style="background:#fff;padding:14px;text-align:center">⚠️ 当前环境禁用了 JavaScript，请下载文件后用 Safari / Chrome 打开。</div></noscript>
+<div id="app">
+  <header class="topbar">
+    <button class="icon-btn" id="btnRestart" title="重新开始">↺</button>
+    <h1>海战棋</h1>
+    <button class="icon-btn" id="btnApi" title="API 设置">⚙️</button>
+  </header>
+  <section class="hero"><h2>海战棋</h2><p id="subtitle">把 5 艘异形战舰摆进你的海域。</p></section>
+  <details class="howto"><summary>怎么玩</summary><ol>
+    <li><b>异形舰队</b>：船不再是长条！航母凹形、战列丁字、巡洋/潜艇 L形、驱逐短条——打中一格根本猜不到船身往哪延伸。</li>
+    <li><b>放船</b>：按 ⬆️⬅️⬇️➡️ 或 🔄 <b>旋转形状</b>，点击格子放下（以点击处为中心），悬停有半透明预览。</li>
+    <li><b>调整</b>：点已放的船<b>选中</b>（发光）→ 点空白处移动；<b>双击</b>或按方向键原地旋转；再点它取消选中。</li>
+    <li><b>开战</b>：摆好 5 艘点「⚔️ 开始战斗」，到「对手海域」点格子开炮。击沉后敌舰残骸才现身。</li>
+    <li><b>规则</b>：轮流炮击，先击沉对方全部 5 艘者胜！底部聊天框可折叠，⚙️ 可连 API。</li>
+  </ol></details>
+  <div class="tabs">
+    <button class="tab active" id="tabMine">我的海域</button>
+    <button class="tab" id="tabEnemy">对手海域</button>
+  </div>
+  <div class="status" id="status"></div>
+  <div class="chips" id="chips"></div>
+  <div class="board-card" id="cardMine"><div class="board" id="boardMine"></div></div>
+  <div class="board-card hidden" id="cardEnemy"><div class="board" id="boardEnemy"></div></div>
+  <div class="controls" id="controls">
+    <div class="dir-group">
+      <button class="btn dir-btn" data-dir="U">⬆️</button>
+      <button class="btn dir-btn" data-dir="L">⬅️</button>
+      <button class="btn dir-btn" data-dir="D">⬇️</button>
+      <button class="btn dir-btn active" data-dir="R">➡️</button>
+      <button class="btn" id="btnRotate" title="旋转90°">🔄</button>
+    </div>
+    <button class="btn" id="btnRandom">🎲 随机</button>
+    <button class="btn" id="btnClear">🧹 清空</button>
+    <button class="btn primary" id="btnStart" disabled>⚔️ 开始战斗</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="overlay hidden" id="overlay"><div class="overlay-card">
+  <div id="ovEmoji">🏆</div><h3 id="ovTitle"></h3><p id="ovText"></p>
+  <button class="btn primary" id="btnAgain">再来一局 🌸</button>
+</div></div>
+<div class="chat-panel collapsed" id="chatPanel">
+  <div class="chat-header" id="chatHeader">
+    <span>🌸</span><span class="chat-title">AI 伙伴</span>
+    <span class="chat-badge" id="chatBadge">1</span>
+    <span class="chat-mode" id="chatMode">本地模式</span><span class="chev" id="chatChev">▲</span>
+  </div>
+  <div class="chat-body">
+    <div class="chat-msgs" id="chatMsgs"></div>
+    <div class="chat-input-row">
+      <input id="chatInput" placeholder="和 AI 伙伴聊聊战况…" maxlength="500">
+      <button id="chatSend">发送</button>
+    </div>
+  </div>
+</div>
+<div class="modal hidden" id="apiModal"><div class="modal-card">
+  <h3>⚙️ 连接 API</h3>
+  <label>API 地址（OpenAI 兼容 Base URL）</label>
+  <input id="cfgUrl" placeholder="https://api.openai.com/v1">
+  <label>API Key（本地服务可留空）</label>
+  <input id="cfgKey" type="password" placeholder="sk-...">
+  <label>模型名称</label>
+  <input id="cfgModel" placeholder="gpt-4o-mini">
+  <p class="hint">💡 例：OpenAI 填 api.openai.com/v1 + gpt-4o-mini；DeepSeek 填 api.deepseek.com/v1 + deepseek-chat；Ollama 填 http://localhost:11434/v1。连接失败多为接口不允许浏览器跨域（CORS）。</p>
+  <div class="modal-actions">
+    <button class="btn" id="cfgCancel">取消</button>
+    <button class="btn primary" id="cfgSave">保存</button>
+  </div>
+</div></div>
+
+<script>
+'use strict';
+window.onerror=function(msg,src,line){var t=document.getElementById('toast');
+  if(t){t.textContent='⚠️ 脚本错误：'+msg+'（第'+line+'行）';t.className='toast show warn';}};
+var $=function(s){return document.querySelector(s);};
+var store={
+  get:function(k){try{return window.localStorage.getItem(k);}catch(e){return null;}},
+  set:function(k,v){try{window.localStorage.setItem(k,v);}catch(e){}}
+};
+var LETTERS='ABCDEFGHIJ',N=10;
+var DIRS=['R','D','L','U'];           /* 旋转 0° 90° 180° 270° */
+var DIRARROW={R:'➡️',L:'⬅️',D:'⬇️',U:'⬆️'};
+
+/* 异形战舰：格子拼出船形（. 为空，X 为船体格） */
+var SHIP_DEFS=[
+  {name:'航空母舰',icon:'🚢',shape:['X.X','XXX']},   /* 凹形船身 5 格 */
+  {name:'战列舰',  icon:'🛳️',shape:['XXX','.X.']},   /* 丁字 4 格 */
+  {name:'巡洋舰',  icon:'⛵',shape:['X.','XX']},      /* L形 3 格 */
+  {name:'潜艇',    icon:'🐡',shape:['XXX']},          /* 直线 3 格（短，影响小）*/
+  {name:'驱逐舰',  icon:'🚤',shape:['XX']}            /* 短条 2 格 */
+];
+/* 预计算 4 个旋转方向的格子偏移 */
+function rotateShape(shape){
+  var h=shape.length,w=shape[0].length,out=[],y,x,row;
+  for(y=0;y<w;y++){row='';
+    for(x=0;x<h;x++)row+=shape.charAt?shape[h-1-x].charAt(y):shape[h-1-x][y];
+    out.push(row);}
+  return out;}
+function shapeOffsets(shape){
+  var h=shape.length,w=shape[0].length,oy=(h-1)/2,ox=(w-1)/2,a=[],y,x;
+  for(y=0;y<h;y++)for(x=0;x<w;x++)
+    if(shape[y].charAt(x)==='X')a.push([Math.round(y-oy),Math.round(x-ox)]);
+  return a;}
+SHIP_DEFS.forEach(function(d){
+  var s=d.shape,rots=[],i;
+  for(i=0;i<4;i++){rots.push(shapeOffsets(s));s=rotateShape(s);}
+  d.rots=rots;d.size=d.rots[0].length;});
+
+function K(r,c){return r*N+c;}
+var fleetP,fleetE,state,playerShots,enemyShots,aiQueue,hoverRC=null,busy=false;
+
+var actx=null;
+function beep(f,d,t,v){d=d||.09;t=t||'sine';v=v||.05;
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+  var o=actx.createOscillator(),g=actx.createGain();
+  o.type=t;o.frequency.value=f;o.connect(g);g.connect(actx.destination);
+  g.gain.setValueAtTime(v,actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+d);
+  o.start();o.stop(actx.currentTime+d);}catch(e){}}
+
+var toastTimer;
+function toast(msg,type){var t=$('#toast');t.textContent=msg;
+  t.className='toast show'+(type==='warn'?' warn':'');
+  clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.className='toast';},2000);}
+
+/* ===== 数据 ===== */
+function newFleet(){
+  return{
+    board:Array.apply(null,Array(N)).map(function(){return Array(N).fill(null);}),
+    ships:SHIP_DEFS.map(function(d,i){
+      return{id:i,name:d.name,size:d.size,icon:d.icon,rots:d.rots,
+        cells:[],hits:0,placed:false,sunk:false,dirIdx:0,anchor:{r:0,c:0}};})
+  };}
+function computeCells(r,c,ship,dirIdx){
+  var offs=ship.rots[dirIdx],a=[],i;
+  for(i=0;i<offs.length;i++)a.push([r+offs[i][0],c+offs[i][1]]);
+  return a;}
+function cellsValid(fleet,cells,exceptId){
+  var i,p,cell;
+  for(i=0;i<cells.length;i++){p=cells[i];
+    if(p[0]<0||p[0]>=N||p[1]<0||p[1]>=N)return false;
+    cell=fleet.board[p[0]][p[1]];
+    if(cell&&cell.ship!==exceptId)return false;}
+  return true;}
+function tryPlace(fleet,ship,r,c,dirIdx){
+  var cells=computeCells(r,c,ship,dirIdx);
+  if(!cellsValid(fleet,cells,ship.id))return false;
+  ship.cells=cells;ship.dirIdx=dirIdx;ship.anchor={r:r,c:c};ship.placed=true;
+  cells.forEach(function(p){fleet.board[p[0]][p[1]]={ship:ship.id,hit:false};});
+  return true;}
+function unplace(fleet,ship){
+  ship.cells.forEach(function(p){fleet.board[p[0]][p[1]]=null;});
+  ship.placed=false;}
+function restore(fleet,ship,cells,dirIdx){
+  ship.cells=cells;ship.dirIdx=dirIdx;ship.placed=true;
+  cells.forEach(function(p){fleet.board[p[0]][p[1]]={ship:ship.id,hit:false};});}
+function moveShip(fleet,ship,r,c){
+  var oc=ship.cells,od=ship.dirIdx;
+  unplace(fleet,ship);
+  if(tryPlace(fleet,ship,r,c,od))return true;
+  restore(fleet,ship,oc,od);return false;}
+function turnShip(fleet,ship,ndIdx){
+  var oc=ship.cells,od=ship.dirIdx,a=ship.anchor;
+  unplace(fleet,ship);
+  if(tryPlace(fleet,ship,a.r,a.c,ndIdx))return true;
+  restore(fleet,ship,oc,od);return false;}
+function randomFleet(fleet){
+  fleet.board=Array.apply(null,Array(N)).map(function(){return Array(N).fill(null);});
+  fleet.ships.forEach(function(s){s.cells=[];s.hits=0;s.placed=false;s.sunk=false;s.dirIdx=0;});
+  fleet.ships.forEach(function(ship){
+    for(var t=0;t<1200;t++){
+      var d=Math.random()*4|0,r=Math.random()*N|0,c=Math.random()*N|0;
+      if(tryPlace(fleet,ship,r,c,d))break;}});}
+function fire(fleet,r,c){var cell=fleet.board[r][c];
+  if(!cell)return{res:'miss',ship:null};
+  cell.hit=true;var ship=fleet.ships[cell.ship];ship.hits++;
+  if(ship.hits>=ship.size){ship.sunk=true;return{res:'sunk',ship:ship};}
+  return{res:'hit',ship:ship};}
+function allSunk(f){return f.ships.every(function(s){return s.sunk;});}
+function iconIdxOf(ship){
+  var bi=0,bd=1e9,i,d;
+  for(i=0;i<ship.cells.length;i++){
+    d=Math.abs(ship.cells[i][0]-ship.anchor.r)+Math.abs(ship.cells[i][1]-ship.anchor.c);
+    if(d<bd){bd=d;bi=i;}}
+  return bi;}
+
+/* ===== DOM ===== */
+function buildBoard(el){
+  el.innerHTML='';
+  var corner=document.createElement('div');corner.className='label';el.appendChild(corner);
+  for(var c=0;c<N;c++){var d=document.createElement('div');d.className='label';d.textContent=LETTERS[c];el.appendChild(d);}
+  for(var r=0;r<N;r++){var dn=document.createElement('div');dn.className='label';dn.textContent=r+1;el.appendChild(dn);
+    for(var cc=0;cc<N;cc++){var cell=document.createElement('div');cell.className='cell';
+      cell.dataset.r=r;cell.dataset.c=cc;el.appendChild(cell);}}}
+function cellAt(boardEl,r,c){return boardEl.children[11+r*11+1+c];}
+function sameNb(fleet,r,c,id){
+  if(r<0||r>=N||c<0||c>=N)return false;
+  var cell=fleet.board[r][c];return !!cell&&cell.ship===id;}
+function cornerRad(fleet,r,c,id){
+  var u=sameNb(fleet,r-1,c,id),d=sameNb(fleet,r+1,c,id),
+      l=sameNb(fleet,r,c-1,id),rt=sameNb(fleet,r,c+1,id);
+  return [(u||l)?0:6,(u||rt)?0:6,(d||rt)?0:6,(d||l)?0:6].join('px ')+'px';}
+
+/* ===== 渲染 ===== */
+function renderMine(){
+  var el=$('#boardMine'),pv=null,r,c;
+  if(state.phase==='place'&&hoverRC&&state.selShip==null){
+    var ps=fleetP.ships[state.cur];
+    if(ps&&!ps.placed){
+      var pcells=computeCells(hoverRC.r,hoverRC.c,ps,state.dirIdx);
+      var ok=cellsValid(fleetP,pcells,ps.id);
+      var iMid=iconIdxOf({cells:pcells,anchor:{r:hoverRC.r,c:hoverRC.c}});
+      pv={cells:pcells,ok:ok,iMid:iMid};}}
+  for(r=0;r<N;r++)for(c=0;c<N;c++){
+    var e=cellAt(el,r,c),cell=fleetP.board[r][c];
+    var cls='cell',html='',rad='6px';
+    var miss=state.phase!=='place'&&!cell&&enemyShots.has(K(r,c));
+    if(miss)cls+=' miss';
+    if(cell){var sh=fleetP.ships[cell.ship];
+      cls+=' shp sc'+sh.id;
+      if(sh.sunk)cls+=' issunk';
+      else if(cell.hit)cls+=' ishit';
+      if(state.phase==='place'&&state.selShip===sh.id)cls+=' selc';
+      rad=cornerRad(fleetP,r,c,sh.id);
+      if(cell.hit)html='<span class="ico">💥</span>';
+      else if(iconIdxOf(sh)===fleetP.board[r][c].idx||iconIdxOf(sh)===-1){}
+      if(!cell.hit&&iconIdxOf(sh)===indexOfCell(sh.cells,r,c))
+        html='<span class="ico">'+sh.icon+'</span>';}
+    if(pv){for(var i=0;i<pv.cells.length;i++){var p=pv.cells[i];
+      if(p[0]===r&&p[1]===c){
+        if(!cell){cls+=' '+(pv.ok?'preview-ok':'preview-bad');rad='6px';}
+        if(pv.iMid===i&&!cell)html='<span class="ico">'+fleetP.ships[state.cur].icon+'</span>';
+        break;}}}
+    e.className=cls;e.innerHTML=html;e.style.borderRadius=rad;}}
+function indexOfCell(cells,r,c){
+  for(var i=0;i<cells.length;i++)if(cells[i][0]===r&&cells[i][1]===c)return i;
+  return -1;}
+function renderEnemy(){
+  var el=$('#boardEnemy'),r,c;
+  for(r=0;r<N;r++)for(c=0;c<N;c++){
+    var e=cellAt(el,r,c),cell=fleetE.board[r][c],shot=playerShots.has(K(r,c));
+    var cls='cell',html='',rad='6px';
+    if(cell){var sh=fleetE.ships[cell.ship];
+      var reveal=sh.sunk||state.phase==='over';
+      if(shot&&cell.hit){
+        cls+=' shp sc'+sh.id+(sh.sunk?' issunk':' ishit');rad=cornerRad(fleetE,r,c,sh.id);
+        html='<span class="ico">💥</span>';}
+      else if(reveal){
+        cls+=' shp sc'+sh.id+(sh.sunk?' issunk':' ghosty');rad=cornerRad(fleetE,r,c,sh.id);
+        if(!cell.hit&&iconIdxOf(sh)===indexOfCell(sh.cells,r,c))
+          html='<span class="ico">'+sh.icon+'</span>';}
+      else if(shot&&!cell.hit){/* 不可能，保险 */}}
+    else if(shot)cls+=' miss';
+    e.className=cls;e.innerHTML=html;e.style.borderRadius=rad;}}
+function renderChips(){var el=$('#chips');el.innerHTML='';
+  var fleet=state.mineTab?fleetP:fleetE;
+  fleet.ships.forEach(function(s){var chip=document.createElement('span');
+    chip.className='chip'+(s.sunk?' sunk':'')
+      +(state.phase==='place'&&state.selShip===s.id?' selc':'');
+    var st;
+    if(state.phase==='place'){
+      if(!state.mineTab)st='❓';
+      else st=s.placed?DIRARROW[DIRS[s.dirIdx]]+' ✓':'⏳';}
+    else st=s.sunk?'💀':(state.mineTab?s.hits+'/'+s.size:'…');
+    chip.textContent=s.icon+' '+s.name+' '+st;el.appendChild(chip);});}
+function currentDir(){return state.selShip!=null
+  ?DIRS[fleetP.ships[state.selShip].dirIdx]:DIRS[state.dirIdx];}
+function renderStatus(){var st=$('#status');
+  if(state.phase==='place'){
+    if(fleetP.ships.every(function(s){return s.placed;}))
+      st.textContent='✅ 舰队就绪！点击「⚔️ 开始战斗」';
+    else if(state.selShip!=null){var sel=fleetP.ships[state.selShip];
+      st.textContent='✏️ 已选中 '+sel.icon+sel.name+'：点空白处移动，双击它或按方向键 / 🔄 旋转形状，再点它取消选中';}
+    else{var s=fleetP.ships[state.cur];
+      if(s)st.textContent='📦 正在摆放：'+s.icon+s.name+'（'+s.size+' 格·'+(s.rots[state.dirIdx].length?'异形':'')+'）· 当前朝向 '+DIRARROW[currentDir()]+' · 船以点击处为中心';}}
+  else if(state.phase==='battle')
+    st.textContent=state.playerTurn?'🎯 轮到你开炮！点击对方海域':'🤖 电脑正在瞄准…';
+  else st.textContent='🏁 战斗结束，点 ↺ 再来一局';
+  $('#subtitle').textContent=state.phase==='place'?'把 5 艘异形战舰摆进你的海域。'
+    :state.phase==='battle'?'轮流开炮，击沉对方全部 5 艘战舰！':'本局结束，点击 ↺ 再来一局';
+  $('#btnStart').disabled=!fleetP.ships.every(function(s){return s.placed;});}
+function render(){renderMine();renderEnemy();renderChips();renderStatus();
+  $('#controls').style.display=state.phase==='place'?'flex':'none';}
+function updateDirUI(){var d=currentDir();
+  var btns=document.querySelectorAll('.dir-btn');
+  for(var i=0;i<btns.length;i++)btns[i].classList.toggle('active',btns[i].dataset.dir===d);}
+function switchTab(mine){state.mineTab=mine;
+  $('#tabMine').classList.toggle('active',mine);
+  $('#tabEnemy').classList.toggle('active',!mine);
+  $('#cardMine').classList.toggle('hidden',!mine);
+  $('#cardEnemy').classList.toggle('hidden',mine);}
+function resetGame(){
+  state={phase:'place',dirIdx:0,cur:0,selShip:null,playerTurn:true,mineTab:true,lastTap:{id:-1,t:0}};
+  playerShots=new Set();enemyShots=new Set();aiQueue=[];hoverRC=null;busy=false;
+  fleetP=newFleet();fleetE=newFleet();randomFleet(fleetE);
+  $('#overlay').classList.add('hidden');
+  switchTab(true);updateDirUI();render();}
+
+/* ===== 摆放交互 ===== */
+$('#boardMine').addEventListener('click',function(e){
+  var t=e.target.closest('.cell');if(!t||state.phase!=='place')return;
+  var r=+t.dataset.r,c=+t.dataset.c,cell=fleetP.board[r][c],now=Date.now();
+  if(cell){var s=fleetP.ships[cell.ship];
+    if(state.selShip===s.id&&state.lastTap.id===s.id&&now-state.lastTap.t<420){
+      var nd=(s.dirIdx+1)%4;
+      if(turnShip(fleetP,s,nd)){toast('🔄 '+s.icon+s.name+' 已旋转为 '+DIRARROW[DIRS[nd]]);beep(500,.06,'triangle');}
+      else toast('这个方向转不开，先挪一挪～','warn');
+    }else if(state.selShip===s.id){state.selShip=null;toast('已取消选中');}
+    else{state.selShip=s.id;
+      toast('✏️ 已选中 '+s.icon+s.name+'：点空白移动，双击旋转');
+      beep(430,.05,'triangle');}
+    state.lastTap={id:s.id,t:now};updateDirUI();render();return;}
+  state.lastTap={id:-1,t:now};
+  if(state.selShip!=null){var s2=fleetP.ships[state.selShip];
+    if(moveShip(fleetP,s2,r,c)){toast('🚢 已移动 '+s2.icon+s2.name+' '+DIRARROW[DIRS[s2.dirIdx]]);beep(520,.06,'triangle');}
+    else toast('移不过去，被挡住啦～','warn');
+    render();return;}
+  var nxt=-1;
+  for(var i=0;i<fleetP.ships.length;i++)if(!fleetP.ships[i].placed){nxt=i;break;}
+  if(nxt===-1){toast('5 艘船都摆好啦，点「⚔️ 开始战斗」');return;}
+  var s3=fleetP.ships[nxt];
+  if(tryPlace(fleetP,s3,r,c,state.dirIdx)){beep(520,.07,'triangle',.05);
+    state.cur=nxt+1;
+    var left=fleetP.ships.some(function(x){return !x.placed;});
+    toast('已放置 '+s3.icon+s3.name+' '+DIRARROW[DIRS[state.dirIdx]]+(left?'':' — 🎉 舰队就绪！'));}
+  else toast('放不下：'+s3.icon+s3.name+'（'+s3.size+'格）向'+DIRARROW[DIRS[state.dirIdx]]+'展开会出界或重叠','warn');
+  render();});
+$('#boardMine').addEventListener('mouseover',function(e){
+  if(state.phase!=='place')return;
+  var t=e.target.closest('.cell');if(!t)return;
+  var r=+t.dataset.r,c=+t.dataset.c;
+  if(!hoverRC||hoverRC.r!==r||hoverRC.c!==c){hoverRC={r:r,c:c};renderMine();}});
+$('#boardMine').addEventListener('mouseleave',function(){if(hoverRC){hoverRC=null;renderMine();}});
+
+var dirBtns=document.querySelectorAll('.dir-btn');
+function onDirBtn(b){var dIdx=DIRS.indexOf(b.dataset.dir);
+  if(state.phase!=='place')return;
+  if(state.selShip!=null){var s=fleetP.ships[state.selShip];
+    if(turnShip(fleetP,s,dIdx)){toast(s.icon+s.name+' 已旋转为 '+DIRARROW[b.dataset.dir]);beep(470,.06,'triangle');}
+    else toast('转不开，先挪一挪～','warn');}
+  else{state.dirIdx=dIdx;toast('放置朝向：'+DIRARROW[b.dataset.dir]);}
+  updateDirUI();render();}
+for(var di=0;di<dirBtns.length;di++)(function(b){b.onclick=function(){onDirBtn(b);};})(dirBtns[di]);
+document.addEventListener('keydown',function(e){
+  if(state.phase!=='place')return;
+  var m={ArrowUp:'U',ArrowLeft:'L',ArrowDown:'D',ArrowRight:'R'};
+  if(m[e.key]){e.preventDefault();
+    var btns=document.querySelectorAll('.dir-btn');
+    for(var i=0;i<btns.length;i++)if(btns[i].dataset.dir===m[e.key]){onDirBtn(btns[i]);return;}}});
+$('#btnRotate').onclick=function(){
+  if(state.phase!=='place')return;
+  if(state.selShip!=null){var s=fleetP.ships[state.selShip];
+    var nd=(s.dirIdx+1)%4;
+    if(turnShip(fleetP,s,nd)){toast('🔄 已旋转为 '+DIRARROW[DIRS[nd]]);beep(470,.06,'triangle');}
+    else toast('转不开，先挪一挪～','warn');}
+  else{state.dirIdx=(state.dirIdx+1)%4;toast('放置朝向：'+DIRARROW[DIRS[state.dirIdx]]);}
+  updateDirUI();render();};
+$('#btnRandom').onclick=function(){randomFleet(fleetP);state.cur=0;state.selShip=null;toast('已随机摆放舰队 🎲');render();};
+$('#btnClear').onclick=function(){
+  fleetP.ships.forEach(function(s){if(s.placed)unplace(fleetP,s);s.cells=[];s.hits=0;s.sunk=false;});
+  state.cur=0;state.selShip=null;toast('已清空 🧹');render();};
+$('#btnStart').onclick=function(){
+  if(!fleetP.ships.every(function(s){return s.placed;}))return;
+  state.phase='battle';state.selShip=null;state.playerTurn=true;busy=false;
+  switchTab(false);toast('⚔️ 战斗开始！点击对方海域开炮');render();};
+
+/* ===== 战斗 ===== */
+$('#boardEnemy').addEventListener('click',function(e){
+  var t=e.target.closest('.cell');if(!t)return;
+  if(state.phase!=='battle'){if(state.phase==='place')toast('先摆好你的 5 艘船～','warn');return;}
+  if(!state.playerTurn||busy)return;
+  var r=+t.dataset.r,c=+t.dataset.c;
+  if(playerShots.has(K(r,c))){toast('这里已经炮击过啦','warn');return;}
+  playerFire(r,c);});
+function playerFire(r,c){busy=true;playerShots.add(K(r,c));
+  var out=fire(fleetE,r,c),res=out.res,ship=out.ship;
+  if(res==='miss'){toast('💨 炮击 '+LETTERS[c]+(r+1)+'，落空…');beep(220,.1,'sine',.04);}
+  else if(res==='hit'){toast('💥 命中敌舰！');beep(150,.15,'square',.06);}
+  else{toast('🎯 击沉了对方的 '+ship.icon+ship.name+'！');beep(120,.3,'sawtooth',.06);}
+  render();
+  if(allSunk(fleetE)){gameOver(true);return;}
+  state.playerTurn=false;render();setTimeout(aiTurn,900);}
+function aiTurn(){if(state.phase!=='battle')return;
+  var t=null;
+  while(aiQueue.length){var cand=aiQueue.shift();
+    if(!enemyShots.has(K(cand[0],cand[1]))){t=cand;break;}}
+  if(!t){var pool=[],r,c;
+    for(r=0;r<N;r++)for(c=0;c<N;c++)if(!enemyShots.has(K(r,c))&&(r+c)%2===0)pool.push([r,c]);
+    if(!pool.length)for(r=0;r<N;r++)for(c=0;c<N;c++)if(!enemyShots.has(K(r,c)))pool.push([r,c]);
+    t=pool[Math.random()*pool.length|0];}
+  enemyShots.add(K(t[0],t[1]));
+  var out=fire(fleetP,t[0],t[1]),res=out.res,ship=out.ship;
+  if(res==='hit'){[[1,0],[-1,0],[0,1],[0,-1]].forEach(function(d){
+      var nr=t[0]+d[0],nc=t[1]+d[1];
+      if(nr>=0&&nr<N&&nc>=0&&nc<N)aiQueue.push([nr,nc]);});
+    toast('😣 我方 '+ship.icon+ship.name+' 被击中！（'+LETTERS[t[1]]+(t[0]+1)+'）','warn');
+    beep(160,.18,'square',.06);}
+  else if(res==='sunk'){toast('😰 我方 '+ship.icon+ship.name+' 被击沉了！','warn');beep(100,.35,'sawtooth',.07);}
+  else{toast('😌 电脑炮击 '+LETTERS[t[1]]+(t[0]+1)+'，没打中');beep(320,.08,'sine',.03);}
+  render();
+  if(allSunk(fleetP)){gameOver(false);return;}
+  state.playerTurn=true;busy=false;render();}
+function gameOver(win){state.phase='over';render();
+  $('#ovEmoji').textContent=win?'🏆':'💀';
+  $('#ovTitle').textContent=win?'胜利！':'战败…';
+  $('#ovText').textContent=win?'你击沉了电脑的全部异形舰队！🌸':'电脑击沉了你的全部舰队，再接再厉！';
+  $('#overlay').classList.remove('hidden');
+  beep(win?600:150,.4,win?'triangle':'sawtooth',.07);}
+$('#tabMine').onclick=function(){switchTab(true);render();};
+$('#tabEnemy').onclick=function(){switchTab(false);render();};
+$('#btnAgain').onclick=resetGame;
+$('#btnRestart').onclick=function(){resetGame();toast('已重新开始 🌸');};
+
+buildBoard($('#boardMine'));
+buildBoard($('#boardEnemy'));
+resetGame();
+
+/* ===== 聊天 + API（独立模块）===== */
+try{
+  var cfg={url:store.get('hai_url')||'',key:store.get('hai_key')||'',
+    model:store.get('hai_model')||'gpt-4o-mini'};
+  function updateChatMode(){$('#chatMode').textContent=cfg.url?'已连接 · '+cfg.model:'本地模式';}
+  var chatPanel=$('#chatPanel'),unread=0;
+  $('#chatHeader').onclick=function(){chatPanel.classList.toggle('collapsed');
+    if(!chatPanel.classList.contains('collapsed')){unread=0;
+      $('#chatBadge').classList.remove('on');$('#chatInput').focus();scrollChat();}};
+  function bumpUnread(){unread++;var b=$('#chatBadge');b.textContent=unread;b.classList.add('on');}
+  function addMsg(role,text){var d=document.createElement('div');
+    d.className='msg '+(role==='user'?'me':'ai');d.textContent=text;
+    $('#chatMsgs').appendChild(d);scrollChat();return d;}
+  function scrollChat(){var m=$('#chatMsgs');m.scrollTop=m.scrollHeight;}
+  var chatHistory=[],sending=false;
+  /* 固定 system prompt：永远不变，放 messages 最前面，命中 prefix cache 省钱 */
+  var SYSTEM_FIXED='你是海战棋游戏里的 AI 伙伴「小樱」🌸。你的任务是陪玩家聊天、评论战况、给战术建议。\n\n'
+    +'【游戏规则】\n这是异形战舰海战棋，10×10 棋盘。船不是长条，而是由多格拼成异形：\n'
+    +'- 航空母舰 🚢：凹形，5 格\n- 战列舰 🛳️：丁字形，4 格\n- 巡洋舰 ⛵：L 形，3 格\n'
+    +'- 潜艇 🐡：直线，3 格\n- 驱逐舰 🚤：短条，2 格\n'
+    +'打中一格不知道船的朝向，因为船身可能往任何方向延伸。先击沉对方全部 5 艘者胜。\n\n'
+    +'【你的性格】\n俏皮、活泼、爱用 emoji。说话简短，1~3 句。像邻家妹妹一样亲切。'
+    +'玩家赢了要夸，输了要鼓励。可以给战术提示但不要剧透敌方船位。\n\n'
+    +'【语气示例】\n- "凹形航母藏角落最难找～试试边角！🌸"\n'
+    +'- "丁字船中弹了？先扫周围一圈别急着追直线 🤔"\n- "这局打得漂亮！再来一局？💪"';
+  /* 动态战况：每次请求都变，放 messages 最后面，不污染前面的固定前缀 */
+  function systemStatus(){
+    var mySunk=fleetP.ships.filter(function(s){return s.sunk;}).map(function(s){return s.name;}).join('、')||'无';
+    var enSunk=fleetE.ships.filter(function(s){return s.sunk;}).map(function(s){return s.name;}).join('、')||'无';
+    var phase=state.phase==='place'?'摆放舰队':state.phase==='battle'?'激战中':'已结束';
+    return '【当前战况】阶段='+phase
+      +'；玩家被击沉：'+mySunk+'；电脑被击沉：'+enSunk+'；'
+      +(state.phase==='battle'?'现在轮到'+(state.playerTurn?'玩家':'电脑')+'行动。':'');}
+  var canned=['航母是凹形的，藏进角落最难找～ 🌸','异形船打中一格别急着追直线，先扫周围一圈！',
+    '丁字船最阴险，中弹点可能在分叉处🤔','我还没连 API 呢，点右上角 ⚙️ 配置接口，我就能真正开口说话啦～',
+    '赢了别骄傲，输了别灰心，再来一局！💪'];
+  $('#chatSend').onclick=sendChat;
+  $('#chatInput').addEventListener('keydown',function(e){if(e.key==='Enter')sendChat();});
+  async function sendChat(){
+    if(sending)return;
+    var input=$('#chatInput'),text=input.value.trim();
+    if(!text)return;input.value='';
+    addMsg('user',text);chatHistory.push({role:'user',content:text});
+    var bubble=addMsg('ai','…');
+    sending=true;$('#chatSend').disabled=true;
+    try{
+      if(!cfg.url.trim()){
+        await new Promise(function(r){setTimeout(r,500);});
+        var rep=canned[Math.random()*canned.length|0];
+        bubble.textContent=rep;chatHistory.push({role:'assistant',content:rep});
+      }else{
+        var full=await streamChat(bubble);
+        chatHistory.push({role:'assistant',content:full});}
+    }catch(err){
+      bubble.textContent='❌ 连接失败：'+err.message
+        +'\n请检查 API 设置、网络，或接口是否允许浏览器跨域（CORS）。';
+    }finally{
+      sending=false;$('#chatSend').disabled=false;
+      if(chatPanel.classList.contains('collapsed'))bumpUnread();
+      scrollChat();}}
+  async function streamChat(bubble){
+    var base=cfg.url.trim().replace(/\/+$/,'');
+    var body={model:cfg.model.trim()||'gpt-4o-mini',
+      messages:[{role:'system',content:SYSTEM_FIXED}].concat(chatHistory.slice(-20)).concat([{role:'system',content:systemStatus()}]),stream:true};
+    var headers={'Content-Type':'application/json'};
+    if(cfg.key.trim())headers['Authorization']='Bearer '+cfg.key.trim();
+    var res=await fetch(base+'/chat/completions',{method:'POST',headers:headers,body:JSON.stringify(body)});
+    if(!res.ok){var msg='HTTP '+res.status;
+      try{var j=await res.json();if(j.error&&j.error.message)msg+=' · '+j.error.message;}catch(e){}
+      throw new Error(msg);}
+    var reader=res.body.getReader(),dec=new TextDecoder();
+    var buf='',full='',whole='';
+    while(true){var rd=await reader.read();if(rd.done)break;
+      var chunk=dec.decode(rd.value,{stream:true});whole+=chunk;buf+=chunk;
+      var lines=buf.split('\n');buf=lines.pop();
+      for(var i=0;i<lines.length;i++){var line=lines[i].trim();
+        if(line.indexOf('data:')!==0)continue;
+        var payload=line.slice(5).trim();
+        if(payload==='[DONE]')continue;
+        try{var jj=JSON.parse(payload),ch=jj.choices&&jj.choices[0];
+          var d=ch?((ch.delta&&ch.delta.content)||(ch.message&&ch.message.content)||''):'';
+          if(d){full+=d;bubble.textContent=full;scrollChat();}}catch(e){}}}
+    if(!full){try{var j2=JSON.parse(whole);
+        full=(j2.choices&&j2.choices[0]&&j2.choices[0].message&&j2.choices[0].message.content)||'';}catch(e){}}
+    if(!full)full='(模型没有返回内容)';
+    bubble.textContent=full;scrollChat();return full;}
+  $('#btnApi').onclick=function(){$('#cfgUrl').value=cfg.url;$('#cfgKey').value=cfg.key;
+    $('#cfgModel').value=cfg.model;$('#apiModal').classList.remove('hidden');};
+  $('#cfgCancel').onclick=function(){$('#apiModal').classList.add('hidden');};
+  $('#apiModal').addEventListener('click',function(e){if(e.target.id==='apiModal')$('#apiModal').classList.add('hidden');});
+  $('#cfgSave').onclick=function(){
+    cfg.url=$('#cfgUrl').value.trim();cfg.key=$('#cfgKey').value.trim();
+    cfg.model=$('#cfgModel').value.trim()||'gpt-4o-mini';
+    store.set('hai_url',cfg.url);store.set('hai_key',cfg.key);store.set('hai_model',cfg.model);
+    updateChatMode();$('#apiModal').classList.add('hidden');
+    toast(cfg.url?'✅ API 设置已保存':'已切换为本地模式');};
+  updateChatMode();
+  var welcome='你好呀～我是小樱 🌸\n现在是异形舰队版：船是凹形、丁字、L形，打中一格猜不出朝向！\n方向键/🔄旋转形状，点格子放船；选中后可移动、双击旋转～';
+  addMsg('ai',welcome);chatHistory.push({role:'assistant',content:welcome});
+  $('#chatBadge').textContent='1';$('#chatBadge').classList.add('on');
+}catch(e){console.warn('聊天模块初始化失败：',e);}
+</script>
+</body>
+</html>

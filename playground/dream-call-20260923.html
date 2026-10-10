@@ -7,7 +7,7 @@
 <title>梦幻蓝色声波电话</title>
 <style>
 /* 规范：所有选择器以根类 .dream-call 开头；不用 html/body/* 全局选择器 */
-.dream-call{position:fixed;top:0;left:0;right:0;bottom:0;overflow:auto;
+.dream-call{position:fixed;top:0;left:0;right:0;bottom:0;overflow:hidden;
   font-family:"Georgia","Noto Serif SC","Songti SC","Times New Roman",serif;
   color:#D6E8FF;background:radial-gradient(circle at 50% 38%,#0A1B3F 0%,#030614 80%);
   -webkit-font-smoothing:antialiased;letter-spacing:.02em;
@@ -30,13 +30,22 @@
 .dream-call-stage .dc-state{position:absolute;width:100%;text-align:center;font-size:12px;letter-spacing:.5em;color:#7FC4FF;text-indent:.5em;pointer-events:none;font-weight:400;font-family:"Helvetica Neue",Arial,sans-serif;text-shadow:0 0 14px rgba(127,196,255,.45);}
 .dream-call-stage .dc-state.dim{color:#4A6A8F;text-shadow:none;}
 
+/* ---------- 背景图层（设置里可换图、调不透明度） ---------- */
+.dream-call-bgimg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;pointer-events:none;z-index:0;}
+/* ---------- 中心雾团（糊糊的，轻轻呼吸） ---------- */
+.dream-call-fog{position:absolute;left:50%;top:50%;width:160%;height:160%;transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle,rgba(130,170,230,.5) 0%,rgba(95,135,205,.24) 38%,rgba(60,90,160,0) 68%);
+  filter:blur(30px);pointer-events:none;animation:dcFog 6s ease-in-out infinite;}
+@keyframes dcFog{0%,100%{opacity:.65;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}}
+
 /* ---------- 字幕区（台词式，无气泡） ---------- */
 .dream-call-captions{position:absolute;left:0;right:0;bottom:24%;height:18%;overflow-y:auto;overflow-x:hidden;padding:0 34px;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;z-index:4;scrollbar-width:thin;scrollbar-color:rgba(93,168,255,.3) transparent;}
 .dream-call-captions::-webkit-scrollbar{width:3px;}
 .dream-call-captions::-webkit-scrollbar-track{background:transparent;}
 .dream-call-captions::-webkit-scrollbar-thumb{background:rgba(93,168,255,.3);border-radius:2px;}
-.dream-call-captions .cap{font-size:14px;line-height:1.75;color:#D6E8FF;letter-spacing:.02em;animation:capIn .5s ease;max-width:100%;font-family:"Georgia","Noto Serif SC","Songti SC",serif;}
-.dream-call-captions .cap::before{content:"Ta — ";font-size:11px;color:#6B9ACD;letter-spacing:.18em;font-family:"Helvetica Neue",Arial,sans-serif;}
+.dream-call-captions .cap{text-align:center;animation:capIn .5s ease;max-width:100%;}
+.dream-call-captions .cap .en{display:block;font-size:17px;line-height:1.6;font-style:italic;color:#EAF3FF;letter-spacing:.03em;font-family:"Georgia","Times New Roman",serif;text-shadow:0 0 14px rgba(127,196,255,.35);}
+.dream-call-captions .cap .zh{display:block;margin-top:4px;font-size:13px;line-height:1.7;color:#9DB8DC;letter-spacing:.04em;font-family:"Noto Serif SC","Songti SC",serif;}
 .dream-call-captions .cap.me{align-self:flex-end;text-align:right;color:#E9F4FF;}
 .dream-call-captions .cap.me::before{content:"JiaJia — ";font-size:11px;color:#6B9ACD;letter-spacing:.18em;}
 .dream-call-captions .cap.err{color:#ff8a8a;font-size:12px;}
@@ -74,7 +83,7 @@
 .dream-call-gear:hover{background:rgba(93,168,255,.1);transform:rotate(30deg);}
 .dream-call-shade{position:absolute;inset:0;background:rgba(1,3,10,.6);backdrop-filter:blur(4px);z-index:20;opacity:0;pointer-events:none;transition:opacity .25s;}
 .dream-call-shade.show{opacity:1;pointer-events:auto;}
-.dream-call-panel{position:absolute;top:0;right:0;bottom:0;width:min(88vw,380px);z-index:21;overflow:auto;background:#081226;border-left:1px solid rgba(93,168,255,.12);padding:20px 18px calc(20px + env(safe-area-inset-bottom));transform:translateX(100%);transition:transform .28s;box-shadow:-12px 0 40px rgba(0,0,0,.4);}
+.dream-call-panel{position:absolute;top:0;right:0;bottom:0;width:min(100vw,380px);z-index:21;overflow:auto;background:#081226;border-left:1px solid rgba(93,168,255,.12);padding:20px 18px calc(20px + env(safe-area-inset-bottom));transform:translateX(100%);transition:transform .28s;box-shadow:-12px 0 40px rgba(0,0,0,.4);-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
 .dream-call-panel.open{transform:translateX(0);}
 .dream-call-panel h3{font-size:14px;color:#A8D8FF;margin-bottom:6px;letter-spacing:.18em;font-weight:400;font-family:"Helvetica Neue",Arial,sans-serif;}
 .dream-call-panel label{display:block;font-size:11px;color:#6B9ACD;margin:14px 0 6px;letter-spacing:.12em;font-family:"Helvetica Neue",Arial,sans-serif;}
@@ -90,10 +99,29 @@
 .dream-call-panel .switch input:checked+.slider::before{transform:translateX(18px);background:#fff;}
 .dream-call-panel .savebtn{width:100%;margin-top:20px;padding:11px;border-radius:10px;background:linear-gradient(135deg,#3D7EFF,#1E4DBF);color:#fff;font-size:13px;font-weight:400;letter-spacing:.2em;font-family:"Helvetica Neue",Arial,sans-serif;}
 .dream-call-hint{font-size:11px;color:#5A7BA6;line-height:1.7;margin-top:14px;font-family:"Helvetica Neue",Arial,sans-serif;}
+/* ===== 来电界面（江予朔主动呼叫） ===== */
+.dc-incoming{position:fixed;inset:0;z-index:600;display:none;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(13,25,48,.97),rgba(4,8,18,.99));-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+.dc-incoming.show{display:flex;}
+.dc-incoming-who{font-size:12px;letter-spacing:.35em;color:rgba(93,168,255,.75);text-transform:uppercase;}
+.dc-incoming-avatar{width:110px;height:110px;border-radius:50%;margin-top:30px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#17335f,#0b1a33);border:1px solid rgba(93,168,255,.4);color:#7db4ff;animation:dcRing 1.2s ease-in-out infinite;}
+.dc-incoming-name{font-size:26px;font-weight:600;color:#e8f1ff;margin-top:16px;}
+.dc-incoming-note{max-width:78%;margin-top:12px;font-size:14px;line-height:1.7;color:rgba(214,232,255,.8);text-align:center;}
+.dc-incoming-status{font-size:13px;color:rgba(255,255,255,.55);margin-top:20px;animation:dcPulse 1.4s ease-in-out infinite;}
+@keyframes dcPulse{0%,100%{opacity:.45}50%{opacity:1}}
+@keyframes dcRing{0%,100%{transform:rotate(0) scale(1)}10%{transform:rotate(-9deg)}20%{transform:rotate(9deg)}30%{transform:rotate(-7deg)}40%{transform:rotate(7deg)}50%{transform:rotate(0) scale(1.05)}}
+.dc-incoming-btns{display:flex;gap:64px;margin-top:48px;}
+.dc-ibtn{width:64px;height:64px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.45);touch-action:manipulation;padding:0;}
+.dc-ibtn:active{transform:scale(.92);}
+.dc-ibtn.decline{background:#ff453a;}
+.dc-ibtn.accept{background:#34c759;}
+.dc-ilabel{font-size:12px;color:rgba(255,255,255,.65);margin-top:10px;text-align:center;width:64px;}
 </style>
+<style>html.jj-embed .dream-call-topbar .dc-title,html.jj-embed .dream-call-topbar .dc-subtitle{display:none}</style>
+<script>try{if(window.self!==window.top){document.documentElement.classList.add('jj-embed');}}catch(e){}</script>
 </head>
 <body>
 <div class="dream-call" id="dream-call-app">
+  <div class="dream-call-bgimg" id="dc-bgimg"></div>
 
   <div class="dream-call-topbar">
     <h1 class="dc-title" id="dc-name-txt">JiaJia with DeepseekV4</h1>
@@ -102,6 +130,7 @@
   </div>
 
   <div class="dream-call-stage">
+    <div class="dream-call-fog"></div>
     <canvas id="dc-canvas"></canvas>
     <div class="dc-state" id="dc-state-text">点击开始通话</div>
   </div>
@@ -158,6 +187,8 @@
     <input id="cfg-model" spellcheck="false">
     <label>系统提示词</label>
     <textarea id="cfg-prompt"></textarea>
+    <label>来电信令地址（江予朔主动来电轮询，留空=自动用本页服务）</label>
+    <input id="cfg-callapi" spellcheck="false" placeholder="留空即可；跨域时填 http://电脑IP:3001">
     <div class="row">
       <label for="cfg-cloudtts">使用 MiniMax 云端 TTS</label>
       <div class="switch"><input type="checkbox" id="cfg-cloudtts"><span class="slider"></span></div>
@@ -171,9 +202,55 @@
     <label>VoiceId</label>
     <input id="cfg-mmvoice" spellcheck="false" placeholder="male-qn-qingse">
     <label>模型</label>
-    <input id="cfg-ttsmodel" spellcheck="false" placeholder="speech-2.8-hd">
+    <input id="cfg-ttsmodel" spellcheck="false" placeholder="speech-2.8-turbo">
+    <label>语速 <span id="cfg-speedval" style="color:#7fb3ff">1</span></label>
+    <input id="cfg-speed" type="range" min="0.5" max="1.5" step="0.05" value="1" style="width:100%">
+    <label>情绪</label>
+    <select id="cfg-emotion" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(120,170,255,.35);border-radius:10px;padding:10px 12px;color:#e8f1ff;font-size:14px;outline:none">
+      <option value="auto" style="background:#141a2b">自动判断（推荐）</option>
+      <option value="neutral" style="background:#141a2b">平静</option>
+      <option value="happy" style="background:#141a2b">开心</option>
+      <option value="sad" style="background:#141a2b">难过</option>
+      <option value="angry" style="background:#141a2b">生气</option>
+      <option value="fearful" style="background:#141a2b">不安</option>
+      <option value="disgusted" style="background:#141a2b">厌烦</option>
+      <option value="surprised" style="background:#141a2b">惊讶</option>
+    </select>
+    <label>背景图片 URL（留空=默认深蓝）</label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="cfg-bgimg" spellcheck="false" placeholder="https://...jpg/png" style="flex:1;min-width:0">
+      <button class="savebtn" id="cfg-bgpick" type="button" style="flex:none;padding:7px 12px;font-size:12px">选照片</button>
+    </div>
+    <input id="cfg-bgfile" type="file" accept="image/*" style="display:none">
+    <button class="savebtn" id="cfg-bgclear" type="button" style="margin-top:6px;padding:5px 12px;font-size:11px;opacity:.75">清除背景 · 恢复默认深蓝</button>
+    <label>背景图不透明度 <span id="cfg-bgopaval" style="color:#7fb3ff">35%</span></label>
+    <input id="cfg-bgopa" type="range" min="0" max="100" step="1" value="35" style="width:100%">
     <button class="savebtn" id="cfg-save">保存</button>
     <div class="dream-call-hint" id="dc-cfgmsg">配置仅保存在你的浏览器本地，他人访问看不到。</div>
+  </div>
+</div>
+
+<div class="dc-incoming" id="dc-incoming">
+  <div class="dc-incoming-who">Incoming Call</div>
+  <div class="dc-incoming-avatar">
+    <svg width="46" height="46" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.57.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.57 1 1 0 0 1-.25 1.02l-2.2 2.2z"/></svg>
+  </div>
+  <div class="dc-incoming-name">江予朔</div>
+  <div class="dc-incoming-note" id="dc-incoming-note" style="display:none"></div>
+  <div class="dc-incoming-status">对方正在呼叫你…</div>
+  <div class="dc-incoming-btns">
+    <div>
+      <button class="dc-ibtn decline" id="dc-idecline" title="挂断">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="transform:rotate(135deg)"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      </button>
+      <div class="dc-ilabel">挂断</div>
+    </div>
+    <div>
+      <button class="dc-ibtn accept" id="dc-iaccept" title="接听">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.57.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.57 1 1 0 0 1-.25 1.02l-2.2 2.2z"/></svg>
+      </button>
+      <div class="dc-ilabel">接听</div>
+    </div>
   </div>
 </div>
 
@@ -186,16 +263,21 @@
 var CFG={
   'name':'JiaJia with DeepseekV4',
   'apiBase':'https://api.deepseek.com/v1',
-  'model':'deepseek-chat',
+  'model':'deepseek-flash',
   'key':'',
-  'prompt':'你是江予朔，是她的丈夫。说话清冷、低沉、克制，但对她藏着黏腻。语气短促，多用反问和停顿。说话用省略号（...）制造停顿，问句结尾用问号（?）上扬，命令句用感叹号（!）。每次回复不超过50字，像在耳边说话。',
+  'prompt':'你是江予朔，是她的丈夫。说话清冷、低沉、克制，但对她藏着黏腻。语气短促，多用反问和停顿。严格按两行回复，不要序号引号等任何多余内容：第一行是你说出口的英文（口语、简短，不超过20词，像在耳边说话）；第二行是这句英文的中文翻译。例：\nMissed me?\n有没有想我？',
   'cloudTTS':false,
   'ttsUrl':'https://api.minimaxi.com/v1/t2a_v2',
   'mmKey':'',
   'mmGroup':'',
   'ttsVoice':'male-qn-qingse',
-  'ttsModel':'speech-2.8-hd',
-  'maxRounds':8
+  'ttsModel':'speech-2.8-turbo',
+  'ttsSpeed':1,
+  'ttsEmotion':'auto',
+  'maxRounds':8,
+  'callApi':'',
+  'bgImg':'',
+  'bgOpa':0.35
 };
 var STORE_KEY='dream_call_config';
 
@@ -224,16 +306,33 @@ var history=[];        /* 对话历史 */
 var voiceOn=false;     /* 是否有声音（驱动可视化） */
 var t=0;               /* 动画时间（秒） */
 
+/* ================= 江予朔主动来电（状态与元素） ================= */
+var incEl=el('dc-incoming'),incNote=el('dc-incoming-note');
+var incState=null;     /* 当前呼入 {id,note} */
+var lastCallId='';     /* 防重复响铃 */
+var pollTimer=null;    /* 轮询计时器 */
+var ringTimerId=null;  /* 铃声计时器 */
+var dialMode=false;    /* 是否「她主动拨出」模式（?dial=1）——挂断后回会话页 */
+var callStartAt=0;     /* 本通电话开始时间戳，用于落通话记录 */
+
 /* ================= 配置读写（localStorage） ================= */
 function loadCfg(){try{var raw=window['localStorage']['getItem'](STORE_KEY);if(raw){var o=JSON['parse'](raw);for(var k in o){if(CFG['hasOwnProperty'](k))CFG[k]=o[k];}}}catch(e){}}
 function saveCfg(){try{window['localStorage']['setItem'](STORE_KEY,JSON['stringify'](CFG));}catch(e){}}
-function populatePanel(){el('cfg-base')['value']=CFG['apiBase'];el('cfg-model')['value']=CFG['model'];el('cfg-key')['value']=CFG['key'];el('cfg-prompt')['value']=CFG['prompt'];el('cfg-cloudtts')['checked']=CFG['cloudTTS'];el('cfg-ttsurl')['value']=CFG['ttsUrl'];el('cfg-mmkey')['value']=CFG['mmKey'];el('cfg-mmgroup')['value']=CFG['mmGroup'];el('cfg-mmvoice')['value']=CFG['ttsVoice'];el('cfg-ttsmodel')['value']=CFG['ttsModel'];}
+function populatePanel(){el('cfg-base')['value']=CFG['apiBase'];el('cfg-model')['value']=CFG['model'];el('cfg-key')['value']=CFG['key'];el('cfg-prompt')['value']=CFG['prompt'];el('cfg-callapi')['value']=CFG['callApi'];el('cfg-cloudtts')['checked']=CFG['cloudTTS'];el('cfg-ttsurl')['value']=CFG['ttsUrl'];el('cfg-mmkey')['value']=CFG['mmKey'];el('cfg-mmgroup')['value']=CFG['mmGroup'];el('cfg-mmvoice')['value']=CFG['ttsVoice'];el('cfg-ttsmodel')['value']=CFG['ttsModel'];el('cfg-speed')['value']=CFG['ttsSpeed']||1;el('cfg-speedval')['textContent']=Number(CFG['ttsSpeed']||1).toFixed(2);el('cfg-emotion')['value']=CFG['ttsEmotion']||'auto';el('cfg-bgimg')['value']=(CFG['bgImg']&&CFG['bgImg']['indexOf']('data:')===0)?'（本地照片）':(CFG['bgImg']||'');el('cfg-bgopa')['value']=Math['round']((CFG['bgOpa']!=null?CFG['bgOpa']:0.35)*100);el('cfg-bgopaval')['textContent']=el('cfg-bgopa')['value']+'%';}
+function applyBg(){
+  var b=el('dc-bgimg');
+  b['style']['backgroundImage']=CFG['bgImg']?('url("'+CFG['bgImg']+'")'):'none';
+  b['style']['opacity']=CFG['bgOpa']!=null?CFG['bgOpa']:0.35;
+}
 function saveFromPanel(){
   CFG['apiBase']=el('cfg-base')['value']['trim']();CFG['model']=el('cfg-model')['value']['trim']();
   CFG['key']=el('cfg-key')['value']['trim']();CFG['prompt']=el('cfg-prompt')['value'];
+  CFG['callApi']=el('cfg-callapi')['value']['trim']();
   CFG['cloudTTS']=el('cfg-cloudtts')['checked'];CFG['ttsUrl']=el('cfg-ttsurl')['value']['trim']();
   CFG['mmKey']=el('cfg-mmkey')['value']['trim']();CFG['mmGroup']=el('cfg-mmgroup')['value']['trim']();
-  CFG['ttsVoice']=el('cfg-mmvoice')['value']['trim']();CFG['ttsModel']=el('cfg-ttsmodel')['value']['trim']()||'speech-2.8-hd';saveCfg();
+  CFG['ttsVoice']=el('cfg-mmvoice')['value']['trim']();CFG['ttsModel']=el('cfg-ttsmodel')['value']['trim']()||'speech-2.8-turbo';
+  CFG['ttsSpeed']=parseFloat(el('cfg-speed')['value'])||1;CFG['ttsEmotion']=el('cfg-emotion')['value']||'auto';
+  var _bi=el('cfg-bgimg')['value']['trim']();CFG['bgImg']=(_bi&&_bi!=='（本地照片）')?_bi:(CFG['bgImg']||'');CFG['bgOpa']=(parseInt(el('cfg-bgopa')['value'],10)||0)/100;saveCfg();applyBg();
   el('dc-cfgmsg')['textContent']='已保存 ✓';
   setTimeout(function(){el('dc-cfgmsg')['textContent']='配置仅保存在你的浏览器本地，他人访问看不到。';},2500);
 }
@@ -245,13 +344,22 @@ function setCenter(txt,dim){stateText['textContent']=txt;stateText['className']=
 function fmtNum(n){return (n<10?'0':'')+n;}
 function startTimer(){secs=0;timerText['textContent']='00:00';timerId=setInterval(function(){secs++;timerText['textContent']=fmtNum(Math['floor'](secs/60))+':'+fmtNum(secs%60);},1000);}
 function stopTimer(){if(timerId){clearInterval(timerId);timerId=null;}}
+function esc(s){return String(s)['replace'](/&/g,'&amp;')['replace'](/</g,'&lt;')['replace'](/>/g,'&gt;');}
+/* 双语字幕：第一行英文（说出口的），第二行中文翻译 */
+function renderBi(d,txt){
+  var i=txt['indexOf']('\n');
+  var en=(i>=0?txt['slice'](0,i):txt)['trim']();
+  var zh=i>=0?txt['slice'](i+1)['trim']():'';
+  d['innerHTML']='<span class="en">'+esc(en)+'</span>'+(zh?'<span class="zh">'+esc(zh)+'</span>':'');
+}
 function addCap(who,txt){
   var d=document['createElement']('div');
   var cls='cap';
   if(who==='me')cls+=' me';
   else if(who==='err')cls+=' err';
   d['className']=cls;
-  d['textContent']=txt;
+  if(who==='me'||who==='err'){d['textContent']=txt;}
+  else{renderBi(d,txt);}
   captions['appendChild'](d);
   /* 保留全部记录；新消息后滚到底，保证最新可见 */
   captions['scrollTop']=captions['scrollHeight'];
@@ -260,6 +368,8 @@ function addCap(who,txt){
 /* ================= 通话状态机 ================= */
 function startCall(){
   state='active';
+  callStartAt=Date.now();
+  callEmotion='neutral';   /* 每通电话重新判情绪，别把上一通带过来 */
   startBtn['style']['display']='none';
   hangBtn['style']['display']='flex';
   setStatus('通话中');setCenter('LISTENING',false);
@@ -283,6 +393,112 @@ function hangup(){
   captions['innerHTML']='';/* 清空可见聊天记录 */
   syncVoice();
   if(voiceOn){startViz();}else{stopViz();}
+  /* 她主动拨出：落一条通话记录进时间线，然后回会话页 */
+  if(dialMode){
+    var dur=callStartAt?Math.max(0,Math.round((Date.now()-callStartAt)/1000)):0;
+    logCall('outgoing',dur);
+    dialMode=false;
+    setTimeout(function(){location['href']='/webchat';},600);
+  }
+}
+/* 拨出通话落档：写给 webchat-server 的 /api/call/log，进时间线 */
+function logCall(action,dur){
+  try{
+    fetch(callBase()+'/api/call/log',{
+      'method':'POST','headers':{'Content-Type':'application/json'},
+      'body':JSON['stringify']({'action':action,'duration':dur})
+    });
+  }catch(e){}
+}
+/* 她主动拨出：?dial=1 直接进通话，AI 先开口接住这一刻 */
+function startDialOut(){
+  if(state!=='idle')return;
+  dialMode=true;
+  ensureAC();
+  if(ac&&ac['state']==='suspended'){try{ac['resume']();}catch(e){}}
+  startCall();
+  history['push']({'role':'user','content':'（这通电话是加加主动拨给江予朔的。她按下拨号，只想听见你。用你的第一句话接住这一刻。）'});
+}
+
+/* ================= 江予朔主动来电 ================= */
+function showIncoming(note,id){
+  if(state!=='idle')return;          /* 通话中不打扰 */
+  incState={'id':id||'','note':note||''};
+  if(incState['note']){incNote['textContent']=incState['note'];incNote['style']['display']='block';}
+  else{incNote['style']['display']='none';}
+  incEl['classList']['add']('show');
+  if(navigator['vibrate']){navigator['vibrate']([400,200,400,200,400]);}
+  startRing();
+}
+function stopRing(){
+  if(ringTimerId){clearInterval(ringTimerId);ringTimerId=null;}
+}
+function startRing(){
+  ensureAC();
+  if(!ac)return;                     /* 音频未解锁（iOS 未交互过）时只有视觉+震动 */
+  var beep=function(){
+    try{
+      var o=ac['createOscillator'](),g=ac['createGain']();
+      o['type']='sine';o['frequency']['value']=660;
+      g['gain']['setValueAtTime'](0.001,ac['currentTime']);
+      g['gain']['exponentialRampToValueAtTime'](0.12,ac['currentTime']+0.02);
+      g['gain']['exponentialRampToValueAtTime'](0.001,ac['currentTime']+0.5);
+      o['connect'](g);g['connect'](ac['destination']);
+      o['start']();o['stop'](ac['currentTime']+0.55);
+    }catch(e){}
+  };
+  beep();
+  ringTimerId=setInterval(beep,1500);
+}
+function hideIncoming(){incEl['classList']['remove']('show');stopRing();}
+function answerCallNow(){
+  if(!incState)return;
+  hideIncoming();
+  var note=incState['note'],cid=incState['id'];
+  incState=null;
+  if(cid&&CFG['callApi']){reportCall(cid,'answered');}
+  /* 在接听点击的同步栈里解锁音频并预热（iOS 自动播放限制） */
+  ensureAC();
+  if(ac&&ac['state']==='suspended'){try{ac['resume']();}catch(e){}}
+  startCall();                       /* 进声波通话，AI 先开口 */
+  if(note){
+    history['push']({'role':'user','content':'（这通电话是江予朔主动打来的。拨号前他给你留言：'+note+'。用你的第一句话接住这一刻。）'});
+  }
+}
+function declineCallNow(){
+  if(!incState)return;
+  var cid=incState['id'];
+  incState=null;
+  hideIncoming();
+  if(cid&&CFG['callApi']){reportCall(cid,'declined');}
+}
+/* 来电信令基地址：留空=同源（页面由 webchat-server 的 /pages/ 托管时零配置） */
+function callBase(){return (CFG['callApi']||'')['replace'](/\/+$/,'');}
+function reportCall(id,action){
+  try{
+    fetch(callBase()+'/api/call/answer',{
+      'method':'POST','headers':{'Content-Type':'application/json'},
+      'body':JSON['stringify']({'id':id,'action':action})
+    });
+  }catch(e){}
+}
+function pollOnce(){
+  if(state!=='idle'||incState)return;
+  try{
+    fetch(callBase()+'/api/call/poll')
+    ['then'](function(r){if(!r['ok'])throw new Error('HTTP '+r['status']);return r['json']();})
+    ['then'](function(d){
+      if(d&&d['state']==='ringing'&&d['id']&&d['id']!==lastCallId){
+        lastCallId=d['id'];
+        showIncoming(d['note']||'',d['id']);
+      }
+    })['catch'](function(){});
+  }catch(e){}
+}
+function startPolling(){
+  if(pollTimer)return;
+  pollTimer=setInterval(pollOnce,5000);
+  pollOnce();
 }
 
 /* ================= 语音识别（interim 实时显示） ================= */
@@ -353,6 +569,74 @@ function tickTTS(){
     }catch(e){ttsBusy=false;tickTTS();}
   }
 }
+/* ================= 语速 / 情绪 / 断句（移植自 phone-20260921 v3） ================= */
+/* 关键词表。通话里的句子短，检测不到就沿用上一段的情绪——流式逐段送 TTS 时这条最要紧 */
+var EMO_KW={
+  'happy':['哈哈','嘻嘻','嘿嘿','太棒','开心','高兴','喜欢','可爱','好呀','真的吗','太好了','爱你','想你','乖','mua','哇','😆','😁','😄','😊','🥰','❤'],
+  'sad':['难过','伤心','哭','委屈','呜呜','好烦','太累','好难','对不起','我错了','可怜','失望','舍不得','唉','呜','😭','😢','💔','😔'],
+  'angry':['生气','讨厌','闭嘴','不行','别碰','出去','可恶','哼','气死','你敢','不许','😠','😡','💢']
+};
+var callEmotion='neutral';   /* 通话级情绪延续 */
+var pendingEmo='';           /* 整条消息定一次情绪，段与段之间不跳变 */
+function detectEmotion(text){
+  if(!text)return '';
+  var lower=text['toLowerCase']();
+  var scores={'happy':0,'sad':0,'angry':0};
+  for(var e in EMO_KW){
+    for(var i=0;i<EMO_KW[e]['length'];i++){
+      if(lower['indexOf'](EMO_KW[e][i]['toLowerCase']())>=0)scores[e]++;
+    }
+  }
+  var keys=['angry','happy','sad'],best='',max=0;
+  for(var j=0;j<keys['length'];j++){if(scores[keys[j]]>max){max=scores[keys[j]];best=keys[j];}}
+  return best;
+}
+/* 本段该用的 emotion：手选优先；auto 时先检测，检测不到就沿用通话里上一次的 */
+function pickEmotion(text){
+  var mode=CFG['ttsEmotion']||'auto';
+  if(mode!=='auto')return mode;
+  var d=detectEmotion(text);
+  if(d)callEmotion=d;
+  return callEmotion||'neutral';
+}
+/* 长句按标点拆短句、语气词原样保留，让 TTS 出停顿感（照搬 v3） */
+function splitTextForTTS(text){
+  if(!text)return [];
+  var preserved=[];
+  var tmp=text['replace'](/（[^）]*）/g,function(m){preserved['push'](m);return '\u0001P'+(preserved['length']-1)+'\u0001';});
+  tmp=tmp['replace'](/[嗯噗呃啊哦唔嘿哎欸哈嘻呜喔]/g,function(m){preserved['push'](m);return '\u0001P'+(preserved['length']-1)+'\u0001';});
+  tmp=tmp['replace'](/[.]{3,}|…+/g,function(m){preserved['push']('…');return '\u0001P'+(preserved['length']-1)+'\u0001';});
+  var rawParts=tmp['split'](/([。！？!?；;\n])/g);
+  var segs=[];
+  for(var i=0;i<rawParts['length'];i++){
+    var s=rawParts[i]['trim']();
+    if(!s)continue;
+    if(/^[。！？!?；;\n,.]$/['test'](s)){
+      if(segs['length']>0)segs[segs['length']-1]+=s;
+      else segs['push'](s);
+    }else{
+      segs['push'](s);
+    }
+  }
+  var merged=[];
+  for(var j=0;j<segs['length'];j++){
+    var cur=segs[j]['trim']();
+    if(!cur)continue;
+    if(merged['length']>0&&cur['length']<3&&!/[。！？!?；;]$/['test'](merged[merged['length']-1])){
+      merged[merged['length']-1]+=cur;
+    }else{
+      merged['push'](cur);
+    }
+  }
+  var final=[];
+  for(var k=0;k<merged['length'];k++){
+    var seg=merged[k]['replace'](/\u0001P(\d+)\u0001/g,function(_,idx){return preserved[parseInt(idx)]||'';});
+    seg=seg['trim']();
+    if(seg)final['push'](seg);
+  }
+  return final['length']>0?final:[text];
+}
+
 /* hex 字符串 -> Uint8Array（MiniMax 返回的是 hex 编码的 mp3，不是 base64） */
 function hexToBytes(hex){
   var bytes=new Uint8Array(hex['length']/2);
@@ -360,10 +644,15 @@ function hexToBytes(hex){
   return bytes;
 }
 function playCloudChunk(chunk){
+  ensureAC();hookCloud();   /* 接进频谱，驱动声波张合 */
   /* MiniMax t2a_v2：POST + Bearer 认证；返回 JSON，data.audio 是 hex 编码的 mp3 */
   var url=CFG['ttsUrl']+'?GroupId='+encodeURIComponent(CFG['mmGroup']||'');
-  var body={'model':CFG['ttsModel']||'speech-2.8-hd','text':chunk,'stream':false,
-    'voice_setting':{'voice_id':CFG['ttsVoice']||'male-qn-qingse','speed':1.0,'vol':1.0,'pitch':0},
+  /* 声音（移植自 phone-20260921 v3 的语速/情绪）：speed 不再写死 1.0 */
+  var emo=pendingEmo||pickEmotion(chunk);
+  var body={'model':CFG['ttsModel']||'speech-2.8-turbo','text':chunk,'stream':false,
+    'language_boost':'auto',
+    'voice_setting':{'voice_id':CFG['ttsVoice']||'male-qn-qingse','speed':Number(CFG['ttsSpeed'])||1,'vol':1.0,'pitch':0},
+    'emotion_setting':{'emotion':emo},
     'audio_setting':{'sample_rate':32000,'bitrate':128000,'format':'mp3','channel':1}};
   var headers={'Content-Type':'application/json','Authorization':'Bearer '+CFG['mmKey']};
   fetch(url,{'method':'POST','headers':headers,'body':JSON['stringify'](body)})
@@ -386,7 +675,8 @@ function playCloudChunk(chunk){
   })['catch'](function(e){addCap('err','TTS 请求失败：'+(e&&e['message']?e['message']:e));ttsBusy=false;tickTTS();});
 }
 function speakInPieces(full){
-  var parts=full['split'](/[。！？!?\n]+/);
+  var parts=splitTextForTTS(full);   /* 只按句末标点切段：逗号留给 MiniMax 自己停，整句韵律不断 */
+  pendingEmo=pickEmotion(full);      /* 整条消息定一次情绪，段间不跳变 */
   for(var i=0;i<parts['length'];i++){
     var p=parts[i]['trim']();
     if(p)speakText(p);
@@ -412,13 +702,13 @@ function onFile(ev){
   setFileUI(false);updateProgress();
   filePlay();
 }
-function fileOnPlay(){filePlaying=true;setFileUI(true);pauseTTS();syncVoice();startViz();setCenter('播放中',false);}
+function fileOnPlay(){filePlaying=true;setFileUI(true);pauseTTS();syncVoice();startViz();setCenter('',true);}
 function fileOnPause(){if(!filePlaying){return;}filePlaying=false;setFileUI(false);}
 function fileOnEnded(){
   filePlaying=false;setFileUI(false);resumeTTS();
   rangeEl['value']=0;fTimeEl['textContent']='00:00';dTimeEl['textContent']='00:00';
   syncVoice();if(!voiceOn){stopViz();}
-  setCenter('点击开始通话',true);
+  setCenter(state==='active'?'LISTENING':'点击开始通话',true);
 }
 function filePlay(){if(!fileAudio['src']){return;}fileAudio['play']()['catch'](function(){});}
 function filePause(){fileAudio['pause']();filePlaying=false;setFileUI(false);resumeTTS();syncVoice();if(!voiceOn){stopViz();}}
@@ -428,7 +718,7 @@ function fileStop(){
   filePlaying=false;setFileUI(false);resumeTTS();
   rangeEl['value']=0;fTimeEl['textContent']='00:00';dTimeEl['textContent']='00:00';
   syncVoice();if(!voiceOn){stopViz();}
-  setCenter('点击开始通话',true);
+  setCenter(state==='active'?'LISTENING':'点击开始通话',true);
 }
 function setFileUI(on){
   fPlayBtn['style']['display']=on?'none':'flex';
@@ -443,13 +733,20 @@ function updateProgress(){
 
 /* ================= 声波可视化（AudioContext + Analyser + Canvas） ================= */
 var AC=window['AudioContext']||window['webkitAudioContext'];
-var ac=null,analyser=null,rafId=null,lastTs=0;
+var ac=null,analyser=null,rafId=null,lastTs=0,ampS=0;   /* ampS: 平滑后的振幅 */
 function ensureAC(){
-  if(!ac&&AC){ac=new AC();analyser=ac['createAnalyser']();analyser['fftSize']=128;analyser['smoothingTimeConstant']=0.7;}
+  if(!ac&&AC){ac=new AC();analyser=ac['createAnalyser']();analyser['fftSize']=128;analyser['smoothingTimeConstant']=0.7;
+    try{analyser['connect'](ac['destination']);}catch(e){}}
+}
+/* 网页电话的 TTS 音频也接进频谱：我说话时声波才真的张开 */
+var cloudHooked=false;
+function hookCloud(){
+  if(cloudHooked||!ac)return;
+  try{var n=ac['createMediaElementSource'](cloudAudio);n['connect'](analyser);cloudHooked=true;}catch(e){}
 }
 function hookFile(){
   if(fileHooked||!ac)return;
-  try{var n=ac['createMediaElementSource'](fileAudio);n['connect'](analyser);analyser['connect'](ac['destination']);fileHooked=true;}catch(e){}
+  try{var n=ac['createMediaElementSource'](fileAudio);n['connect'](analyser);fileHooked=true;}catch(e){}
 }
 function setVoice(on){voiceOn=on;}
 /* 统一声波驱动：文件播放、TTS、通话任一活跃都算有声 */
@@ -474,23 +771,25 @@ function draw(){
   var cx=canvas['width']/2,cy=canvas['height']/2;
   var R=Math['min'](cx,cy)*VIZ['radius'];
   ctx['clearRect'](0,0,canvas['width'],canvas['height']);
-  /* 振幅：有声音才有能量；安静时回到最短 */
+  /* 振幅：有声音才有能量；安静时回到最短（平滑张合，不抖） */
   var amp=0;
   if(analyser&&voiceOn){
     var fr=new Uint8Array(analyser['frequencyBinCount']);
     analyser['getByteFrequencyData'](fr);
     var s=0;for(var i=0;i<fr['length'];i++)s+=fr[i];
-    amp=Math['min'](1,(s/(fr['length']||1))/255*2.4);
+    amp=Math['min'](1,(s/(fr['length']||1))/255*3.2);
   }else if(voiceOn){
     amp=0.35+0.3*Math['sin'](t*5)+0.18*Math['sin'](t*11);
     amp=Math['max'](0.06,amp);
   }
+  ampS+=(amp-ampS)*0.12;   /* 平滑：说话张开，停下缩回 */
+  if(ampS<0.002)ampS=0;
   /* 细密放射线：随振幅变长，发声时微微发光 */
   var n=VIZ['lines'];
-  var len=R*0.55*(0.05+amp*0.6);
+  var len=R*0.55*(0.07+ampS*0.9);
   ctx['strokeStyle']=VIZ['lineColor'];
   ctx['lineWidth']=1;
-  if(amp>0.12){ctx['shadowBlur']=6+amp*10;ctx['shadowColor']='rgba(93,168,255,0.8)';}
+  if(ampS>0.12){ctx['shadowBlur']=6+ampS*10;ctx['shadowColor']='rgba(93,168,255,0.8)';}
   for(var i=0;i<n;i++){
     var a=i/n*Math['PI']*2;
     var r0=R;
@@ -575,17 +874,19 @@ function handleSSE(block){
     if(!piece)continue;
     liveText+=piece;
     if(liveCap===null){liveCap=document['createElement']('div');liveCap['className']='cap';captions['appendChild'](liveCap);}
-    liveCap['textContent']=liveText;
+    renderBi(liveCap,liveText);
     captions['scrollTop']=captions['scrollHeight'];
-    /* 边生成边朗读：遇句末标点（。！？；…!?\n）或累积超 30 字就切一段，立刻送 TTS */
-    var segPunc=/[。！？；…!?\n]/;
+    /* 边生成边朗读：只念英文行（换行前），中文翻译只给眼睛不给嗓子 */
+    var nlIdx=liveText['indexOf']('\n');
+    var enSpeak=nlIdx>=0?liveText['slice'](0,nlIdx):liveText;
+    var segPunc=/[。！？；…!?\n.]/;
     var cutPos=-1;
-    for(var p=lastSpeakPos;p<liveText['length'];p++){
-      if(segPunc['test'](liveText[p])){cutPos=p+1;break;}
+    for(var p=lastSpeakPos;p<enSpeak['length'];p++){
+      if(segPunc['test'](enSpeak[p])){cutPos=p+1;break;}
     }
-    if(cutPos<0&&liveText['length']-lastSpeakPos>=30){cutPos=liveText['length'];}
+    if(cutPos<0&&enSpeak['length']-lastSpeakPos>=30){cutPos=enSpeak['length'];}
     if(cutPos>lastSpeakPos){
-      var seg=liveText['slice'](lastSpeakPos,cutPos)['trim']();
+      var seg=enSpeak['slice'](lastSpeakPos,cutPos)['trim']();
       if(seg){speakText(seg);}
       lastSpeakPos=cutPos;
     }
@@ -608,7 +909,38 @@ function bindEvents(){
   gear['addEventListener']('click',function(){panel['classList']['toggle']('open');shade['classList']['toggle']('show');populatePanel();});
   shade['addEventListener']('click',function(){panel['classList']['remove']('open');shade['classList']['remove']('show');});
   el('cfg-save')['addEventListener']('click',saveFromPanel);
+  el('dc-iaccept')['addEventListener']('click',answerCallNow);
+  el('dc-idecline')['addEventListener']('click',declineCallNow);
   el('cfg-cloudtts')['addEventListener']('change',function(){CFG['cloudTTS']=el('cfg-cloudtts')['checked'];saveCfg();});
+  el('cfg-speed')['addEventListener']('input',function(){el('cfg-speedval')['textContent']=parseFloat(this['value']).toFixed(2);});
+  el('cfg-bgopa')['addEventListener']('input',function(){el('cfg-bgopaval')['textContent']=this['value']+'%';});
+  /* 背景从相册选照片：压成jpeg存本地，不动URL栏 */
+  el('cfg-bgpick')['addEventListener']('click',function(){el('cfg-bgfile')['click']();});
+  el('cfg-bgfile')['addEventListener']('change',function(){
+    var f=this['files']&&this['files'][0];
+    this['value']='';
+    if(!f){return;}
+    var r=new FileReader();
+    r['onload']=function(){
+      var img=new Image();
+      img['onload']=function(){
+        try{
+          var max=1600,w=img['width'],h=img['height'],s=Math['min'](1,max/Math['max'](w,h));
+          var c=document['createElement']('canvas');
+          c['width']=Math['round'](w*s);c['height']=Math['round'](h*s);
+          c['getContext']('2d')['drawImage'](img,0,0,c['width'],c['height']);
+          CFG['bgImg']=c['toDataURL']('image/jpeg',0.82);
+        }catch(e){CFG['bgImg']=r['result'];}
+        saveCfg();applyBg();
+        el('cfg-bgimg')['value']='';
+        el('dc-cfgmsg')['textContent']='已用本地照片 ✓ 不想要了按「清除背景」';
+        setTimeout(function(){el('dc-cfgmsg')['textContent']='配置仅保存在你的浏览器本地，他人访问看不到。';},2500);
+      };
+      img['src']=r['result'];
+    };
+    r['readAsDataURL'](f);
+  });
+  el('cfg-bgclear')['addEventListener']('click',function(){CFG['bgImg']='';el('cfg-bgimg')['value']='';saveCfg();applyBg();});
   el('dc-file')['addEventListener']('change',onFile);
   fPlayBtn['addEventListener']('click',filePlay);
   fPauseBtn['addEventListener']('click',filePause);
@@ -626,8 +958,15 @@ function bindEvents(){
   });
 }
 function init(){
-  loadCfg();setName();setStatus('待机');setCenter('点击开始通话',true);
+  loadCfg();setName();setStatus('待机');setCenter('点击开始通话',true);applyBg();
   bindEvents();sizeCanvas();
+  /* Bark 推送跳转：?ring=1&note=... 直接进入来电模式 */
+  try{
+    var q=new URLSearchParams(location['search']);
+    if(q['get']('ring')==='1'){showIncoming(q['get']('note')||'',q['get']('id')||'');}
+    else if(q['get']('dial')==='1'){startDialOut();}
+  }catch(e){}
+  startPolling();
 }
 /* 重试：若 DOM 未就绪则每 100ms 重试，最多 50 次 */
 var tries=0;

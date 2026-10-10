@@ -209,7 +209,7 @@ body::before {
 }
 .sp-send:active { transform:scale(0.92); background:rgba(201,169,110,0.30); }
 
-.sp-subrow { display:flex; gap:6px; margin-top:8px; }
+.sp-subrow { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
 .sp-sbtn {
   flex:1; border:1px solid rgba(255,255,255,0.06);
   background:transparent; color:#8a8a98; font-family:inherit;
@@ -372,6 +372,8 @@ body.light .sp-upload-btn { color:#a08545; border-color:rgba(160,133,69,0.18); }
 body.light .sp-save-btn { background:linear-gradient(135deg, rgba(201,169,110,0.25), rgba(201,169,110,0.15)); color:#a08545; }
 
 </style>
+<style>html.jj-embed .sp-app .sp-contact-bar{display:none}</style>
+<script>try{if(window.self!==window.top){document.documentElement.classList.add('jj-embed');}}catch(e){}</script>
 </head>
 <body>
 
@@ -406,6 +408,7 @@ body.light .sp-save-btn { background:linear-gradient(135deg, rgba(201,169,110,0.
         <button class="sp-send" id="soup-send">▸</button>
       </div>
       <div class="sp-subrow">
+        <button class="sp-sbtn" id="soup-role">🔄 我来出汤</button>
         <button class="sp-sbtn sp-gold" id="soup-guess">我要猜汤底</button>
         <button class="sp-sbtn sp-gold" id="soup-reveal">揭晓汤底</button>
         <button class="sp-sbtn" id="soup-next">换一题</button>
@@ -571,9 +574,14 @@ function soupOpen(soup){
   soupPushRaw('left', spProfile['hostName'], '提问吧。是/不是/无关，我来回答。', null);
 }
 
-function soupInit(){
-  soupState = { idx:-1, soup:null, chat:[], revealed:false, askCount:0, waitAnswer:false };
-  soupPick();
+function soupInit(){ soupStart('guess'); }
+
+function soupStart(role){
+  soupState = { idx:-1, soup:null, chat:[], revealed:false, askCount:0, waitAnswer:false, role:role, phase:'story', aiGuessing:false };
+  if(role === 'guess'){ soupPick(); return; }
+  // 出汤模式：加加掌勺，江予朔来猜
+  soupPushRaw('left', spProfile['hostName'], '今天换你掌勺。汤面直接发我，发完点「封存汤底」把真相封好——不许提示，我来猜。', null);
+  soupRender();
 }
 
 function soupPick(){
@@ -642,22 +650,64 @@ function soupRender(){
 
   var qr = document['getElementById']('soup-quickrow');
   var hasAPI = spHasAPI();
-  qr['style']['display'] = (soupState['waitAnswer'] && !hasAPI) ? 'flex' : 'none';
   var input = document['getElementById']('soup-input');
-  if(soupState['waitAnswer']){
-    input['placeholder'] = hasAPI ? 'AI 正在思考…' : '（用上方按钮替我回答）';
-    input['disabled'] = !hasAPI;
+  var roleBtn = document['getElementById']('soup-role');
+  var gBtn = document['getElementById']('soup-guess');
+  var rBtn = document['getElementById']('soup-reveal');
+  var stEl = document['getElementById']('top-status');
+  if(stEl) stEl['textContent'] = soupState['role'] === 'host' ? '猜汤的人 · 在线' : '主持人 · 在线';
+  var mode = input['getAttribute']('data-mode');
+  if(soupState['role'] === 'host'){
+    roleBtn['textContent'] = '🔄 我来猜';
+    gBtn['textContent'] = '封存汤底';
+    rBtn['textContent'] = '认输揭晓';
+    var st = soupState['phase'];
+    if(st === 'story'){
+      gBtn['style']['display'] = 'none';
+      qr['style']['display'] = 'none';
+      input['placeholder'] = '把汤面发给猜的人…';
+      input['disabled'] = false;
+    } else if(st === 'truth'){
+      gBtn['style']['display'] = 'inline-flex';
+      qr['style']['display'] = 'none';
+      input['placeholder'] = (mode === 'truth') ? '输入汤底（封存，对面看不见）…' : '再点「封存汤底」，把汤底交出来';
+      input['disabled'] = false;
+    } else if(st === 'play'){
+      gBtn['style']['display'] = 'none';
+      qr['style']['display'] = soupState['waitAnswer'] ? 'flex' : 'none';
+      input['placeholder'] = soupState['waitAnswer'] ? '（用上方按钮回答）' : '对方在想问题…';
+      input['disabled'] = true;
+    } else {
+      gBtn['style']['display'] = 'none';
+      qr['style']['display'] = 'none';
+      input['placeholder'] = '本局结束，点「换一题」再来';
+      input['disabled'] = true;
+    }
   } else {
-    input['placeholder'] = '提问或猜汤底…';
-    input['disabled'] = false;
+    roleBtn['textContent'] = '🔄 我来出汤';
+    gBtn['textContent'] = '我要猜汤底';
+    gBtn['style']['display'] = 'inline-flex';
+    rBtn['textContent'] = '揭晓汤底';
+    qr['style']['display'] = (soupState['waitAnswer'] && !hasAPI) ? 'flex' : 'none';
+    if(soupState['waitAnswer']){
+      input['placeholder'] = hasAPI ? 'AI 正在思考…' : '（用上方按钮替我回答）';
+      input['disabled'] = !hasAPI;
+    } else if(mode === 'guess'){
+      input['placeholder'] = '输入你猜的汤底…';
+      input['disabled'] = false;
+    } else {
+      input['placeholder'] = '提问或猜汤底…';
+      input['disabled'] = false;
+    }
   }
 }
 
 function soupSend(){
-  if(soupState['waitAnswer']) return;
   var input = document['getElementById']('soup-input');
   var text = input['value']['trim']();
   if(!text) return;
+  if(soupState['role'] === 'host'){ soupHostSend(text, input); return; }
+  if(soupState['waitAnswer']) return;
 
   if(input['getAttribute']('data-mode') === 'guess'){
     soupPush('right', spProfile['playerName'], '我猜汤底：' + text);
@@ -710,7 +760,8 @@ function soupSend(){
     })['catch'](function(e){
       var chat = soupState['chat'];
       if(chat['length']>0 && chat[chat['length']-1]['text']==='…') chat['pop']();
-      soupPush('left', spProfile['hostName'], '（API不通，手动回答吧）');
+      soupState['waitAnswer'] = false;
+      soupPush('left', spProfile['hostName'], '（API不通，这题卡住了。点「换一题」，或再问一次。）');
       soupRender();
     });
   } else {
@@ -730,6 +781,21 @@ function soupAnswer(ans){
   if(ans==='是') ansType='yes';
   else if(ans==='不是') ansType='no';
   else if(ans==='部分正确') ansType='part';
+  if(soupState['role'] === 'host'){
+    var wasGuessing = soupState['aiGuessing'];
+    soupState['aiGuessing'] = false;
+    soupState['waitAnswer'] = false;
+    if(wasGuessing && ans === '是'){
+      soupPush('right', spProfile['playerName'], '对，就是它。', 'answer', 'yes');
+      soupWinHost();
+      return;
+    }
+    if(wasGuessing) ansType = 'no';
+    soupPush('right', spProfile['playerName'], ans, 'answer', ansType);
+    soupRender();
+    soupAIAsk();
+    return;
+  }
   soupPush('left', spProfile['hostName'], ans, 'answer', ansType);
   soupState['waitAnswer'] = false;
   soupRender();
@@ -740,6 +806,19 @@ function soupReveal(){
   soupState['revealed'] = true;
   soupState['waitAnswer'] = false;
   var soup = soupState['soup'];
+  if(!soup || !soup['truth']){
+    soupPush('left', spProfile['hostName'], '锅里还没汤呢，急什么。', null);
+    soupRender();
+    return;
+  }
+  if(soupState['role'] === 'host'){
+    soupState['phase'] = 'done';
+    soupPush('right', spProfile['playerName'], '行，我认输——', null);
+    soupPush('right', spProfile['playerName'], '', 'reveal', soup['truth']);
+    soupPush('left', spProfile['hostName'], '这局算我的。不服就「换一题」，再来。', null);
+    soupRender();
+    return;
+  }
   soupPush('left', spProfile['hostName'], '好，揭晓——', null);
   soupPush('left', spProfile['hostName'], '', 'reveal', soup['truth']);
   soupRender();
@@ -747,10 +826,117 @@ function soupReveal(){
 
 function soupGuess(){
   var input = document['getElementById']('soup-input');
+  if(soupState['role'] === 'host'){
+    if(soupState['phase'] !== 'truth') return;
+    input['setAttribute']('data-mode','truth');
+    input['placeholder'] = '输入汤底（封存，对面看不见）…';
+    input['disabled'] = false;
+    input['focus']();
+    soupRender();
+    return;
+  }
+  soupState['waitAnswer'] = false;
   input['setAttribute']('data-mode','guess');
   input['placeholder'] = '输入你猜的汤底…';
   input['disabled'] = false;
   input['focus']();
+  soupRender();
+}
+
+/* ============ 出汤模式：加加掌勺，江予朔来猜 ============ */
+function soupToggleRole(){
+  soupStart(soupState['role'] === 'host' ? 'guess' : 'host');
+}
+
+function soupHostSend(text, input){
+  if(soupState['phase'] === 'done' || soupState['revealed']) return;
+  if(soupState['phase'] === 'story'){
+    soupState['soup'] = { title:'加加特调', story:text, truth:'' };
+    soupState['phase'] = 'truth';
+    soupPush('right', spProfile['playerName'], '', 'story', text);
+    input['value'] = '';
+    return;
+  }
+  if(input['getAttribute']('data-mode') === 'truth'){
+    if(text['length'] < 2) return;
+    soupState['soup']['truth'] = text;
+    input['removeAttribute']('data-mode');
+    input['value'] = '';
+    if(!spHasAPI()){
+      soupState['phase'] = 'done';
+      soupPush('left', spProfile['hostName'], '汤底收好了。但我现在张不开嘴——先去设置里填上 API Key，再回来让我猜。', null);
+      soupRender();
+      return;
+    }
+    soupState['phase'] = 'play';
+    soupPush('left', spProfile['hostName'], '汤底封好了。一句都不许提示，我开始了——', null);
+    soupRender();
+    soupAIAsk();
+    return;
+  }
+}
+
+function soupAIAsk(){
+  if(soupState['phase'] !== 'play' || soupState['revealed']) return;
+  var log = '';
+  var c = soupState['chat'];
+  for(var i=0; i<c['length']; i++){
+    var m = c[i];
+    if(m['special'] === 'story'){ log += '汤面：' + m['extra'] + '\n'; }
+    else if(m['special'] === 'answer'){ log += '你答：' + m['text'] + '\n'; }
+    else if(!m['special'] && m['side'] === 'left'){ log += '我问：' + m['text'] + '\n'; }
+  }
+  var prompt = '我们在玩海龟汤，你是猜的人，你不知道汤底。汤面和已有的问答记录：\n' + log + '\n请提出下一个简短的是/不是问题，只输出问题本身；如果线索已经足够，就直接输出完整猜测，格式：「猜测：你的猜测」。';
+  soupPush('left', spProfile['hostName'], '…', null);
+  soupRender();
+  fetch(spAPI['base'] + '/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (spAPI['key']||'') },
+    body: JSON.stringify({ model: spAPI['model'], messages: [{role:'user', content:prompt}], max_tokens: 100, temperature: 0.8 })
+  }).then(function(r){ return r['json'](); }).then(function(d){
+    var chat = soupState['chat'];
+    if(chat['length']>0 && chat[chat['length']-1]['text']==='…') chat['pop']();
+    if(soupState['phase'] !== 'play' || soupState['revealed']){ soupRender(); return; }
+    var q = d['choices'][0]['message']['content']['trim']();
+    var gi = q['indexOf']('猜测');
+    if(gi >= 0){
+      var guessText = q['substr'](gi + 2)['replace'](/^[：:，,\s]+/,'');
+      var truthClean = soupState['soup']['truth']['replace'](/[^一-龥a-zA-Z0-9]/g,'');
+      var guessClean = guessText['replace'](/[^一-龥a-zA-Z0-9]/g,'');
+      if(guessClean['length'] >= 4 && truthClean['indexOf'](guessClean['substr'](0,5)) >= 0){
+        soupWinHost();
+        return;
+      }
+      if(guessClean['length'] < 2){
+        soupPush('left', spProfile['hostName'], q, null);
+      } else {
+        soupPush('left', spProfile['hostName'], '我猜汤底是——' + guessText + '。对不对？', null);
+        soupState['aiGuessing'] = true;
+      }
+      soupState['waitAnswer'] = true;
+    } else {
+      soupState['aiGuessing'] = false;
+      soupPush('left', spProfile['hostName'], q, null);
+      soupState['waitAnswer'] = true;
+    }
+    soupRender();
+  })['catch'](function(e){
+    var chat = soupState['chat'];
+    if(chat['length']>0 && chat[chat['length']-1]['text']==='…') chat['pop']();
+    soupState['phase'] = 'done';
+    soupState['waitAnswer'] = false;
+    soupPush('left', spProfile['hostName'], '（网断了，我卡住了。点「换一题」再来。）', null);
+    soupRender();
+  });
+}
+
+function soupWinHost(){
+  soupState['phase'] = 'done';
+  soupState['revealed'] = true;
+  soupState['waitAnswer'] = false;
+  soupPush('left', spProfile['hostName'], '', 'reveal', soupState['soup']['truth']);
+  soupPush('left', spProfile['hostName'], '猜对了，这局是我的。换一题，你再来熬。', null);
+  soupRender();
 }
 
 /* ===================================================================
@@ -896,7 +1082,8 @@ document['addEventListener']('DOMContentLoaded', function(){
   });
   document['getElementById']('soup-guess')['addEventListener']('click', soupGuess);
   document['getElementById']('soup-reveal')['addEventListener']('click', soupReveal);
-  document['getElementById']('soup-next')['addEventListener']('click', soupInit);
+  document['getElementById']('soup-next')['addEventListener']('click', function(){ soupStart(soupState['role'] === 'host' ? 'host' : 'guess'); });
+  document['getElementById']('soup-role')['addEventListener']('click', soupToggleRole);
 
 });
 </script>

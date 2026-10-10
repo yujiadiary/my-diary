@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f3ec">
+<title>五子棋 · 人机对战</title>
+<style>
+:root{
+  --bg:#f6f3ec; --panel:#fffdf7; --line:#e5dfcf; --ink:#3a3630; --muted:#8b857a;
+  --accent:#b58a4e; --radius:18px; --shadow:0 10px 30px rgba(60,50,30,.08);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  background:var(--bg);color:var(--ink);min-height:100dvh;display:flex;flex-direction:column;
+}
+header.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;gap:10px;flex-wrap:wrap;}
+h1{font-size:18px;margin:0;}
+h1 .sub{font-size:12px;color:var(--muted);font-weight:400;margin-left:6px;}
+.topbar-actions{display:flex;gap:8px;}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:8px 14px;transition:.15s;}
+button:hover{border-color:var(--accent);color:var(--accent);}
+button:disabled{opacity:.45;cursor:not-allowed;}
+button.primary{background:var(--ink);color:#fdfbf5;border-color:var(--ink);}
+button.ghost{border:none;background:none;color:var(--muted);padding:4px 8px;}
+button.danger{color:#c0564a;border-color:#e4c7c2;background:#fdf6f4;}
+main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;padding:0 16px 16px;align-items:start;}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);}
+.board-panel{padding:14px;}
+.status{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13.5px;color:var(--muted);margin-bottom:10px;}
+.status .turn{color:var(--ink);font-weight:600;font-size:14.5px;}
+.board-wrap{position:relative;width:min(100%,640px);aspect-ratio:1;margin:0 auto;}
+canvas{width:100%;height:100%;display:block;border-radius:12px;}
+.board-foot{margin-top:10px;font-size:12.5px;color:var(--muted);text-align:center;}
+
+/* ---------- 棋盘上的气泡 ---------- */
+.bubble-wrap{
+  position:absolute;display:flex;align-items:flex-start;gap:7px;
+  max-width:74%;z-index:6;
+  opacity:0;transform:translateY(8px) scale(.95);
+  transition:opacity .28s ease,transform .28s ease;
+  pointer-events:none;
+}
+.bubble-wrap.show{opacity:1;transform:none;pointer-events:auto;}
+.bubble-ai{top:10px;left:10px;}
+.bubble-user{bottom:10px;right:10px;flex-direction:row-reverse;}
+.avatar{
+  flex:none;width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:19px;
+  border:1.5px solid var(--line);box-shadow:0 4px 12px rgba(60,50,30,.18);
+}
+.bubble-ai .avatar{background:#efe9da;}
+.bubble-user .avatar{background:#fffdf7;}
+.bubble{
+  position:relative;background:#fffdf7;border:1px solid var(--line);
+  border-radius:14px;padding:8px 12px;font-size:13.5px;line-height:1.5;
+  box-shadow:var(--shadow);cursor:pointer;max-width:100%;
+  word-break:break-word;white-space:pre-wrap;
+}
+.bubble-user .bubble{background:var(--ink);color:#fdfbf5;border-color:var(--ink);}
+.bubble .text{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
+.bubble-ai .bubble::after{
+  content:'';position:absolute;left:-5px;top:13px;width:9px;height:9px;
+  background:#fffdf7;border-left:1px solid var(--line);border-bottom:1px solid var(--line);
+  transform:rotate(45deg);
+}
+.bubble-user .bubble::after{
+  content:'';position:absolute;right:-4.5px;top:13px;width:9px;height:9px;
+  background:var(--ink);transform:rotate(45deg);
+}
+.typing{display:inline-flex;gap:4px;padding:3px 2px;}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1s infinite;}
+.bubble-user .typing i{background:#cfc8b6;}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+
+/* ---------- 聊天面板（可折叠） ---------- */
+.chat-panel{display:flex;flex-direction:column;height:min(76vh,680px);overflow:hidden;}
+.chat-panel.collapsed{height:auto;}
+.chat-head{
+  display:flex;align-items:center;gap:8px;padding:12px 14px;
+  border-bottom:1px solid var(--line);font-weight:600;cursor:pointer;user-select:none;
+}
+.chat-panel.collapsed .chat-head{border-bottom:none;}
+.api-badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:#efe9da;color:var(--muted);flex:none;}
+.api-badge.on{background:#e3ecdd;color:#5a7a4d;}
+.chat-preview{
+  flex:1;min-width:0;font-size:12px;font-weight:400;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:none;
+}
+.chat-panel.collapsed .chat-preview{display:block;}
+.unread{
+  flex:none;min-width:18px;height:18px;border-radius:9px;background:#d95f4b;color:#fff;
+  font-size:11px;display:flex;align-items:center;justify-content:center;padding:0 5px;
+}
+.unread[hidden]{display:none;}
+#btnToggleChat{transition:transform .25s;}
+.chat-panel.collapsed #btnToggleChat{transform:rotate(-90deg);}
+.chat-body-wrap{display:grid;grid-template-rows:1fr;transition:grid-template-rows .3s ease;}
+.chat-panel.collapsed .chat-body-wrap{grid-template-rows:0fr;}
+.chat-body{min-height:0;overflow:hidden;display:flex;flex-direction:column;flex:1;}
+.chat-msgs{flex:1;min-height:0;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;}
+.msg{max-width:85%;padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word;}
+.msg.me{align-self:flex-end;background:var(--ink);color:#fdfbf5;border-bottom-right-radius:4px;}
+.msg.ai{align-self:flex-start;background:#f1ecdf;border-bottom-left-radius:4px;}
+.msg.sys{align-self:center;background:transparent;color:var(--muted);font-size:12.5px;text-align:center;max-width:95%;}
+.chat-input{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);}
+.chat-input input{flex:1;min-width:0;border:1px solid var(--line);border-radius:999px;padding:10px 14px;font:inherit;font-size:16px;background:#fff;outline:none;}
+.chat-input input:focus{border-color:var(--accent);}
+
+/* ---------- 设置弹窗 ---------- */
+.modal-backdrop{position:fixed;inset:0;background:rgba(40,35,25,.4);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;}
+.modal-backdrop[hidden]{display:none;}
+.modal{width:min(440px,100%);padding:20px;display:flex;flex-direction:column;gap:12px;max-height:90dvh;overflow:auto;}
+.modal h2{margin:0;font-size:17px;}
+.modal label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted);}
+.modal label.row{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px;}
+.modal input[type=password],.modal input[type=text],.modal input[type=url],.modal select{
+  border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+  font:inherit;font-size:16px;background:#fff;outline:none;color:var(--ink);width:100%;
+}
+.modal input:focus,.modal select:focus{border-color:var(--accent);}
+.hint{font-size:12px;color:var(--muted);margin:-4px 0 0;line-height:1.7;}
+.divider{height:1px;background:var(--line);margin:6px 0;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:2px;flex-wrap:wrap;}
+.modal-actions.split{justify-content:space-between;}
+.note{font-size:12px;color:var(--muted);margin:0;line-height:1.7;}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:rgba(40,36,28,.92);color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;z-index:99;max-width:88vw;text-align:center;}
+.toast[hidden]{display:none;}
+@media (max-width:900px){
+  main{grid-template-columns:1fr;}
+  .chat-panel{height:min(70vh,560px);}
+  .avatar{width:30px;height:30px;font-size:16px;}
+  .bubble{font-size:13px;padding:7px 10px;}
+}
+</style>
+<style>html.jj-embed .topbar{padding-left:64px;}</style>
+<script>try{if(window.self!==window.top){document.documentElement.classList.add('jj-embed');}}catch(e){}</script>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>⚫ 五子棋<span class="sub">人机对战</span></h1>
+  <div class="topbar-actions">
+    <button id="btnUndo">悔棋</button>
+    <button id="btnNew" class="primary">新对局</button>
+    <button id="btnSettings">设置</button>
+  </div>
+</header>
+
+<main>
+  <section class="board-panel card">
+    <div class="status" id="statusBar"></div>
+    <div class="board-wrap">
+      <canvas id="board"></canvas>
+
+      <!-- AI 气泡：左上角 -->
+      <div class="bubble-wrap bubble-ai" id="bubbleAi">
+        <div class="avatar">🤖</div>
+        <div class="bubble" id="bubbleAiText"><span class="text"></span></div>
+      </div>
+
+      <!-- 我的气泡：右下角 -->
+      <div class="bubble-wrap bubble-user" id="bubbleUser">
+        <div class="avatar">🙂</div>
+        <div class="bubble" id="bubbleUserText"><span class="text"></span></div>
+      </div>
+    </div>
+    <div class="board-foot" id="boardFoot">点击棋盘落子 · 黑方先行 · 点气泡可展开聊天</div>
+  </section>
+
+  <section class="chat-panel card" id="chatPanel">
+    <div class="chat-head" id="chatHead">
+      <span style="flex:none;">💬 对局聊天</span>
+      <span class="api-badge" id="apiBadge">未连接</span>
+      <span class="chat-preview" id="chatPreview"></span>
+      <span class="unread" id="unreadBadge" hidden>0</span>
+      <button id="btnClearChat" class="ghost" title="清空聊天记录">清空</button>
+      <button id="btnToggleChat" class="ghost" title="折叠 / 展开">▾</button>
+    </div>
+    <div class="chat-body-wrap">
+      <div class="chat-body">
+        <div class="chat-msgs" id="chatMsgs"></div>
+        <form id="chatForm" class="chat-input">
+          <input id="chatText" type="text" placeholder="和 AI 棋手聊聊这盘棋…" autocomplete="off">
+          <button type="submit" id="btnSend" class="primary">发送</button>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ========== 设置：按「AI 连接」页结构 ========== -->
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+  <div class="modal card">
+    <h2>🔌 AI 连接</h2>
+
+    <label>服务商
+      <select id="selProvider">
+        <option value="deepseek">DeepSeek</option>
+        <option value="siliconflow">硅基流动 SiliconFlow</option>
+        <option value="custom">自定义</option>
+      </select>
+    </label>
+
+    <label>API 地址（Base URL）
+      <input id="inpBase" type="url" placeholder="https://api.deepseek.com/v1" autocomplete="off" spellcheck="false">
+    </label>
+    <p class="hint">DeepSeek：https://api.deepseek.com/v1<br>硅基流动：https://api.siliconflow.cn/v1</p>
+
+    <label>API Key
+      <input id="inpKey" type="password" placeholder="sk-…" autocomplete="off" spellcheck="false">
+    </label>
+    <p class="hint">仅保存在本机浏览器 localStorage，不会上传到任何服务器</p>
+
+    <label>模型名称
+      <input id="inpModel" type="text" placeholder="deepseek-chat" autocomplete="off" spellcheck="false" list="modelList">
+    </label>
+    <datalist id="modelList">
+      <option value="deepseek-chat"></option>
+      <option value="deepseek-reasoner"></option>
+      <option value="deepseek-ai/DeepSeek-V3"></option>
+    </datalist>
+    <p class="hint">DeepSeek：deepseek-chat / deepseek-reasoner<br>硅基流动：deepseek-ai/DeepSeek-V3 等</p>
+
+    <div class="modal-actions">
+      <button id="btnTest">🔌 测试连接</button>
+      <button id="btnSaveSettings" class="primary">💾 保存配置</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <label>AI 棋力
+      <select id="selLevel">
+        <option value="easy">简单</option>
+        <option value="normal">普通</option>
+        <option value="hard">困难</option>
+      </select>
+    </label>
+    <label class="row"><input id="chkComment" type="checkbox"> AI 落子 / 终局后自动在聊天里点评</label>
+
+    <p class="note">填好 Key、地址和模型并「保存配置」后，聊天与 AI 点评就会走真实大模型；不填则只能正常对弈，无法聊天。也可填入兼容 OpenAI 格式的中转 / 代理地址。</p>
+
+    <div class="modal-actions split">
+      <button id="btnWipe" class="danger">清除本机存档</button>
+      <button id="btnCloseSettings">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+'use strict';
+/* ================= 基础常量与状态 ================= */
+const N=15, EMPTY=0, BLACK=1, WHITE=2;
+const LETTERS='ABCDEFGHIJKLMNO';
+const DIRS=[[1,0],[0,1],[1,1],[1,-1]];
+const SCORE={FIVE:10000000,OPEN4:1000000,FOUR:120000,OPEN3:60000};
+const KEY='gomoku_ai_save_v1';
+const BUBBLE_MS=7000;
+
+const PROVIDERS={
+  deepseek:{label:'DeepSeek',baseURL:'https://api.deepseek.com/v1',model:'deepseek-chat'},
+  siliconflow:{label:'硅基流动',baseURL:'https://api.siliconflow.cn/v1',model:'deepseek-ai/DeepSeek-V3'}
+};
+
+let board, moves=[], playerColor, aiColor, currentColor, gameOver=false, winner=null, winLine=null;
+let history=[];
+let settings={
+  provider:'deepseek',
+  baseURL:'https://api.deepseek.com/v1',
+  apiKey:'',
+  model:'deepseek-chat',
+  level:'normal', autoComment:true, chatCollapsed:false
+};
+let aiThinking=false, gameId=0;
+let unread=0, bubbleTimer=null;
+
+/* ================= DOM ================= */
+const $=id=>document.getElementById(id);
+const cv=$('board'), ctx=cv.getContext('2d');
+const statusBar=$('statusBar'), chatMsgs=$('chatMsgs'), chatPanel=$('chatPanel');
+const inp=$('chatText'), btnSend=$('btnSend'), toastEl=$('toast');
+const bubbleAi=$('bubbleAi'), bubbleUser=$('bubbleUser');
+const bubbleAiText=$('bubbleAiText').querySelector('.text');
+const bubbleUserText=$('bubbleUserText').querySelector('.text');
+
+/* ================= 工具 ================= */
+const inb=(x,y)=>x>=0&&x<N&&y>=0&&y<N;
+const sym=c=>c===BLACK?'⚫':'⚪';
+const other=c=>c===BLACK?WHITE:BLACK;
+const coordStr=(x,y)=>LETTERS[x]+(y+1);
+let toastTimer=null;
+function toast(t,ms=2400){toastEl.textContent=t;toastEl.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.hidden=true,ms);}
+function apiUrl(){return (settings.baseURL||'').trim().replace(/\/+$/,'')+'/chat/completions';}
+
+/* ================= 气泡 ================= */
+function showBubble(who,text,opts={}){
+  const showEl=who==='ai'?bubbleAi:bubbleUser;
+  const hideEl=who==='ai'?bubbleUser:bubbleAi;
+  hideEl.classList.remove('show');
+  (who==='ai'?bubbleAiText:bubbleUserText).textContent=text;
+  showEl.classList.add('show');
+  clearTimeout(bubbleTimer);
+  if(!opts.sticky){
+    bubbleTimer=setTimeout(()=>showEl.classList.remove('show'),opts.duration||BUBBLE_MS);
+  }
+}
+function showTypingBubble(){
+  bubbleUser.classList.remove('show');
+  bubbleAiText.innerHTML='<span class="typing"><i></i><i></i><i></i></span>';
+  bubbleAi.classList.add('show');
+  clearTimeout(bubbleTimer);
+}
+bubbleAi.addEventListener('click',()=>{expandChat();bubbleAi.classList.remove('show');});
+bubbleUser.addEventListener('click',()=>{expandChat();bubbleUser.classList.remove('show');});
+
+/* ================= 持久化 ================= */
+function save(){
+  try{
+    localStorage.setItem(KEY,JSON.stringify({
+      v:2, board:board.map(r=>r.join('')), moves, playerColor, currentColor,
+      gameOver, winner, winLine, history:history.slice(-60), settings
+    }));
+  }catch(e){}
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(!raw)return false;
+    const s=JSON.parse(raw);
+    board=s.board.map(r=>[...r].map(Number));
+    moves=s.moves||[];
+    playerColor=s.playerColor; aiColor=other(playerColor);
+    currentColor=s.currentColor; gameOver=!!s.gameOver; winner=s.winner; winLine=s.winLine||null;
+    history=s.history||[];
+    Object.assign(settings,s.settings||{});
+    // 兼容旧存档：补齐 provider / baseURL
+    if(!settings.baseURL){
+      settings.provider=settings.provider||'deepseek';
+      settings.baseURL=(PROVIDERS[settings.provider]||PROVIDERS.deepseek).baseURL;
+    }
+    return true;
+  }catch(e){return false;}
+}
+
+/* ================= 棋盘绘制 ================= */
+let view={size:0,pad:0,cell:0};
+function roundRect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+function redraw(){
+  const wrap=cv.parentElement;
+  const cssSize=Math.floor(wrap.clientWidth);
+  if(cssSize<=0||!board)return;
+  const dpr=window.devicePixelRatio||1;
+  cv.width=cssSize*dpr; cv.height=cssSize*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const p=cssSize/(N+1), c=p;
+  view={size:cssSize,pad:p,cell:c};
+  const g=ctx.createLinearGradient(0,0,cssSize,cssSize);
+  g.addColorStop(0,'#eaca90');g.addColorStop(1,'#ddb87a');
+  roundRect(ctx,0,0,cssSize,cssSize,12);ctx.fillStyle=g;ctx.fill();
+  const end=p+(N-1)*c;
+  ctx.strokeStyle='rgba(92,62,26,.75)';ctx.lineWidth=1;
+  ctx.beginPath();
+  for(let i=0;i<N;i++){
+    ctx.moveTo(p+i*c,p);ctx.lineTo(p+i*c,end);
+    ctx.moveTo(p,p+i*c);ctx.lineTo(end,p+i*c);
+  }
+  ctx.stroke();
+  ctx.lineWidth=1.6;ctx.strokeRect(p,p,end-p,end-p);
+  ctx.fillStyle='rgba(92,62,26,.85)';
+  for(const[sx,sy]of[[3,3],[11,3],[3,11],[11,11],[7,7]]){
+    ctx.beginPath();ctx.arc(p+sx*c,p+sy*c,c*0.11,0,7);ctx.fill();
+  }
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    const v=board[y][x];
+    if(v)drawStone(x,y,v);
+  }
+  if(moves.length&&!winLine){
+    const m=moves[moves.length-1];
+    ctx.strokeStyle='#d95f4b';ctx.lineWidth=Math.max(1.5,c*0.07);
+    ctx.beginPath();ctx.arc(p+m.x*c,p+m.y*c,c*0.47,0,7);ctx.stroke();
+  }
+  if(winLine){
+    const a=winLine[0],b=winLine[winLine.length-1];
+    ctx.strokeStyle='rgba(255,203,64,.95)';ctx.lineWidth=c*0.16;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(p+a[0]*c,p+a[1]*c);ctx.lineTo(p+b[0]*c,p+b[1]*c);ctx.stroke();
+  }
+}
+function drawStone(x,y,v){
+  const px=view.pad+x*view.cell,py=view.pad+y*view.cell,r=view.cell*0.44;
+  ctx.save();
+  ctx.shadowColor='rgba(60,40,10,.35)';ctx.shadowBlur=view.cell*0.12;ctx.shadowOffsetY=1.5;
+  const g=ctx.createRadialGradient(px-r*0.35,py-r*0.4,r*0.15,px,py,r);
+  if(v===BLACK){g.addColorStop(0,'#5f5f5f');g.addColorStop(1,'#0c0c0c');}
+  else{g.addColorStop(0,'#ffffff');g.addColorStop(1,'#c8c1b2');}
+  ctx.beginPath();ctx.arc(px,py,r,0,7);ctx.fillStyle=g;ctx.fill();
+  ctx.restore();
+  if(v===WHITE){ctx.strokeStyle='rgba(120,110,90,.5)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(px,py,r,0,7);ctx.stroke();}
+}
+
+/* ================= 落子与胜负 ================= */
+function getWinLine(x,y,c){
+  for(const[dx,dy]of DIRS){
+    const cells=[[x,y]];
+    let i=1;
+    while(inb(x+dx*i,y+dy*i)&&board[y+dy*i][x+dx*i]===c){cells.push([x+dx*i,y+dy*i]);i++;}
+    i=1;
+    while(inb(x-dx*i,y-dy*i)&&board[y-dy*i][x-dx*i]===c){cells.unshift([x-dx*i,y-dy*i]);i++;}
+    if(cells.length>=5)return cells;
+  }
+  return null;
+}
+function placeStone(x,y,color){
+  board[y][x]=color;
+  moves.push({x,y,color});
+  const line=getWinLine(x,y,color);
+  if(line||moves.length===N*N){
+    gameOver=true;
+    winner=line?color:0;
+    winLine=line;
+    redraw();onGameEnd();
+  }else{
+    currentColor=other(color);
+    redraw();
+    if(currentColor===aiColor)scheduleAiMove();
+  }
+  save();updateStatus();
+}
+function onGameEnd(){
+  let txt;
+  if(winner===0)txt='🤝 棋盘已满，平局！';
+  else if(winner===playerColor)txt=`🎉 恭喜，你（${sym(playerColor)}）五连获胜！`;
+  else txt=`💪 AI（${sym(aiColor)}）五连获胜，再来一局？`;
+  addMsg('sys',txt);
+  if(settings.autoComment&&settings.apiKey)setTimeout(()=>aiComment('end'),700);
+}
+
+/* ================= 本地 AI ================= */
+function shapeScore(count,open){
+  if(count>=5)return SCORE.FIVE;
+  if(open===0)return 0;
+  if(count===4)return open===2?SCORE.OPEN4:SCORE.FOUR;
+  if(count===3)return open===2?SCORE.OPEN3:8000;
+  if(count===2)return open===2?3500:500;
+  return open===2?300:50;
+}
+function scorePoint(x,y,color){
+  let total=0;
+  for(const[dx,dy]of DIRS){
+    let count=1,open=0,i=1;
+    while(inb(x+dx*i,y+dy*i)&&board[y+dy*i][x+dx*i]===color){count++;i++;}
+    if(inb(x+dx*i,y+dy*i)&&board[y+dy*i][x+dx*i]===EMPTY)open++;
+    i=1;
+    while(inb(x-dx*i,y-dy*i)&&board[y-dy*i][x-dx*i]===color){count++;i++;}
+    if(inb(x-dx*i,y-dy*i)&&board[y-dy*i][x-dx*i]===EMPTY)open++;
+    total+=shapeScore(count,open);
+  }
+  return total;
+}
+function candidatePoints(){
+  const list=[];
+  let empty=true;
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    if(board[y][x]!==EMPTY){empty=false;continue;}
+    let near=false;
+    for(let dy=-2;dy<=2&&!near;dy++)for(let dx=-2;dx<=2;dx++){
+      const nx=x+dx,ny=y+dy;
+      if(inb(nx,ny)&&board[ny][nx]!==EMPTY){near=true;break;}
+    }
+    if(near)list.push({x,y});
+  }
+  if(empty)list.push({x:7,y:7});
+  return list;
+}
+function genMove(){
+  const empt=candidatePoints();
+  if(!empt.length)return{x:7,y:7};
+  const scored=empt.map(p=>{
+    const atk=scorePoint(p.x,p.y,aiColor);
+    const def=scorePoint(p.x,p.y,playerColor);
+    return{p,atk,def,score:atk*1.05+def};
+  });
+  const findAtk=v=>scored.find(s=>s.atk>=v);
+  const findDef=v=>scored.find(s=>s.def>=v);
+  let m=findAtk(SCORE.FIVE);if(m)return m.p;
+  m=findDef(SCORE.FIVE);if(m)return m.p;
+  m=findAtk(SCORE.OPEN4);if(m)return m.p;
+  m=findDef(SCORE.OPEN4);if(m)return m.p;
+
+  const top=[...scored].sort((a,b)=>b.score-a.score);
+  if(settings.level==='easy'){
+    const d=findDef(SCORE.OPEN3);
+    if(d&&Math.random()<0.85)return d.p;
+    return top[Math.floor(Math.random()*Math.min(8,top.length))].p;
+  }
+  if(settings.level==='normal'){
+    const best=top[0].score;
+    const cands=top.filter(s=>s.score>=best-1).slice(0,3);
+    return cands[Math.floor(Math.random()*cands.length)].p;
+  }
+  let bestP=top[0].p,bestF=-Infinity;
+  for(const s of top.slice(0,10)){
+    const{x,y}=s.p;
+    board[y][x]=aiColor;
+    let oppMax=0;
+    for(const q of empt){
+      if(q.x===x&&q.y===y)continue;
+      if(board[q.y][q.x]!==EMPTY)continue;
+      const v=scorePoint(q.x,q.y,playerColor);
+      if(v>oppMax)oppMax=v;
+    }
+    board[y][x]=EMPTY;
+    const f=s.atk-oppMax*0.9;
+    if(f>bestF){bestF=f;bestP=s.p;}
+  }
+  return bestP;
+}
+function scheduleAiMove(){
+  aiThinking=true;updateStatus();
+  const gid=gameId;
+  setTimeout(()=>{
+    if(gid!==gameId||gameOver){aiThinking=false;updateStatus();return;}
+    const p=genMove();
+    aiThinking=false;
+    placeStone(p.x,p.y,aiColor);
+    if(!gameOver&&settings.autoComment&&settings.apiKey)aiComment('move');
+  },350+Math.random()*450);
+}
+
+/* ================= 对局控制 ================= */
+function newGame(silent){
+  gameId++;
+  board=Array.from({length:N},()=>Array(N).fill(EMPTY));
+  moves=[];gameOver=false;winner=null;winLine=null;aiThinking=false;
+  playerColor=Math.random()<0.5?BLACK:WHITE;
+  aiColor=other(playerColor);
+  currentColor=BLACK;
+  redraw();save();updateStatus();
+  if(!silent)addMsg('sys',`🎲 新对局开始！随机结果：你执 ${sym(playerColor)} ${playerColor===BLACK?'黑棋（先手）':'白棋（后手）'}。`);
+  if(currentColor===aiColor)scheduleAiMove();
+}
+function undo(){
+  if(aiThinking){toast('AI 正在思考…');return;}
+  if(!moves.length){toast('还没有落子');return;}
+  let removed=0;
+  while(moves.length&&removed<2){
+    const m=moves.pop();
+    board[m.y][m.x]=EMPTY;
+    removed++;
+    if(m.color===playerColor)break;
+  }
+  gameOver=false;winner=null;winLine=null;
+  currentColor=playerColor;
+  redraw();save();updateStatus();
+  addMsg('sys','↩️ 悔棋一手，轮到你重新落子。');
+}
+function levelName(){return{easy:'简单',normal:'普通',hard:'困难'}[settings.level]||'普通';}
+function updateStatus(){
+  const me=sym(playerColor)+(playerColor===BLACK?'黑':'白');
+  const ai=sym(aiColor)+(aiColor===BLACK?'黑':'白');
+  let turn;
+  if(gameOver)turn=winner===0?'平局':(winner===playerColor?'🎉 你赢了！':'AI 获胜');
+  else turn=aiThinking?'AI 思考中…':(currentColor===playerColor?'轮到你落子':'等待 AI…');
+  statusBar.innerHTML=`<span class="turn">${turn}</span><span>你执 ${me}</span><span>AI 执 ${ai}</span><span>难度：${levelName()}</span>`;
+  $('btnUndo').disabled=aiThinking||moves.length===0;
+}
+
+/* ================= 聊天（OpenAI 兼容接口） ================= */
+function boardText(){
+  let head='   '+LETTERS.split('').join(' ');
+  let lines=[head];
+  for(let y=0;y<N;y++){
+    let row=(y+1).toString().padStart(2,' ')+' ';
+    for(let x=0;x<N;x++){
+      const v=board[y][x];
+      row+=v===EMPTY?'· ':(v===aiColor?'● ':'○ ');
+    }
+    lines.push(row);
+  }
+  return lines.join('\n');
+}
+function buildSysPrompt(){
+  // 全静态：不含任何随对局变化的字段，保证请求前缀稳定吃缓存
+  return `你是一个五子棋网页里的 AI 棋手，正在与用户对弈并聊天。
+棋盘 15×15，列 A-O（左→右），行 1-15（上→下）。每条请求末尾会附一条【实时棋局】尾注：●=你的子，○=用户的子，·=空位，一切以尾注为准，不要编造不存在的棋子。
+落子由程序自动完成，你不需要也不应该输出着法来"替自己下棋"；用户问起时可以讲解。
+用简体中文，语气轻松友好。回复保持简短（一般 1~3 句，因为要在棋盘气泡里展示）。可以分析局势、讲棋、闲聊。`;
+}
+function buildTailNote(extra){
+  const status=gameOver
+    ?(winner===0?'对局已结束：平局。':(winner===aiColor?'对局已结束：你（AI）获胜。':'对局已结束：用户获胜。'))
+    :`对局进行中，${currentColor===playerColor?'现在轮到用户落子':'现在轮到你落子（落子由系统自动完成）'}`;
+  const recent=moves.slice(-8).map(m=>`${m.color===aiColor?'你':'用户'} ${sym(m.color)}${coordStr(m.x,m.y)}`).join('，')||'（尚未落子）';
+  return `【实时棋局】你执${aiColor===BLACK?'黑(●)':'白(○)'}，用户执${playerColor===BLACK?'黑':'白'}。${status}\n棋盘：\n${boardText()}\n最近落子：${recent}${extra?'\n'+extra:''}`;
+}
+async function callLLM(messages,maxTokens=400){
+  const res=await fetch(apiUrl(),{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+settings.apiKey.trim()},
+    body:JSON.stringify({model:settings.model.trim(),messages,temperature:0.8,max_tokens:maxTokens})
+  });
+  if(!res.ok){
+    let detail='';
+    try{const j=await res.json();detail=(j.error&&j.error.message)||j.message||'';}catch(e){}
+    throw new Error(`HTTP ${res.status}${detail?' · '+detail:''}`);
+  }
+  const data=await res.json();
+  return(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'').trim()||'（空回复）';
+}
+function markUnread(){
+  if(chatPanel.classList.contains('collapsed')){
+    unread++;
+    const b=$('unreadBadge');
+    b.textContent=unread>99?'99+':unread;
+    b.hidden=false;
+  }
+}
+function updatePreview(){
+  const last=history[history.length-1];
+  if(!last){$('chatPreview').textContent='';return;}
+  const prefix=last.role==='user'?'我：':(last.role==='assistant'?'AI：':'');
+  $('chatPreview').textContent=prefix+last.content.replace(/\s+/g,' ').slice(0,30);
+}
+function addMsg(type,text,notify=true){
+  const d=document.createElement('div');
+  d.className='msg '+type;
+  d.textContent=text;
+  chatMsgs.appendChild(d);
+  chatMsgs.scrollTop=chatMsgs.scrollHeight;
+  if(notify){
+    if(type==='sys')toast(text);
+    if(type!=='me'){markUnread();updatePreview();}
+    else updatePreview();
+  }
+  return d;
+}
+async function onChatSubmit(e){
+  e.preventDefault();
+  if(e.nativeEvent&&e.nativeEvent.isComposing)return;
+  const text=inp.value.trim();
+  if(!text)return;
+  if(!settings.apiKey){toast('请先在「设置」里保存 API 配置');openSettings();return;}
+  inp.value='';
+  addMsg('me',text);
+  history.push({role:'user',content:text});
+  showBubble('user',text);
+  save();
+  showTypingBubble();
+  btnSend.disabled=true;
+  try{
+    const msgs=[{role:'system',content:buildSysPrompt()},...history.slice(-20),{role:'user',content:buildTailNote()}];
+    const reply=await callLLM(msgs);
+    history.push({role:'assistant',content:reply});
+    addMsg('ai',reply);
+    showBubble('ai',reply);
+  }catch(err){
+    addMsg('sys','⚠️ 调用失败：'+err.message+'（请到设置里「测试连接」排查）');
+    showBubble('ai','⚠️ 我这边连接不上了，去设置里测一下？');
+  }finally{
+    btnSend.disabled=false;
+    save();chatMsgs.scrollTop=chatMsgs.scrollHeight;
+  }
+}
+async function aiComment(kind){
+  try{
+    const instr=kind==='move'
+      ?'（系统内部指令，用户不可见）：你刚落下一子，请用一两句轻松的话点评当前局势或这步的意图。'
+      :'（系统内部指令，用户不可见）：对局已结束，请用两三句话复盘总结这盘棋。';
+    const msgs=[{role:'system',content:buildSysPrompt()},...history.slice(-20),{role:'user',content:buildTailNote(instr)}];
+    const reply=await callLLM(msgs,200);
+    history.push({role:'assistant',content:reply});
+    addMsg('ai',reply);
+    showBubble('ai',reply);
+    save();
+  }catch(e){/* 点评失败静默处理 */}
+}
+
+/* ================= 聊天面板折叠 ================= */
+function applyCollapse(){
+  chatPanel.classList.toggle('collapsed',!!settings.chatCollapsed);
+}
+function expandChat(){
+  settings.chatCollapsed=false;
+  applyCollapse();
+  unread=0;$('unreadBadge').hidden=true;
+  chatMsgs.scrollTop=chatMsgs.scrollHeight;
+  save();
+}
+function toggleChat(){
+  if(chatPanel.classList.contains('collapsed'))expandChat();
+  else{settings.chatCollapsed=true;applyCollapse();save();}
+}
+$('chatHead').addEventListener('click',e=>{
+  if(e.target.closest('#btnClearChat'))return;
+  toggleChat();
+});
+$('btnToggleChat').addEventListener('click',e=>{e.stopPropagation();toggleChat();});
+
+/* ================= 设置面板 ================= */
+const backdrop=$('modalBackdrop');
+function openSettings(){
+  $('selProvider').value=settings.provider||'deepseek';
+  $('inpBase').value=settings.baseURL||'';
+  $('inpKey').value=settings.apiKey||'';
+  $('inpModel').value=settings.model||'';
+  $('selLevel').value=settings.level||'normal';
+  $('chkComment').checked=!!settings.autoComment;
+  backdrop.hidden=false;
+}
+function closeSettings(){backdrop.hidden=true;}
+function readSettingsForm(){
+  settings.provider=$('selProvider').value;
+  settings.baseURL=$('inpBase').value.trim()||PROVIDERS.deepseek.baseURL;
+  settings.apiKey=$('inpKey').value.trim();
+  settings.model=$('inpModel').value.trim()||'deepseek-chat';
+  settings.level=$('selLevel').value;
+  settings.autoComment=$('chkComment').checked;
+}
+function syncApiBadge(){
+  const b=$('apiBadge');
+  if(settings.apiKey){b.textContent='已连接';b.classList.add('on');}
+  else{b.textContent='未连接';b.classList.remove('on');}
+}
+/* 切换服务商：自动填地址；模型若为空或仍是某个预设值则一并切换 */
+$('selProvider').addEventListener('change',()=>{
+  const p=$('selProvider').value;
+  if(!PROVIDERS[p])return;
+  $('inpBase').value=PROVIDERS[p].baseURL;
+  const cur=$('inpModel').value.trim();
+  if(!cur||Object.values(PROVIDERS).some(v=>v.model===cur)){
+    $('inpModel').value=PROVIDERS[p].model;
+  }
+});
+/* 测试连接：发一条极短请求验证 地址+Key+模型 */
+$('btnTest').addEventListener('click',async()=>{
+  const btn=$('btnTest');
+  const key=$('inpKey').value.trim();
+  const base=$('inpBase').value.trim().replace(/\/+$/,'');
+  const model=$('inpModel').value.trim();
+  if(!base){toast('请先填写 API 地址');return;}
+  if(!key){toast('请先填写 API Key');return;}
+  if(!model){toast('请先填写模型名称');return;}
+  btn.disabled=true;btn.textContent='测试中…';
+  const t0=Date.now();
+  try{
+    const res=await fetch(base+'/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model,messages:[{role:'user',content:'收到请回复OK'}],max_tokens:8,temperature:0})
+    });
+    if(!res.ok){
+      let detail='';
+      try{const j=await res.json();detail=(j.error&&j.error.message)||j.message||'';}catch(e){}
+      throw new Error(`HTTP ${res.status}${detail?' · '+detail:''}`);
+    }
+    const data=await res.json();
+    const reply=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'').trim();
+    toast(`✅ 连接成功（${Date.now()-t0}ms）${reply?'：'+reply.slice(0,24):''}`,3600);
+  }catch(err){
+    const hint=err instanceof TypeError?'（网络错误或跨域受限，可换个网络 / 部署到自己的域名试试）':'';
+    toast('❌ 连接失败：'+err.message+hint,4200);
+  }finally{
+    btn.disabled=false;btn.textContent='🔌 测试连接';
+  }
+});
+$('btnSaveSettings').addEventListener('click',()=>{
+  readSettingsForm();
+  save();syncApiBadge();updateStatus();closeSettings();
+  toast('💾 配置已保存'+(settings.apiKey?'':'（未填 Key，聊天不可用）'));
+});
+$('btnCloseSettings').onclick=closeSettings;
+backdrop.addEventListener('click',e=>{if(e.target===backdrop)closeSettings();});
+$('btnWipe').addEventListener('click',()=>{
+  if(!confirm('确定清除本机保存的棋局、聊天和设置吗？'))return;
+  localStorage.removeItem(KEY);
+  history=[];
+  chatMsgs.innerHTML='';
+  settings={
+    provider:'deepseek',baseURL:PROVIDERS.deepseek.baseURL,apiKey:'',model:'deepseek-chat',
+    level:'normal',autoComment:true,chatCollapsed:false
+  };
+  closeSettings();syncApiBadge();applyCollapse();
+  newGame(true);
+  addMsg('sys','🧹 已清除本机数据，新对局开始。');
+});
+
+/* ================= 事件绑定 ================= */
+cv.addEventListener('click',e=>{
+  if(gameOver){toast('对局已结束，可开新局或悔棋');return;}
+  if(aiThinking||currentColor!==playerColor)return;
+  const r=cv.getBoundingClientRect();
+  const px=e.clientX-r.left,py=e.clientY-r.top;
+  const gx=Math.round((px-view.pad)/view.cell),gy=Math.round((py-view.pad)/view.cell);
+  if(!inb(gx,gy))return;
+  const cx=view.pad+gx*view.cell,cy=view.pad+gy*view.cell;
+  if(Math.hypot(px-cx,py-cy)>view.cell*0.46)return;
+  if(board[gy][gx]!==EMPTY)return;
+  placeStone(gx,gy,playerColor);
+});
+$('btnNew').onclick=()=>newGame(false);
+$('btnUndo').onclick=undo;
+$('btnSettings').onclick=openSettings;
+$('chatForm').addEventListener('submit',onChatSubmit);
+window.addEventListener('resize',redraw);
+window.addEventListener('orientationchange',()=>setTimeout(redraw,200));
+
+/* ================= 启动 ================= */
+(function init(){
+  const loaded=load();
+  if(!loaded){
+    newGame(true);
+    addMsg('sys','👋 欢迎来到五子棋人机对战！开局执子是随机的。右上角「设置」里按提示填好 API 配置并「测试连接」成功后，即可解锁聊天与 AI 点评。棋局自动保存在本机，刷新不丢。');
+  }else{
+    history.forEach(m=>addMsg(m.role==='user'?'me':'ai',m.content,false));
+    if(!gameOver&&currentColor===aiColor)scheduleAiMove();
+  }
+  applyCollapse();
+  updatePreview();
+  syncApiBadge();
+  updateStatus();
+  redraw();
+})();
+</script>
+</body>
+</html>

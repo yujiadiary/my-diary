@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#fde9f1">
+<title>说给我听</title>
+<style>
+:root{--ink:#54404b;--muted:#bd8ba4;--faint:#d3aec1;--accent:#d9548c;--accent-deep:#c2457e}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:-apple-system,"PingFang SC","HarmonyOS Sans SC",sans-serif;
+  color:var(--ink);min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding-bottom:calc(24px+env(safe-area-inset-bottom));
+  background:
+    radial-gradient(1100px 760px at 88% -12%,#ffd9e8 0%,transparent 60%),
+    radial-gradient(900px 680px at -14% 106%,#e9dcf6 0%,transparent 58%),
+    linear-gradient(180deg,#fff1f6 0%,#fbe2ee 48%,#f6d8e9 100%);
+  -webkit-user-select:none;user-select:none;overflow-x:hidden}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:5;opacity:.18;mix-blend-mode:soft-light;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='.55'/></svg>")}
+.blob{position:fixed;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:0}
+.b1{width:430px;height:430px;left:-150px;top:-120px;background:radial-gradient(circle,rgba(255,150,195,.38),transparent 70%);animation:drift 24s ease-in-out infinite alternate}
+.b2{width:400px;height:400px;right:-140px;bottom:-110px;background:radial-gradient(circle,rgba(192,162,238,.30),transparent 70%);animation:drift 28s ease-in-out infinite alternate-reverse}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(48px,32px) scale(1.12)}}
+
+header{margin-top:max(30px,env(safe-area-inset-top));text-align:center;z-index:1}
+h1{margin:0;font-size:24px;letter-spacing:.3em;text-indent:.3em;font-weight:600}
+.tagline{margin-top:8px;color:var(--muted);font-size:12px;letter-spacing:.24em;text-indent:.24em}
+
+#envhint{display:none;max-width:min(88vw,470px);margin:14px 16px 0;padding:11px 15px;
+  border-radius:14px;background:rgba(255,236,244,.92);border:1px solid #f3bdd3;
+  color:#a54e6f;font-size:12.5px;line-height:1.8;text-align:left;z-index:1}
+#envhint.show{display:block}
+
+.stage{position:relative;width:200px;height:200px;margin-top:40px;display:grid;place-items:center;z-index:1}
+#halo{position:absolute;inset:18px;border-radius:50%;opacity:0;will-change:transform,opacity;z-index:0;
+  background:radial-gradient(closest-side,rgba(255,120,180,.42),rgba(255,120,180,0) 74%)}
+#btn{position:relative;width:160px;height:160px;border-radius:50%;border:none;cursor:pointer;
+  color:#fff;font-size:17px;letter-spacing:.2em;text-indent:.2em;z-index:2;
+  font-family:inherit;touch-action:none;-webkit-tap-highlight-color:transparent;
+  background:radial-gradient(circle at 33% 27%,#ffcbde 0%,#ff9ec6 42%,#f278a8 72%,#df5f94 100%);
+  box-shadow:inset-14px -20px 36px rgba(158,38,92,.28),inset 8px 10px 20px rgba(255,255,255,.55),0 24px 50px rgba(222,106,158,.35);
+  animation:idle 4.2s ease-in-out infinite;transition:transform .16s}
+@keyframes idle{0%,100%{filter:brightness(1)}50%{filter:brightness(1.05)}}
+#btn:active{transform:scale(.955)}
+.stage.live #btn{box-shadow:inset-14px -20px 36px rgba(158,38,92,.28),inset 8px 10px 20px rgba(255,255,255,.55),
+  0 0 0 12px rgba(255,160,200,.16),0 0 70px 14px rgba(255,130,185,.40),0 24px 50px rgba(222,106,158,.35)}
+
+.status{margin-top:24px;min-height:22px;color:var(--muted);font-size:14px;letter-spacing:.1em;z-index:1;text-align:center}
+#timer{margin-top:6px;color:var(--accent);font-size:28px;font-variant-numeric:tabular-nums;z-index:1;min-height:34px}
+
+#result{display:none;width:min(86vw,420px);margin-top:20px;padding:20px;border-radius:22px;
+  background:rgba(255,255,255,.75);z-index:1;
+  -webkit-backdrop-filter:blur(16px) saturate(1.25);backdrop-filter:blur(16px) saturate(1.25);
+  border:1px solid rgba(255,255,255,.7);
+  box-shadow:0 24px 54px rgba(214,110,160,.14),0 2px 8px rgba(214,110,160,.06)}
+#result.show{display:block;animation:cardIn .5s cubic-bezier(.22,1,.36,1)}
+@keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(.975)}to{opacity:1;transform:none}}
+#result audio{width:100%;margin-bottom:14px}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.dl-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:999px;
+  background:linear-gradient(135deg,#ff9ec6,#df5f94);color:#fff;font-size:14px;font-weight:600;
+  text-decoration:none;letter-spacing:.06em;box-shadow:0 5px 14px rgba(224,110,160,.25);border:none;cursor:pointer;font-family:inherit}
+.retry-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:999px;
+  background:rgba(255,255,255,.7);color:var(--muted);font-size:14px;border:1px solid #f0d4e1;cursor:pointer;font-family:inherit}
+
+#ear-box{margin-top:18px;width:min(84vw,400px);z-index:1;text-align:center}
+#ear-url{width:100%;padding:10px 16px;border-radius:999px;border:1px solid rgba(236,201,218,.9);
+  background:rgba(255,255,255,.7);font-size:13px;color:var(--ink);outline:none;font-family:inherit;
+  margin-bottom:8px;transition:border-color .3s,box-shadow .3s}
+#ear-url:focus{border-color:#ef9dbd;box-shadow:0 0 0 4px rgba(239,157,189,.15)}
+#ear-url::placeholder{color:var(--faint)}
+#ear-send{padding:8px 20px;border-radius:999px;border:1px solid #f0bcd0;
+  background:rgba(255,240,246,.8);color:var(--accent-deep);font-size:13px;cursor:pointer;font-family:inherit}
+#ear-send:active{transform:scale(.96)}
+#ear-result{margin-top:10px;font-size:13px;color:var(--muted);min-height:18px;line-height:1.6}
+
+footer{margin-top:auto;padding-top:20px;text-align:center;z-index:1}
+.love{color:var(--faint);font-size:11px;letter-spacing:.22em}
+</style>
+</head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div>
+
+<header>
+  <h1>说给我听</h1>
+  <div class="tagline">录完下载，发给他</div>
+</header>
+
+<div id="envhint"></div>
+
+<div class="stage" id="stage">
+  <div id="halo"></div>
+  <button id="btn" aria-label="按住说话">按住说话</button>
+</div>
+
+<div class="status" id="st" aria-live="polite">准备好了，按住说话</div>
+<div id="timer"></div>
+
+<div id="result">
+  <audio id="player" controls></audio>
+  <div class="btns">
+    <a class="dl-btn" id="dl" download>⬇ 下载音频</a>
+    <button class="retry-btn" id="retry">↺ 重新录</button>
+  </div>
+  <div id="ear-box">
+    <input id="ear-url" placeholder="ear 地址（可选，如 http://192.168.1.5:8420）" autocomplete="off">
+    <button id="ear-send">发给耳朵分析</button>
+    <div id="ear-result"></div>
+  </div>
+</div>
+
+<footer>
+  <div class="love">说给他听 ♡</div>
+</footer>
+
+<script>
+const $=id=>document.getElementById(id);
+const btn=$("btn"),st=$("st"),timer=$("timer"),result=$("result"),
+      player=$("player"),dl=$("dl"),stage=$("stage"),halo=$("halo"),
+      envhint=$("envhint"),earUrl=$("ear-url"),earSend=$("ear-send"),earResult=$("ear-result");
+const MIN=0.4;
+
+/* 环境检测 */
+let envOK=true;
+if(!window.isSecureContext){
+  envOK=false;
+  envhint.innerHTML="⚠️ 当前不是安全上下文，浏览器会禁止麦克风。<br>需要通过 <code>http://localhost</code> 或 HTTPS 访问本页面。";
+}else if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){
+  envOK=false;
+  envhint.innerHTML="⚠️ 这个浏览器拿不到麦克风接口，换 Safari / Chrome 试试。";
+}else if(typeof MediaRecorder==="undefined"){
+  envOK=false;
+  envhint.innerHTML="⚠️ 浏览器太老不支持录音（iOS 需 14.3+）。";
+}
+if(!envOK) envhint.classList.add("show");
+
+function errText(err){
+  const n=err&&err.name;
+  if(n==="NotAllowedError"||n==="SecurityError") return "麦克风权限被拒了：点地址栏左边的 🔒 改成允许，再刷新";
+  if(n==="NotFoundError") return "没检测到麦克风";
+  if(n==="NotReadableError") return "麦克风被别的应用占用了";
+  return "麦克风打不开："+(err&&err.message||err);
+}
+
+function setSt(t){st.textContent=t;}
+
+/* 录音状态机 */
+let media=null,rec=null,chunks=[],holding=false,t0=0,interval=0;
+let state="idle";
+let actx=null,analyser=null,wave=null,raf=0;
+
+async function start(){
+  if(!actx) actx=new(window.AudioContext||window.webkitAudioContext)();
+  if(actx.state==="suspended"){try{await actx.resume();}catch(_){}}
+  if(!media){
+    media=await navigator.mediaDevices.getUserMedia({audio:true});
+    const src=actx.createMediaStreamSource(media);
+    analyser=actx.createAnalyser();analyser.fftSize=512;
+    src.connect(analyser);
+    wave=new Uint8Array(analyser.fftSize);
+  }
+  if(!holding){state="idle";return;}
+  chunks=[];
+  rec=new MediaRecorder(media);
+  rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+  rec.onerror=()=>{visualsOff();state="idle";setSt("录音出错了，再试一次");};
+  rec.start();
+  btn.textContent="在听…";
+  stage.classList.add("live");
+  t0=Date.now();
+  interval=setInterval(()=>{
+    const s=((Date.now()-t0)/1000).toFixed(1);
+    timer.textContent=s+"s";
+  },100);
+  loop();
+}
+
+function loop(){
+  analyser.getByteTimeDomainData(wave);
+  let s=0;for(let i=0;i<wave.length;i++){const v=(wave[i]-128)/128;s+=v*v;}
+  const rms=Math.sqrt(s/wave.length);
+  halo.style.transform=`scale(${1+Math.min(rms*2.4,.5)})`;
+  halo.style.opacity=Math.min(.35+rms*2.2,.9);
+  raf=requestAnimationFrame(loop);
+}
+
+function visualsOff(){
+  cancelAnimationFrame(raf);
+  clearInterval(interval);
+  halo.style.transform="scale(1)";halo.style.opacity=0;
+  stage.classList.remove("live");
+  btn.textContent="按住说话";
+}
+
+let lastBlob=null,lastUrl=null;
+
+async function stop(){
+  const held=(Date.now()-t0)/1000;
+  visualsOff();
+  if(!rec||rec.state==="inactive"){
+    state="idle";
+    setSt(held<MIN?"太短啦，按久一点":"麦克风还没准备好，再按一次试试");
+    return;
+  }
+  state="processing";
+  setSt("处理中…");
+  rec.stop();
+  await new Promise(r=>{rec.onstop=r;});
+  try{
+    const blob=new Blob(chunks);
+    const ab=await blob.arrayBuffer();
+    const decoded=await actx.decodeAudioData(ab);
+    const off=new OfflineAudioContext(1,Math.ceil(decoded.duration*16000),16000);
+    const src=off.createBufferSource();src.buffer=decoded;
+    src.connect(off.destination);src.start();
+    const pcm=(await off.startRendering()).getChannelData(0);
+    const wav=encodeWAV(pcm,16000);
+    
+    if(lastUrl) URL.revokeObjectURL(lastUrl);
+    lastBlob=new Blob([wav],{type:"audio/wav"});
+    lastUrl=URL.createObjectURL(lastBlob);
+    player.src=lastUrl;
+    const ts=new Date().toISOString().replace(/[:.]/g,"-").slice(0,19);
+    dl.href=lastUrl;
+    dl.download=`voice-${ts}.wav`;
+    
+    result.classList.remove("show");void result.offsetWidth;result.classList.add("show");
+    setSt(`录了 ${held.toFixed(1)} 秒，下载后发给他`);
+  }catch(err){
+    setSt("处理出错了："+(err&&err.message||err));
+  }finally{
+    state="idle";
+  }
+}
+
+function encodeWAV(samples,sr){
+  const buf=new ArrayBuffer(44+samples.length*2),v=new DataView(buf);
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,"RIFF");v.setUint32(4,36+samples.length*2,true);ws(8,"WAVEfmt ");
+  v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);
+  v.setUint16(34,16,true);ws(36,"data");v.setUint32(40,samples.length*2,true);
+  let o=44;for(let i=0;i<samples.length;i++,o+=2){
+    let s=Math.max(-1,Math.min(1,samples[i]));v.setInt16(o,s<0?s*0x8000:s*0x7FFF,true);}
+  return buf;
+}
+
+/* 事件 */
+btn.addEventListener("contextmenu",e=>e.preventDefault());
+btn.addEventListener("pointerdown",e=>{
+  e.preventDefault();e.stopPropagation();
+  if(state!=="idle")return;
+  if(!envOK){setSt("先看页面上方的 ⚠️ 提示");return;}
+  state="recording";holding=true;
+  try{btn.setPointerCapture(e.pointerId);}catch(_){}
+  setSt("…");
+  start().catch(err=>{
+    state="idle";holding=false;visualsOff();
+    setSt(errText(err));
+  });
+});
+["pointerup","pointercancel"].forEach(ev=>
+  btn.addEventListener(ev,()=>{if(holding){holding=false;stop();}}));
+document.addEventListener("pointerup",()=>{if(holding){holding=false;stop();}});
+document.addEventListener("pointerdown",e=>{if(e.target!==btn&&holding){holding=false;stop();}},true);
+
+$("retry").onclick=()=>{
+  result.classList.remove("show");
+  timer.textContent="";
+  setSt("准备好了，按住说话");
+};
+
+/* 发给 ear */
+earSend.onclick=async()=>{
+  if(!lastBlob){earResult.textContent="先录一段";return;}
+  const base=earUrl.value.trim().replace(/\/+$/,"");
+  if(!base){earResult.textContent="填上 ear 地址才能发";return;}
+  earResult.textContent="发送中…";
+  try{
+    const fd=new FormData();
+    fd.append("file",lastBlob,"voice.wav");
+    const r=await fetch(base+"/api/listen",{method:"POST",body:fd});
+    const d=await r.json();
+    if(d.error){
+      earResult.textContent=d.error;
+    }else{
+      const parts=[];
+      if(d.text) parts.push(`"${d.text}"`);
+      if(d.emotion) parts.push(`情绪：${d.emotion}`);
+      if(d.hint) parts.push(d.hint);
+      if(d.baseline_progress) parts.push(`认识你 ${d.baseline_progress}`);
+      earResult.textContent=parts.join(" · ")||"已收到";
+    }
+  }catch(err){
+    earResult.textContent="发不出去："+(err&&err.message||err);
+  }
+};
+</script>
+</body>
+</html>
