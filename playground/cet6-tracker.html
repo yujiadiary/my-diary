@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>六级打卡 · 江予朔监督</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--card:#161b22;--border:#30363d;
+  --text:#e6edf3;--sub:#8b949e;
+  --accent:#f0a050;--done:#3fb950;--exam:#f85149;--today:#58a6ff;
+}
+body{
+  font-family:-apple-system,'PingFang SC','Helvetica Neue',sans-serif;
+  background:var(--bg);color:var(--text);
+  max-width:480px;margin:0 auto;padding:12px 16px 48px;
+  -webkit-tap-highlight-color:transparent;font-size:15px;
+}
+
+/* 顶部 */
+.header{text-align:center;padding:20px 0 16px}
+.countdown{font-size:28px;font-weight:700;color:var(--accent)}
+.countdown span{font-size:36px}
+.progress-wrap{margin:14px auto 6px;height:8px;background:var(--card);border-radius:4px;overflow:hidden;max-width:300px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--done));border-radius:4px;transition:width .4s ease;width:0}
+.progress-text{font-size:12px;color:var(--sub)}
+
+/* 日历 */
+.cal-section{background:var(--card);border-radius:14px;padding:14px;margin-bottom:14px;border:1px solid var(--border)}
+.month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.nav-btn{background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;padding:4px 12px;border-radius:8px}
+.nav-btn:active{background:var(--border)}
+.month-label{font-size:16px;font-weight:600}
+.today-btn{font-size:12px;color:var(--today);background:none;border:1px solid var(--today);padding:3px 10px;border-radius:8px;cursor:pointer}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px}
+.cal-weekdays span{text-align:center;font-size:11px;color:var(--sub);padding:2px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-day{
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  border-radius:8px;font-size:13px;cursor:pointer;
+  background:transparent;border:1px solid transparent;
+  min-height:34px;position:relative;transition:all .15s;
+}
+.cal-day.has-task{background:rgba(240,160,80,.12);border-color:rgba(240,160,80,.25)}
+.cal-day.exam{background:rgba(248,81,73,.12);border-color:rgba(248,81,73,.3)}
+.cal-day.exam::after{content:'';position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--exam)}
+.cal-day.all-done{background:rgba(63,185,80,.18);border-color:rgba(63,185,80,.35)}
+.cal-day.today{border-color:var(--today);border-width:2px}
+.cal-day.selected{background:rgba(88,166,255,.2);border-color:var(--today)}
+.cal-day:active{transform:scale(.92)}
+.cal-empty{visibility:hidden}
+
+/* 任务 */
+.task-section{background:var(--card);border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid var(--border);min-height:120px}
+.task-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.task-date{font-size:17px;font-weight:600}
+.task-phase{font-size:12px;color:var(--accent);background:rgba(240,160,80,.12);padding:3px 10px;border-radius:8px}
+.task-summary{font-size:13px;color:var(--sub);margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.task-summary b{color:var(--text)}
+.task-item{
+  display:flex;align-items:flex-start;gap:10px;padding:12px;
+  background:rgba(255,255,255,.02);border-radius:10px;
+  border:1px solid var(--border);margin-bottom:8px;cursor:pointer;
+  transition:all .2s;
+}
+.task-item:active{background:rgba(255,255,255,.05)}
+.task-item.done{opacity:.5}
+.task-item.done .task-text{text-decoration:line-through}
+.checkbox{
+  width:22px;height:22px;border:2px solid var(--border);border-radius:7px;
+  flex-shrink:0;cursor:pointer;transition:all .2s;margin-top:1px;
+  display:flex;align-items:center;justify-content:center;
+}
+.checkbox.checked{background:var(--done);border-color:var(--done);animation:pop .3s ease}
+.checkbox.checked::after{content:'✓';color:#fff;font-size:13px;font-weight:700}
+@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.25)}100%{transform:scale(1)}}
+.task-content{flex:1;min-width:0}
+.task-text{font-size:15px;line-height:1.4}
+.task-detail{font-size:12px;color:var(--sub);margin-top:4px;line-height:1.5}
+.task-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.task-duration{font-size:13px;color:var(--accent);white-space:nowrap}
+.task-cat{font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(88,166,255,.12);color:var(--today);white-space:nowrap}
+.no-task{text-align:center;padding:30px 0;color:var(--sub)}
+.no-task .nd{font-size:16px;margin-bottom:6px;color:var(--text)}
+.no-task .nt{font-size:13px}
+
+/* 统计 */
+.stats-section{background:var(--card);border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid var(--border)}
+.stat-row{display:flex;justify-content:space-around;margin-bottom:16px}
+.stat-item{text-align:center}
+.stat-num{font-size:24px;font-weight:700;color:var(--accent)}
+.stat-label{font-size:11px;color:var(--sub);margin-top:2px}
+.cat-progress{display:flex;flex-direction:column;gap:8px}
+.cat-row{display:flex;align-items:center;gap:8px}
+.cat-name{font-size:12px;color:var(--sub);width:44px;flex-shrink:0}
+.cat-bar{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+.cat-fill{height:100%;background:var(--done);border-radius:3px;transition:width .4s}
+.cat-pct{font-size:11px;color:var(--sub);width:36px;text-align:right;flex-shrink:0}
+
+/* 寄语 */
+.message{
+  background:linear-gradient(135deg,rgba(240,160,80,.08),rgba(63,185,80,.08));
+  border:1px solid rgba(240,160,80,.2);
+  border-radius:14px;padding:18px 20px;text-align:center;margin-bottom:14px;
+}
+.message-text{font-size:15px;line-height:1.6;color:var(--text)}
+.message-sig{font-size:12px;color:var(--sub);margin-top:8px}
+
+/* 底部 */
+.footer{text-align:center;font-size:11px;color:var(--sub);padding:8px 0}
+.reset-btn{font-size:11px;color:var(--exam);background:none;border:none;cursor:pointer;text-decoration:underline;margin-top:8px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="countdown">距六级 <span id="days-left">--</span> 天</div>
+  <div class="progress-wrap"><div class="progress-fill" id="total-progress"></div></div>
+  <div class="progress-text"><span id="completed-days">0</span> / <span id="total-days">0</span> 天完成</div>
+</div>
+
+<div class="cal-section">
+  <div class="month-nav">
+    <button class="nav-btn" id="prev-month">‹</button>
+    <span class="month-label" id="month-label"></span>
+    <button class="nav-btn" id="next-month">›</button>
+  </div>
+  <button class="today-btn" id="today-btn">回到今天</button>
+  <div class="cal-weekdays">
+    <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
+</div>
+
+<div class="task-section" id="task-section"></div>
+
+<div class="stats-section">
+  <div class="stat-row">
+    <div class="stat-item"><div class="stat-num" id="streak">0</div><div class="stat-label">连续打卡</div></div>
+    <div class="stat-item"><div class="stat-num" id="total-done">0</div><div class="stat-label">累计完成</div></div>
+    <div class="stat-item"><div class="stat-num" id="exam-countdown">--</div><div class="stat-label">下次考察</div></div>
+  </div>
+  <div class="cat-progress" id="cat-progress"></div>
+</div>
+
+<div class="message">
+  <div class="message-text" id="message-text"></div>
+  <div class="message-sig">—— 江予朔</div>
+</div>
+
+<div class="footer">
+  六级备考打卡 · 2026冬<br>
+  <button class="reset-btn" id="reset-btn">重置全部记录</button>
+</div>
+
+<script>
+const EXAM_DATE = '2026-12-15';
+const STORAGE = 'cet6_v1_';
+
+/* ===== 生成每日任务数据 ===== */
+const TASKS = {};
+
+function fmtDate(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+// 打底期 10/13-10/31
+const listenCycle = [
+  {n:'1篇讲座',d:'做题8min→对答案5min→逐句听写25min→跟读2遍12min'},
+  {n:'1篇长对话',d:'做题5min→对答案3min→逐句听写25min→跟读2遍17min'},
+  {n:'1篇篇章',d:'做题6min→对答案4min→逐句听写25min→跟读2遍15min'},
+  {n:'1篇讲座',d:'做题8min→对答案5min→逐句听写25min→跟读2遍12min'},
+  {n:'1篇长对话',d:'做题5min→对答案3min→逐句听写25min→跟读2遍17min'},
+  {n:'1篇篇章',d:'做题6min→对答案4min→逐句听写25min→跟读2遍15min'},
+  {n:'听力复习日',d:'本周6篇重听不看原文+整理1页同义替换表'}
+];
+const fStart = new Date('2026-10-13');
+for(let i=0;i<19;i++){
+  const dt = new Date(fStart); dt.setDate(dt.getDate()+i);
+  const ds = fmtDate(dt);
+  if(i===16){TASKS[ds]={phase:'打底期',label:'考察一',exam:true,items:[{t:'真题听力+阅读 限时70min',dur:'70min',cat:'考察',det:'1套六级真题，只做听力+阅读'}]};continue}
+  if(i===17){TASKS[ds]={phase:'打底期',label:'考察一·精析',exam:true,items:[{t:'考察一精析',dur:'60min',cat:'考察',det:'听力错题重听→阅读错题定位句→听写抽查1篇'}]};continue}
+  if(i===18){TASKS[ds]={phase:'打底期',label:'复习日',items:[{t:'听力同义替换表完整过一遍',dur:'30min',cat:'听力'},{t:'阅读生词本完整过一遍',dur:'30min',cat:'阅读'},{t:'本周听力重听（不看原文）',dur:'30min',cat:'听力'}]};continue}
+  const cd = i%7, L = listenCycle[cd];
+  const odd = i%2===0;
+  const items=[
+    {t:'背词 60个（40旧+20新）',dur:'20min',cat:'词汇'},
+    {t:'听力精听：'+L.n,dur:'50min',cat:'听力',det:L.d}
+  ];
+  if(odd) items.push({t:'阅读精读：1篇仔细阅读',dur:'30min',cat:'阅读',det:'做题10min→对答案3min→逐句翻译+查生词+长难句17min'});
+  else items.push({t:'阅读复习：本周生词+长难句重看',dur:'15min',cat:'阅读'});
+  items.push({t:'泛听 BBC/TED',dur:'20min',cat:'听力'});
+  TASKS[ds]={phase:'打底期',label:'Day '+(cd+1),items};
+}
+
+// 强化期 11/1-11/30
+const iStart = new Date('2026-11-01');
+for(let i=0;i<30;i++){
+  const dt = new Date(iStart); dt.setDate(dt.getDate()+i);
+  const ds = fmtDate(dt);
+  const dow = dt.getDay();
+  if(i===14){TASKS[ds]={phase:'强化期',label:'考察二·模拟',exam:true,items:[{t:'真题全卷模拟 严格计时130min',dur:'130min',cat:'考察',det:'写作30→听力30→阅读40→翻译30'}]};continue}
+  if(i===15){TASKS[ds]={phase:'强化期',label:'考察二·精析',exam:true,items:[{t:'考察二精析',dur:'100min',cat:'考察',det:'听力错题重听→阅读错题定位→写作翻译对照范文'}]};continue}
+  if(i===29){TASKS[ds]={phase:'强化期',label:'复习日',items:[{t:'15套真题听力错题全部重听',dur:'60min',cat:'听力'},{t:'15套真题阅读错题定位句过一遍',dur:'40min',cat:'阅读'},{t:'背词 复习100个',dur:'20min',cat:'词汇'}]};continue}
+  const isA = i%2===0;
+  const setNum = i<14 ? Math.floor(i/2)+1 : Math.floor((i-16)/2)+8;
+  const items=[{t:'背词 过100个旧词',dur:'20min',cat:'词汇'}];
+  if(isA) items.push({t:'真题'+setNum+' 全卷限时',dur:'130min',cat:'真题',det:'写作30→听力30→阅读40→翻译30，一气呵成'});
+  else{
+    items.push({t:'真题'+setNum+' 精析',dur:'100min',cat:'真题',det:'听力错题重听→听写难点句→抄同义替换 / 阅读错题定位→长难句→生词 / 写作对照范文 / 翻译对照参考译文'});
+    items.push({t:'听力加练 2篇讲座',dur:'30min',cat:'听力',det:'做题+抄同义替换'});
+  }
+  if(dow===2) items.push({t:'翻译练习 1篇真题',dur:'30min',cat:'翻译',det:'限时30min，对照参考译文改'});
+  else if(dow===3) items.push({t:'写作练习 1篇（用模板）',dur:'25min',cat:'写作',det:'套真题题目，写完对照范文改'});
+  else if(dow===5) items.push({t:'翻译练习 1篇真题',dur:'30min',cat:'翻译',det:'限时30min，对照参考译文改'});
+  else if(dow===6) items.push({t:'写作练习 1篇（用模板）',dur:'25min',cat:'写作',det:'套真题题目，写完对照范文改'});
+  TASKS[ds]={phase:'强化期',label:isA?'真题'+setNum+'·做题':'真题'+setNum+'·精析',items};
+}
+
+// 冲刺期 12/1-12/15
+const sStart = new Date('2026-12-01');
+for(let i=0;i<15;i++){
+  const dt = new Date(sStart); dt.setDate(dt.getDate()+i);
+  const ds = fmtDate(dt);
+  if(i===6){TASKS[ds]={phase:'冲刺期',label:'考察三·模拟',exam:true,items:[{t:'真题全卷模拟 严格计时',dur:'130min',cat:'考察',det:'完全模拟考场环境'}]};continue}
+  if(i===7){TASKS[ds]={phase:'冲刺期',label:'考察三·精析',exam:true,items:[{t:'考察三精析',dur:'100min',cat:'考察',det:'重点看总分是否过425'}]};continue}
+  if(i===12){TASKS[ds]={phase:'冲刺期',label:'倒数第3天',items:[{t:'写作3套模板默写',dur:'30min',cat:'写作'},{t:'翻译主题词汇过一遍',dur:'30min',cat:'翻译'}]};continue}
+  if(i===13){TASKS[ds]={phase:'冲刺期',label:'倒数第2天',items:[{t:'听力同义替换表过一遍',dur:'30min',cat:'听力'},{t:'阅读错题定位句过一遍',dur:'30min',cat:'阅读'}]};continue}
+  if(i===14){TASKS[ds]={phase:'冲刺期',label:'考前最后一天',items:[{t:'过词汇本',dur:'20min',cat:'词汇'},{t:'早睡',dur:'',cat:'休息'}]};continue}
+  const cd=i%3;
+  if(cd===0){const sn=Math.floor(i/3)+1;TASKS[ds]={phase:'冲刺期',label:'模拟'+sn,items:[{t:'真题全卷模拟 严格计时130min',dur:'130min',cat:'模拟',det:'写作30→听力30→阅读40→翻译30+涂卡'}]}}
+  else if(cd===1){const sn=Math.floor(i/3)+1;TASKS[ds]={phase:'冲刺期',label:'精析'+sn,items:[{t:'对答案+精析',dur:'100min',cat:'精析',det:'听力错题重听→阅读错题定位→写作翻译对照范文'}]}}
+  else{TASKS[ds]={phase:'冲刺期',label:'补弱日',items:[{t:'根据上套卷薄弱项单独练',dur:'90min',cat:'补弱',det:'哪块丢分多练哪块：听力讲座/对话、仔细阅读、选词填空、写作、翻译'}]}}
+}
+
+/* ===== 状态管理 ===== */
+function getDone(ds){try{return JSON.parse(localStorage.getItem(STORAGE+ds)||'{}')}catch(e){return{}}}
+function setDone(ds,idx,val){const d=getDone(ds);d[idx]=val;localStorage.setItem(STORAGE+ds,JSON.stringify(d))}
+function getRate(ds){const t=TASKS[ds];if(!t)return 0;const d=getDone(ds);const dn=t.items.filter((_,i)=>d[i]).length;return t.items.length?Math.round(dn/t.items.length*100):0}
+
+/* ===== 日历 ===== */
+let curY,curM,selDate;
+const today = new Date();
+const todayStr = fmtDate(today);
+
+function renderCal(){
+  const first = new Date(curY,curM,1).getDay();
+  const dim = new Date(curY,curM+1,0).getDate();
+  let h='<div class="cal-grid">';
+  for(let i=0;i<first;i++) h+='<span class="cal-empty"></span>';
+  for(let d=1;d<=dim;d++){
+    const ds=curY+'-'+String(curM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const t=TASKS[ds];const r=getRate(ds);
+    let cls='cal-day';
+    if(t){cls+=' has-task';if(t.exam)cls+=' exam'}
+    if(r===100)cls+=' all-done';
+    if(ds===todayStr)cls+=' today';
+    if(ds===selDate)cls+=' selected';
+    h+='<span class="'+cls+'" data-d="'+ds+'">'+d+'</span>';
+  }
+  h+='</div>';
+  document.getElementById('cal-grid').innerHTML=h;
+  document.getElementById('month-label').textContent=curY+'年'+(curM+1)+'月';
+}
+
+document.getElementById('cal-grid').addEventListener('click',e=>{
+  const el=e.target.closest('.cal-day');if(!el||!el.dataset.d)return;
+  selDate=el.dataset.d;renderCal();renderTask();updateStats();
+});
+
+document.getElementById('prev-month').onclick=()=>{curM--;if(curM<0){curM=11;curY--}renderCal()};
+document.getElementById('next-month').onclick=()=>{curM++;if(curM>11){curM=0;curY++}renderCal()};
+document.getElementById('today-btn').onclick=()=>{curY=today.getFullYear();curM=today.getMonth();selDate=todayStr;renderCal();renderTask();updateStats()};
+
+/* ===== 任务清单 ===== */
+function renderTask(){
+  const sec=document.getElementById('task-section');
+  const t=TASKS[selDate];
+  if(!t){
+    const before=selDate<'2026-10-13';
+    const after=selDate>'2026-12-15';
+    sec.innerHTML='<div class="no-task"><div class="nd">'+selDate.slice(5)+'</div><div class="nt">'+(before?'10月13日开始打卡':after?'考试结束了，等成绩吧':'这天没有安排')+'</div></div>';
+    return;
+  }
+  const d=getDone(selDate);
+  const dn=t.items.filter((_,i)=>d[i]).length;
+  const tm=t.items.reduce((s,it)=>{const m=parseInt(it.dur)||0;return s+m},0);
+  let h='<div class="task-header"><span class="task-date">'+selDate.slice(5).replace('-','月')+'日</span><span class="task-phase">'+t.phase+' · '+t.label+'</span></div>';
+  h+='<div class="task-summary">共 '+tm+'min · 完成 <b>'+dn+'/'+t.items.length+'</b></div>';
+  t.items.forEach((it,i)=>{
+    const ck=d[i]?'checked':'';
+    h+='<div class="task-item '+(d[i]?'done':'')+'" data-i="'+i+'"><div class="checkbox '+ck+'"></div><div class="task-content"><div class="task-text">'+it.t+'</div>'+(it.det?'<div class="task-detail">'+it.det+'</div>':'')+'</div><div class="task-right"><div class="task-duration">'+it.dur+'</div><div class="task-cat">'+it.cat+'</div></div></div>';
+  });
+  sec.innerHTML=h;
+  sec.querySelectorAll('.task-item').forEach(el=>{
+    el.onclick=()=>{
+      const idx=+el.dataset.i;
+      const d2=getDone(selDate);
+      setDone(selDate,idx,!d2[idx]);
+      renderTask();renderCal();updateStats();
+    };
+  });
+}
+
+/* ===== 统计 ===== */
+function updateStats(){
+  // 倒计时
+  const exam=new Date(EXAM_DATE);
+  const dl=Math.ceil((exam-today)/86400000);
+  document.getElementById('days-left').textContent=dl>0?dl:0;
+
+  // 总进度
+  const allDates=Object.keys(TASKS);
+  let compDays=0;
+  allDates.forEach(ds=>{if(getRate(ds)===100)compDays++});
+  document.getElementById('completed-days').textContent=compDays;
+  document.getElementById('total-days').textContent=allDates.length;
+  document.getElementById('total-progress').style.width=(allDates.length?Math.round(compDays/allDates.length*100):0)+'%';
+
+  // 连续打卡
+  let streak=0;
+  let cd=new Date(today);
+  // 如果今天还没完成，从昨天开始算
+  if(getRate(todayStr)<100) cd.setDate(cd.getDate()-1);
+  while(true){
+    const ds=fmtDate(cd);
+    if(TASKS[ds]&&getRate(ds)===100) streak++;
+    else break;
+    cd.setDate(cd.getDate()-1);
+  }
+  document.getElementById('streak').textContent=streak;
+
+  // 累计完成
+  let totalDone=0;
+  allDates.forEach(ds=>{const t=TASKS[ds];const d=getDone(ds);totalDone+=t.items.filter((_,i)=>d[i]).length});
+  document.getElementById('total-done').textContent=totalDone;
+
+  // 下次考察
+  const exams=allDates.filter(ds=>TASKS[ds].exam&&ds>=todayStr);
+  if(exams.length){
+    const nd=Math.ceil((new Date(exams[0])-today)/86400000);
+    document.getElementById('exam-countdown').textContent=nd;
+  }else{
+    document.getElementById('exam-countdown').textContent='完';
+  }
+
+  // 分板块进度
+  const cats={};
+  allDates.forEach(ds=>{
+    const t=TASKS[ds];const d=getDone(ds);
+    t.items.forEach((it,i)=>{
+      if(!cats[it.cat])cats[it.cat]={d:0,t:0};
+      cats[it.cat].t++;
+      if(d[i])cats[it.cat].d++;
+    });
+  });
+  const cp=document.getElementById('cat-progress');
+  let ch='';
+  Object.keys(cats).forEach(c=>{
+    const r=cats[c].t?Math.round(cats[c].d/cats[c].t*100):0;
+    ch+='<div class="cat-row"><span class="cat-name">'+c+'</span><div class="cat-bar"><div class="cat-fill" style="width:'+r+'%"></div></div><span class="cat-pct">'+r+'%</span></div>';
+  });
+  cp.innerHTML=ch;
+
+  // 寄语
+  const t=TASKS[todayStr];
+  let msg='';
+  if(!t){
+    if(todayStr<'2026-10-13') msg='还没开始呢，10月13日见。';
+    else msg='今天休息。明天继续。';
+  }else{
+    const r=getRate(todayStr);
+    if(r===100) msg=t.phase==='打底期'?'稳。今天做到了。':t.phase==='强化期'?'真题不骗人，你也没骗它。':'考前就这样稳住。';
+    else if(r===0) msg=t.phase==='打底期'?'开始了就别停。':t.phase==='强化期'?'真题是最真实的镜子，照吧。':'最后几步了，别松。';
+    else if(r<50) msg='今天还差一半，别放。';
+    else msg='差一点，补上就行。';
+  }
+  document.getElementById('message-text').textContent=msg;
+}
+
+/* ===== 重置 ===== */
+document.getElementById('reset-btn').onclick=()=>{
+  if(confirm('确定重置全部打卡记录？这不可恢复。')){
+    Object.keys(localStorage).filter(k=>k.startsWith(STORAGE)).forEach(k=>localStorage.removeItem(k));
+    renderCal();renderTask();updateStats();
+  }
+};
+
+/* ===== 初始化 ===== */
+curY=today.getFullYear();curM=today.getMonth();selDate=todayStr;
+renderCal();renderTask();updateStats();
+</script>
+</body>
+</html>
