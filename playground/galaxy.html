@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>给加加的银河</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:100%; height:100%; overflow:hidden; background:#000; }
+canvas { display:block; width:100vw; height:100vh; }
+</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+<script>
+const c = document.getElementById('sky');
+const ctx = c.getContext('2d');
+let W, H, cx, cy;
+
+function resize(){
+  W = c.width = window.innerWidth * devicePixelRatio;
+  H = c.height = window.innerHeight * devicePixelRatio;
+  c.style.width = window.innerWidth + 'px';
+  c.style.height = window.innerHeight + 'px';
+  cx = W/2; cy = H/2;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const R = Math.min(W,H);          // 基准尺寸
+const GAL = R * 0.92;             // 星系直径
+const TAU = Math.PI*2;
+
+/* ---------- 预渲染粒子贴图 ---------- */
+function makeSprite(size, stops){
+  const s = document.createElement('canvas');
+  s.width = s.height = size;
+  const g = s.getContext('2d');
+  const grd = g.createRadialGradient(size/2,size/2,0, size/2,size/2,size/2);
+  for(const [o,col] of stops) grd.addColorStop(o,col);
+  g.fillStyle = grd;
+  g.fillRect(0,0,size,size);
+  return s;
+}
+// 星尘
+const dustSprite = makeSprite(32, [
+  [0,'rgba(255,255,255,1)'],
+  [0.25,'rgba(255,255,255,0.55)'],
+  [1,'rgba(255,255,255,0)']
+]);
+// 大亮星光晕
+const glowSprite = makeSprite(256, [
+  [0,'rgba(255,255,255,1)'],
+  [0.08,'rgba(235,225,255,0.9)'],
+  [0.3,'rgba(190,170,255,0.28)'],
+  [0.65,'rgba(150,130,255,0.07)'],
+  [1,'rgba(150,130,255,0)']
+]);
+// 核心光晕
+const coreSprite = makeSprite(512, [
+  [0,'rgba(255,248,232,1)'],
+  [0.12,'rgba(255,232,196,0.85)'],
+  [0.3,'rgba(240,196,226,0.32)'],
+  [0.6,'rgba(190,150,240,0.1)'],
+  [1,'rgba(150,110,235,0)']
+]);
+
+/* ---------- 背景星 ---------- */
+const bgStars = [];
+for(let i=0;i<1060;i++){
+  const a = Math.random()*TAU;
+  const r = Math.sqrt(Math.random()) * Math.max(W,H)*0.75;
+  bgStars.push({
+    x: cx + Math.cos(a)*r,
+    y: cy + Math.sin(a)*r,
+    s: (Math.random()**2)*2.2+0.4,
+    b: Math.random()*0.5+0.25,
+    tw: Math.random()*TAU,
+    tws: 0.005+Math.random()*0.02,
+    warm: Math.random()<0.22
+  });
+}
+
+/* ---------- 星系粒子：对数螺旋双臂 ---------- */
+function gauss(){ return (Math.random()+Math.random()+Math.random()-1.5)/1.5; }
+
+const armDust = [];   // 旋臂尘埃
+const diskDust = [];  // 盘面散尘
+const brightStars = []; // 旋臂上的亮星
+
+const ARMS = 2;
+const B = 0.30;        // 缠绕松紧
+const armTint = t => {
+  // t: 0 核心 → 1 外缘
+  if(t<0.22) return [255, 235, 205];
+  if(t<0.45) return [238, 205, 245];
+  if(t<0.7)  return [205, 172, 245];
+  return [168, 178, 250];
+};
+
+for(let arm=0; arm<ARMS; arm++){
+  const armOff = arm * Math.PI;
+  const N = 1500;
+  for(let i=0;i<N;i++){
+    const t = Math.random();               // 0核 → 1缘
+    const theta = Math.log(1 + t*6)/B;     // 对数螺旋角度
+    const spread = 0.10 + t*0.30;          // 越外越散
+    const th = theta + armOff + gauss()*spread;
+    const rad = GAL*0.5 * t * (1 + gauss()*0.06);
+    const col = armTint(t + gauss()*0.05);
+    armDust.push({
+      r: rad, a: th,
+      s: (Math.random()**1.6)*3.2 + 0.5,
+      al: Math.random()*0.5+0.25,
+      tw: Math.random()*TAU, tws: 0.004+Math.random()*0.015,
+      col
+    });
+  }
+  // 旋臂亮星
+  for(let i=0;i<110;i++){
+    const t = 0.12 + Math.random()*0.85;
+    const theta = Math.log(1 + t*6)/B;
+    const th = theta + armOff + gauss()*0.14;
+    const rad = GAL*0.5 * t * (1 + gauss()*0.04);
+    brightStars.push({
+      r: rad, a: th,
+      s: (Math.random()**2)*R*0.012 + R*0.003,
+      al: Math.random()*0.45+0.5,
+      tw: Math.random()*TAU, tws: 0.003+Math.random()*0.01
+    });
+  }
+}
+// 盘面散尘 + 核球
+for(let i=0;i<1600;i++){
+  const a = Math.random()*TAU;
+  const t = Math.sqrt(Math.random());
+  const rad = GAL*0.5 * t;
+  const dens = t<0.3 ? 1 : 0.35;   // 靠近核心更密
+  if(Math.random()>dens) { i--; continue; }
+  const t2 = t + gauss()*0.04;
+  diskDust.push({
+    r: rad, a,
+    s: (Math.random()**1.6)*2.6 + 0.4,
+    al: Math.random()*0.4+0.15,
+    tw: Math.random()*TAU, tws: 0.004+Math.random()*0.015,
+    col: t2<0.25 ? [255,238,210] : (t2<0.5 ? [232,200,242] : [180,172,248])
+  });
+}
+
+/* ---------- 流星 ---------- */
+const meteors = [];
+function spawnMeteor(){
+  const n = 1 + (Math.random()<0.5?1:0) + (Math.random()<0.25?1:0);  // 一次1~3颗
+  for(let j=0;j<n;j++){
+    // 统一方向带：从右上入，往左下划过星系
+    const rev = Math.random()<0.18;          // 少数反向，从左下入
+    const base = rev ? Math.PI*0.85 : Math.PI*0.78;   // 方向角
+    const ang = base + (Math.random()-0.5)*0.22;
+    let x, y;
+    if(rev){
+      x = -40 - Math.random()*W*0.15;
+      y = H*(0.55+Math.random()*0.35);
+    } else {
+      x = W*(0.55+Math.random()*0.55);
+      y = -40 - Math.random()*H*0.22;
+    }
+    const sp = (7+Math.random()*8) * devicePixelRatio;
+    meteors.push({
+      x, y,
+      vx: Math.cos(ang)*sp, vy: Math.sin(ang)*sp,
+      life: 1, decay: 0.005+Math.random()*0.005,
+      len: (140+Math.random()*180)*devicePixelRatio
+    });
+  }
+}
+
+/* ---------- 主循环 ---------- */
+let rot = -0.35;
+let breathe = 0;
+
+function frame(){
+  rot += 0.00045;
+  breathe += 0.02;
+
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#020208';
+  ctx.fillRect(0,0,W,H);
+
+  // 背景星
+  for(const s of bgStars){
+    s.tw += s.tws;
+    const b = s.b * (0.7 + 0.3*Math.sin(s.tw));
+    ctx.globalAlpha = b;
+    ctx.fillStyle = s.warm ? '#ffe6c8' : '#e8ecff';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.s, 0, TAU);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // ---- 星系（旋转坐标系）----
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.globalCompositeOperation = 'lighter';
+
+  // 核心光晕（呼吸）
+  const pulse = 0.92 + 0.08*Math.sin(breathe*0.7);
+  const coreS = GAL*0.55*pulse;
+  ctx.globalAlpha = 0.9;
+  ctx.drawImage(coreSprite, -coreS/2, -coreS/2, coreS, coreS);
+  ctx.globalAlpha = 1;
+
+  // 盘面散尘
+  for(const d of diskDust){
+    d.tw += d.tws;
+    const x = Math.cos(d.a)*d.r, y = Math.sin(d.a)*d.r;
+    ctx.globalAlpha = d.al * (0.65+0.35*Math.sin(d.tw));
+    const [r,g,b] = d.col;
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.drawImage(dustSprite, x-d.s, y-d.s, d.s*2, d.s*2);
+  }
+
+  // 旋臂尘埃
+  for(const d of armDust){
+    d.tw += d.tws;
+    const x = Math.cos(d.a)*d.r, y = Math.sin(d.a)*d.r;
+    ctx.globalAlpha = d.al * (0.6+0.4*Math.sin(d.tw));
+    const [r,g,b] = d.col;
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.drawImage(dustSprite, x-d.s, y-d.s, d.s*2, d.s*2);
+  }
+
+  // 旋臂亮星 + 光晕
+  for(const s of brightStars){
+    s.tw += s.tws;
+    const x = Math.cos(s.a)*s.r, y = Math.sin(s.a)*s.r;
+    const al = s.al * (0.75+0.25*Math.sin(s.tw));
+    const gs = s.s*6;
+    ctx.globalAlpha = al*0.55;
+    ctx.drawImage(glowSprite, x-gs/2, y-gs/2, gs, gs);
+    ctx.globalAlpha = al;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(0.8, s.s*0.14), 0, TAU);
+    ctx.fill();
+  }
+
+  ctx.restore();
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+
+  // ---- 流星 ----
+  // 开场先落一阵
+  if(meteors.length===0 && Math.random()<0.03) spawnMeteor();
+  if(Math.random()<0.008) spawnMeteor();
+  ctx.globalCompositeOperation = 'lighter';
+  for(let i=meteors.length-1;i>=0;i--){
+    const m = meteors[i];
+    m.x += m.vx; m.y += m.vy; m.life -= m.decay;
+    if(m.life<=0 || m.x>W+80 || m.y>H+80){ meteors.splice(i,1); continue; }
+    const k = m.len/14;
+    const tx = m.x-m.vx*k, ty = m.y-m.vy*k;
+    const grd = ctx.createLinearGradient(tx,ty,m.x,m.y);
+    grd.addColorStop(0,'rgba(255,255,255,0)');
+    grd.addColorStop(0.55,`rgba(190,215,255,${m.life*0.45})`);
+    grd.addColorStop(1,`rgba(255,255,255,${m.life})`);
+    ctx.strokeStyle = grd;
+    ctx.lineWidth = 2.2*devicePixelRatio;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(m.x,m.y); ctx.stroke();
+    // 头部
+    const hs = 9*devicePixelRatio;
+    const gl = ctx.createRadialGradient(m.x,m.y,0,m.x,m.y,hs);
+    gl.addColorStop(0,`rgba(255,255,255,${m.life})`);
+    gl.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle = gl;
+    ctx.beginPath(); ctx.arc(m.x,m.y,hs,0,TAU); ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>

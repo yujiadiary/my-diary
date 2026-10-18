@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>老公和加加一起看</title>
+<style>
+/* ===== 一起看 · 暗夜紫星空 ===== */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#f0eef8;background:#0d0a1f;overflow:hidden;}
+
+.watch-together{
+  position:fixed;inset:0;overflow:hidden;
+  background:#06050e;
+  --wt-bg:url('stars.jpg.PNG');
+  --wt-mask:.18;
+}
+/* 星空层：背景图 + 可调遮罩（设置页可换图/调明暗） */
+.watch-together::before{
+  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:#06050e var(--wt-bg) center center/cover no-repeat;
+}
+.watch-together::after{
+  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:rgba(4,3,10,var(--wt-mask));
+}
+
+.watch-together .wt-wrap{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;}
+
+/* 顶栏 */
+.watch-together .wt-top{
+  flex-shrink:0;padding:calc(env(safe-area-inset-top) + 10px) 18px 10px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+/* 斜体衬线艺术字 */
+.watch-together .wt-art{
+  font-family:"Songti SC","STSong","Kaiti SC","KaiTi",Georgia,"Times New Roman",serif;
+  font-style:italic;font-weight:400;letter-spacing:.16em;text-shadow:0 2px 10px rgba(5,3,12,.6);
+}
+.watch-together .wt-title{
+  font-size:26px;letter-spacing:.24em;font-weight:300;
+  font-family:"Songti SC","STSong","Kaiti SC","KaiTi",Georgia,"Times New Roman",serif;
+  font-style:italic;white-space:nowrap;
+  background:linear-gradient(180deg,rgba(244,238,255,.95) 0%,rgba(201,179,255,.78) 55%,rgba(140,118,205,.5) 100%);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:#e8e2fb;
+  filter:drop-shadow(0 3px 18px rgba(130,100,210,.45));
+  padding:2px 0;
+}
+.watch-together .wt-filmtag{font-size:12px;color:#8a82a0;max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* 主区域 */
+.watch-together .wt-main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px 92px;}
+.watch-together .wt-page{display:none;animation:wt-fade .35s ease;}
+.watch-together .wt-page.active{display:block;}
+@keyframes wt-fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+/* 卡片 */
+.watch-together .card{
+  background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;text-shadow:0 2px 12px rgba(5,3,12,.85);
+  border:1px solid rgba(200,190,230,.10);border-radius:22px;
+  box-shadow:0 8px 32px rgba(5,3,12,.5);padding:18px;margin-bottom:14px;
+}
+.watch-together .card h3{font-size:14px;color:#c9b3ff;font-weight:600;letter-spacing:1px;margin-bottom:12px;}
+.watch-together .card .sub{font-size:12px;color:#8a82a0;line-height:1.6;}
+
+/* 输入 */
+.watch-together .field{margin-bottom:14px;}
+.watch-together .field label{display:block;font-size:12px;color:#8a82a0;margin-bottom:6px;letter-spacing:.5px;}
+.watch-together .field input,.watch-together .field textarea{
+  width:100%;background:rgba(15,10,30,.6);border:1px solid rgba(180,160,230,.15);
+  border-radius:14px;padding:11px 13px;color:#f0eef8;font-size:14px;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.watch-together .field input:focus,.watch-together .field textarea:focus{
+  border-color:rgba(167,139,250,.6);box-shadow:0 0 0 3px rgba(167,139,250,.12);
+}
+.watch-together .field textarea{resize:vertical;min-height:96px;line-height:1.55;}
+
+/* 按钮 */
+.watch-together .btn{
+  touch-action:manipulation;display:inline-flex;align-items:center;justify-content:center;
+  border:none;border-radius:14px;padding:11px 20px;font-size:14px;color:#fff;
+  background:linear-gradient(135deg,#7c5cff,#a78bfa);cursor:pointer;letter-spacing:.5px;
+  transition:transform .12s,opacity .2s,box-shadow .2s;
+}
+.watch-together .btn:active{transform:scale(.96);}
+.watch-together .btn.ghost{background:rgba(180,160,230,.1);color:#c9b3ff;border:1px solid rgba(180,160,230,.2);}
+.watch-together .btn.block{width:100%;}
+.watch-together .btn.sm{padding:8px 14px;font-size:13px;border-radius:12px;}
+.watch-together .btn:disabled{opacity:.5;}
+
+/* 导入区 */
+.watch-together .wt-import{text-align:center;padding:30px 16px;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;border:1px dashed rgba(200,190,230,.10);text-shadow:0 2px 14px rgba(5,3,12,.8);}
+.watch-together #wtBgMask{-webkit-appearance:none;appearance:none;height:4px;background:rgba(180,160,230,.2);border-radius:4px;outline:none;cursor:pointer;margin-top:8px;}
+.watch-together #wtBgMask::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#c9b3ff;box-shadow:0 0 8px rgba(167,139,250,.7);}
+.watch-together .wt-import h2{font-size:21px;color:#eee8fb;margin-bottom:8px;letter-spacing:.16em;
+  font-family:"Songti SC","STSong","Kaiti SC","KaiTi",Georgia,"Times New Roman",serif;
+  font-style:italic;font-weight:400;text-shadow:0 2px 10px rgba(5,3,12,.6);}
+.watch-together .wt-import p{font-size:13px;color:#8a82a0;margin-bottom:22px;line-height:1.6;}
+.watch-together .wt-import .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:12px;}
+.watch-together .wt-hint{font-size:12px;color:#6a6276;margin-top:10px;line-height:1.6;}
+.watch-together .wt-filename{font-size:12px;color:#c9b3ff;margin-top:6px;word-break:break-all;}
+
+/* 播放器 */
+.watch-together .wt-player{position:relative;border-radius:18px;overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:16/9;}
+.watch-together .wt-player video{width:100%;height:100%;display:block;background:#000;object-fit:contain;}
+.watch-together .wt-player.wt-fake-fs{position:fixed;inset:0;z-index:9999;border-radius:0;aspect-ratio:auto;margin:0;}
+.watch-together .wt-player.wt-fake-fs .wt-ctrls{z-index:6;padding-bottom:calc(8px + env(safe-area-inset-bottom));}
+.watch-together .wt-ctrls{
+  position:absolute;left:0;right:0;bottom:0;padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+  background:linear-gradient(transparent,rgba(0,0,0,.55));display:flex;align-items:center;gap:8px;
+}
+.watch-together .wt-playbtn{
+  touch-action:manipulation;width:34px;height:34px;border-radius:50%;border:none;
+  background:rgba(255,255,255,.16);color:#fff;font-size:14px;cursor:pointer;flex-shrink:0;
+}
+.watch-together .wt-seek{flex:1;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,.25);border-radius:4px;outline:none;cursor:pointer;}
+.watch-together .wt-seek::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:#c9b3ff;box-shadow:0 0 6px rgba(167,139,250,.7);}
+.watch-together .wt-time{font-size:11px;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums;flex-shrink:0;letter-spacing:.5px;}
+.watch-together .wt-fullbtn{touch-action:manipulation;width:30px;height:30px;border:none;background:transparent;color:#fff;font-size:15px;cursor:pointer;flex-shrink:0;}
+
+/* 聊天 */
+.watch-together .wt-chat{display:flex;flex-direction:column;height:46vh;}
+.watch-together .wt-msgs{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 2px;}
+.watch-together .wt-msg{margin-bottom:12px;display:flex;flex-direction:column;}
+.watch-together .wt-msg.ai{align-items:flex-start;}
+.watch-together .wt-msg.me{align-items:flex-end;}
+.watch-together .wt-msg .b{max-width:80%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.6;letter-spacing:.3px;}
+.watch-together .wt-msg.ai .b{background:rgba(40,30,66,.7);border:1px solid rgba(180,160,230,.12);color:#e8e2f8;border-bottom-left-radius:5px;}
+.watch-together .wt-msg.me .b{background:linear-gradient(135deg,#7c5cff,#a78bfa);color:#fff;border-bottom-right-radius:5px;}
+.watch-together .wt-msg .who{font-size:11px;color:#6a6276;margin:0 4px 4px;}
+.watch-together .wt-chatempty{text-align:center;color:#6a6276;font-size:13px;padding:30px 10px;line-height:1.7;}
+.watch-together .wt-inputbar{flex-shrink:0;display:flex;gap:8px;padding:10px 0 0;align-items:flex-end;}
+.watch-together .wt-inputbar textarea{flex:1;background:rgba(15,10,30,.6);border:1px solid rgba(180,160,230,.15);border-radius:16px;padding:10px 13px;color:#f0eef8;font-size:14px;outline:none;resize:none;height:42px;max-height:96px;line-height:1.5;}
+.watch-together .wt-send{touch-action:manipulation;flex-shrink:0;height:42px;padding:0 16px;border:none;border-radius:16px;background:linear-gradient(135deg,#7c5cff,#a78bfa);color:#fff;font-size:14px;cursor:pointer;}
+.watch-together .wt-thinking{font-size:12px;color:#8a82a0;padding:4px 6px;}
+.watch-together .wt-thinking span{display:inline-block;animation:wt-dot 1.2s infinite;}
+.watch-together .wt-thinking span:nth-child(2){animation-delay:.2s;}
+.watch-together .wt-thinking span:nth-child(3){animation-delay:.4s;}
+@keyframes wt-dot{0%,60%,100%{opacity:.25;}30%{opacity:1;}}
+
+/* 全屏弹幕浮层 */
+.watch-together .wt-danmaku{
+  position:absolute;left:0;right:0;bottom:0;padding:14px 14px 12px;z-index:5;pointer-events:none;
+  opacity:0;transition:opacity .6s ease;
+}
+.watch-together .wt-danmaku.show{opacity:1;}
+.watch-together .wt-danmaku .dm-user{font-size:13px;color:#c9b3ff;text-shadow:0 1px 4px rgba(0,0,0,.8);margin-bottom:4px;line-height:1.4;}
+.watch-together .wt-danmaku .dm-ai{font-size:14px;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.9);line-height:1.5;}
+.watch-together .wt-fsinput{
+  pointer-events:auto;margin-top:10px;width:100%;background:transparent;border:none;
+  border-bottom:1px solid rgba(255,255,255,.35);color:#fff;font-size:15px;padding:6px 2px;outline:none;
+}
+.watch-together .wt-fsinput::placeholder{color:rgba(255,255,255,.45);}
+
+/* 字幕库 */
+.watch-together .wt-libhead{margin-bottom:14px;}
+.watch-together .wt-libhead h2{font-size:20px;color:#eee8fb;margin-bottom:6px;letter-spacing:.14em;
+  font-family:"Songti SC","STSong","Kaiti SC","KaiTi",Georgia,"Times New Roman",serif;
+  font-style:italic;font-weight:400;text-shadow:0 2px 10px rgba(5,3,12,.6);}
+.watch-together .wt-libhead .meta{font-size:12px;color:#8a82a0;}
+.watch-together .wt-layer{margin-bottom:10px;background:rgba(30,22,52,.5);border:1px solid rgba(180,160,230,.12);border-radius:16px;overflow:hidden;}
+.watch-together .wt-layerhead{touch-action:manipulation;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;}
+.watch-together .wt-layerhead .lnum{font-size:12px;color:#a78bfa;width:34px;flex-shrink:0;}
+.watch-together .wt-layerhead .ltime{font-size:11px;color:#6a6276;width:118px;flex-shrink:0;font-variant-numeric:tabular-nums;}
+.watch-together .wt-layerhead .lsum{flex:1;font-size:13px;color:#c8c0dc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.watch-together .wt-layerhead .arrow{color:#6a6276;transition:transform .25s;flex-shrink:0;}
+.watch-together .wt-layer.open .arrow{transform:rotate(90deg);}
+.watch-together .wt-layerbody{display:none;padding:0 14px 14px 44px;}
+.watch-together .wt-layer.open .wt-layerbody{display:block;}
+.watch-together .wt-layerbody .fullsum{font-size:13px;color:#e8e2f8;line-height:1.7;margin-bottom:10px;padding-top:6px;border-top:1px solid rgba(180,160,230,.1);}
+.watch-together .wt-layerbody .line{font-size:12px;color:#b0a8c8;line-height:1.6;margin-bottom:5px;}
+.watch-together .wt-layerbody .line .t{color:#6a6276;font-variant-numeric:tabular-nums;margin-right:6px;}
+
+/* 设置提示 */
+.watch-together .wt-tip{font-size:12px;color:#c9a0a0;background:rgba(201,160,160,.1);border:1px solid rgba(201,160,160,.2);border-radius:12px;padding:10px 12px;margin-bottom:14px;line-height:1.6;display:none;}
+.watch-together .wt-tip.show{display:block;}
+.watch-together .wt-tip.ok{color:#a0c9a0;background:rgba(160,201,160,.1);border-color:rgba(160,201,160,.2);}
+
+/* 预处理遮罩 */
+.watch-together .wt-mask{position:absolute;inset:0;z-index:20;background:rgba(8,5,18,.86);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;text-align:center;padding:24px;}
+.watch-together .wt-mask.show{display:flex;}
+.watch-together .wt-mask .spinner{width:34px;height:34px;border:3px solid rgba(180,160,230,.2);border-top-color:#a78bfa;border-radius:50%;animation:wt-spin .8s linear infinite;margin:0 auto 16px;}
+@keyframes wt-spin{to{transform:rotate(360deg);}}
+.watch-together .wt-mask .stage{font-size:14px;color:#e8e2f8;margin-bottom:8px;letter-spacing:.5px;}
+.watch-together .wt-mask .detail{font-size:12px;color:#8a82a0;line-height:1.7;}
+.watch-together .wt-mask .bar{width:180px;height:4px;background:rgba(180,160,230,.15);border-radius:4px;margin:14px auto 0;overflow:hidden;}
+.watch-together .wt-mask .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7c5cff,#c9b3ff);transition:width .4s ease;}
+
+/* 底部导航 */
+.watch-together .wt-nav{position:absolute;left:0;right:0;bottom:0;z-index:10;display:flex;background:rgba(13,10,31,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(180,160,230,.1);padding-bottom:env(safe-area-inset-bottom);}
+.watch-together .wt-nav button{touch-action:manipulation;flex:1;background:none;border:none;color:#6a6276;font-size:13px;padding:15px 0 17px;cursor:pointer;display:flex;align-items:center;justify-content:center;letter-spacing:.12em;transition:color .2s;
+  font-family:"Songti SC","STSong","Kaiti SC","KaiTi",Georgia,"Times New Roman",serif;font-style:italic;}
+.watch-together .wt-nav button.active{color:#c9b3ff;}
+
+/* 空态 */
+.watch-together .wt-empty{text-align:center;color:#6a6276;font-size:13px;padding:48px 20px;line-height:1.8;}
+
+</style>
+<style>html.jj-embed .watch-together .wt-top{display:none}</style>
+<script>try{if(window.self!==window.top){document.documentElement.classList.add('jj-embed');}}catch(e){}</script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+</head>
+<body>
+<div class="watch-together">
+  <div class="wt-wrap">
+    <div class="wt-top">
+      <div class="wt-title">老公和加加一起看</div>
+      <div class="wt-filmtag" id="wtFilmTag"></div>
+    </div>
+
+    <div class="wt-main" id="wtMain">
+
+      <!-- 观影页 -->
+      <div class="wt-page active" data-page="watch">
+        <div id="wtImportArea" class="card wt-import">
+          <h2>导一部电影进来</h2>
+          <p>视频和字幕都只在你手机本地处理，<br>不会被上传到任何地方。</p>
+          <div class="field" style="text-align:left;">
+            <label>影片名（可选）</label>
+            <input type="text" id="wtFilmName" placeholder="比如：爱在黎明破晓前">
+          </div>
+          <div class="field" style="text-align:left;">
+            <label>视频链接（m3u8 / mp4）</label>
+            <input type="text" id="wtVideoURL" placeholder="粘贴链接后自动加载" enterkeyhint="done">
+          </div>
+          <div class="row">
+            <button class="btn ghost" id="wtPickVideo">选视频</button>
+            <button class="btn ghost" id="wtPickSub">选字幕</button>
+          </div>
+          <div class="wt-filename" id="wtVideoName"></div>
+          <div class="wt-filename" id="wtSubName"></div>
+          <div class="wt-hint">支持 mp4/mov/webm/m3u8链接；字幕支持 .srt / .vtt<br>选好视频和字幕点预处理，或只选视频直接看。</div>
+          <div class="row" style="margin-top:18px;">
+            <button class="btn block" id="wtStartPre" disabled>开始预处理</button>
+            <button class="btn ghost" id="wtDirectWatch" disabled>直接看</button>
+          </div>
+          <input type="file" id="wtVideoFile" accept="video/*" hidden>
+          <input type="file" id="wtSubFile" accept=".srt,.vtt,text/vtt" hidden>
+        </div>
+
+        <div id="wtWatchArea" style="display:none;">
+          <div class="wt-player" id="wtPlayer">
+            <video id="wtVideo" playsinline></video>
+            <div class="wt-ctrls" id="wtCtrls">
+              <button class="wt-playbtn" id="wtPlayBtn">▶</button>
+              <input type="range" class="wt-seek" id="wtSeek" value="0" min="0" max="100" step="0.1">
+              <span class="wt-time" id="wtTime">0:00 / 0:00</span>
+              <button class="wt-fullbtn" id="wtFullBtn" title="全屏">⤢</button>
+            </div>
+            <div class="wt-danmaku" id="wtDanmaku">
+              <div class="dm-user" id="dmUser"></div>
+              <div class="dm-ai" id="dmAi"></div>
+              <input class="wt-fsinput" id="wtFsInput" placeholder="说点什么…" enterkeyhint="send">
+            </div>
+          </div>
+
+          <div class="card" style="padding:14px 14px 12px;">
+            <div class="wt-chat">
+              <div class="wt-msgs" id="wtMsgs"></div>
+              <div class="wt-inputbar">
+                <textarea id="wtChatInput" placeholder="和我说说这段…" enterkeyhint="send"></textarea>
+                <button class="wt-send" id="wtSend">发送</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 字幕库页 -->
+      <div class="wt-page" data-page="library">
+        <div id="wtLibContent"></div>
+      </div>
+
+      <!-- 设置页 -->
+      <div class="wt-page" data-page="settings">
+        <div class="card">
+          <h3>背景</h3>
+          <div class="tip sub" style="margin-bottom:14px;">换一张图当背景，再调明暗让星星看得清。</div>
+          <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:14px;">
+            <button class="btn ghost" id="wtPickBg">换背景图</button>
+            <button class="btn ghost" id="wtResetBg">用默认星空</button>
+          </div>
+          <div class="field" style="margin-top:6px;">
+            <label>背景明暗 <span id="wtBgMaskVal" style="color:#c9b3ff;">18%</span></label>
+            <input type="range" id="wtBgMask" min="0" max="80" value="18" step="2" style="width:100%;">
+          </div>
+          <input type="file" id="wtBgFile" accept="image/*" hidden>
+        </div>
+
+        <div class="card">
+          <h3>AI 接口</h3>
+          <div class="tip sub" style="margin-bottom:14px;">默认填硅基流动，也可换成 DeepSeek 官方等兼容接口。</div>
+          <div class="field">
+            <label>Base URL</label>
+            <input type="text" id="wtApiBase" placeholder="https://api.siliconflow.cn/v1">
+          </div>
+          <div class="field">
+            <label>API Key</label>
+            <input type="password" id="wtApiKey" placeholder="sk-...">
+          </div>
+          <div class="field">
+            <label>模型名</label>
+            <input type="text" id="wtApiModel" placeholder="deepseek-ai/DeepSeek-V3">
+          </div>
+          <button class="btn block ghost" id="wtSaveApi">保存接口配置</button>
+        </div>
+
+        <div class="card">
+          <h3>系统提示词</h3>
+          <div class="field">
+            <textarea id="wtSysPrompt" placeholder="AI 的身份与语气设定"></textarea>
+          </div>
+          <button class="btn block ghost" id="wtSavePrompt">保存提示词</button>
+        </div>
+
+        <div class="card">
+          <h3>数据</h3>
+          <div class="tip sub" style="margin-bottom:14px;">换影片会自动覆盖。这里可手动清空本地记录。</div>
+          <button class="btn block ghost" id="wtClearData" style="color:#e0a0a0;border-color:rgba(224,160,160,.25);">清空本地数据</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="wt-nav">
+      <button data-nav="watch" class="active">观影</button>
+      <button data-nav="library">字幕库</button>
+      <button data-nav="settings">设置</button>
+    </div>
+  </div>
+
+  <div class="wt-tip" id="wtToast"></div>
+  <div class="wt-mask" id="wtMask">
+    <div>
+      <div class="spinner"></div>
+      <div class="stage" id="wtStage">准备中…</div>
+      <div class="detail" id="wtDetail"></div>
+      <div class="bar"><i id="wtBar"></i></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========== 一起看 · 核心参数（顶部可调） ========== */
+var WT_CFG = {
+  LAYER_COUNT: 20,        // 分层层数
+  GAP_TOLERANCE: 30,      // 切点附近 30 秒内无台词则强行按时间切
+  MAX_CONTEXT: 1500,      // 上下文总字数上限
+  SUMMARY_MAX: 100,       // 单层摘要字数
+  OVERVIEW_MAX: 100,      // 前情总览字数
+  REPLY_MAX: 100,         // AI 回复字数
+  RECENT_LAYERS: 5,       // 上下文带最近几层摘要（含当前层）
+  RECENT_CHAT: 6,         // 上下文带最近几轮聊天
+  DANMAKU_FADE: 60000,    // 全屏弹幕无新消息后淡出时间
+  DB_NAME: 'watch-together',
+  STORE: 'film'
+};
+
+/* 系统提示词默认值 */
+var WT_DEFAULT_PROMPT = '你是加加的观影伙伴。你们正在一起看一部电影。说话口语化、简短、真诚，像坐在旁边的朋友。你知道当前剧情，但不要剧透后面的内容。';
+
+/* ========== 辅助 ========== */
+function $wt(sel, root){ return (root || document)['querySelector'](sel); }
+function $$wt(sel, root){ return Array['from']((root || document)['querySelectorAll'](sel)); }
+function fmtTime(s){
+  if(!isFinite(s)) return '0:00';
+  s = Math['max'](0, Math['floor'](s));
+  var m = Math['floor'](s/60), sec = s%60;
+  var h = Math['floor'](m/60);
+  if(h>0) return h+':'+(m%60<10?'0':'')+(m%60)+':'+(sec<10?'0':'')+sec;
+  return m+':'+(sec<10?'0':'')+sec;
+}
+function wtToast(msg, ok){
+  var el = $wt('#wtToast');
+  el['textContent'] = msg;
+  el['classList']['remove']('ok');
+  if(ok) el['classList']['add']('ok');
+  el['classList']['add']('show');
+  clearTimeout(WT_STATE['toastTimer']);
+  WT_STATE['toastTimer'] = setTimeout(function(){ el['classList']['remove']('show'); }, 2600);
+}
+function wtMask(stage, detail, pct){
+  $wt('#wtStage')['textContent'] = stage || '';
+  $wt('#wtDetail')['textContent'] = detail || '';
+  if(pct!=null) $wt('#wtBar')['style']['width'] = pct + '%';
+}
+
+/* ========== 全局状态 ========== */
+var WT_STATE = {
+  videoURL: null,
+  videoName: '',
+  subName: '',
+  filmName: '',
+  duration: 0,
+  rawLines: [],   // 原始台词 {start,end,text}
+  lines: [],      // 清洗后有效台词
+  layers: [],     // 分层结果 {index,start,end,lines,summary}
+  summary: { overview:'', layerSummaries:[] },
+  chat: [],      // {role:'user'|'ai', text}
+  currentPage: 'watch',
+  danmakuTimer: null,
+  toastTimer: null,
+  api: { base:'https://api.siliconflow.cn/v1', key:'', model:'deepseek-ai/DeepSeek-V3' },
+  sysPrompt: WT_DEFAULT_PROMPT,
+  fullscreen: false
+};
+
+/* ========== IndexedDB ========== */
+function wtIDBOpen(){
+  if(typeof indexedDB === 'undefined' || !indexedDB) return Promise['reject']({name:'NotSupportedError'});
+  return new Promise(function(resolve, reject){
+    var req = indexedDB['open'](WT_CFG['DB_NAME'], 1);
+    req['onupgradeneeded'] = function(e){
+      var db = e['target']['result'];
+      if(!db['objectStoreNames']['contains'](WT_CFG['STORE'])) db['createObjectStore'](WT_CFG['STORE'], {keyPath:'id'});
+    };
+    req['onsuccess'] = function(e){ resolve(e['target']['result']); };
+    req['onerror'] = function(e){ reject(e['target']['error']); };
+  });
+}
+function wtIDBSave(data){
+  return wtIDBOpen().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db['transaction'](WT_CFG['STORE'], 'readwrite');
+      var st = tx['objectStore'](WT_CFG['STORE']);
+      st['put'](Object['assign']({id:'current'}, data));
+      tx['oncomplete'] = function(){ resolve(); };
+      tx['onerror'] = function(){ reject(tx['error']); };
+    });
+  });
+}
+function wtIDBLoad(){
+  return wtIDBOpen().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db['transaction'](WT_CFG['STORE'], 'readonly');
+      var st = tx['objectStore'](WT_CFG['STORE']);
+      var req = st['get']('current');
+      req['onsuccess'] = function(){ resolve(req['result'] || null); };
+      req['onerror'] = function(){ reject(req['error']); };
+    });
+  });
+}
+function wtIDBClear(){
+  return wtIDBOpen().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db['transaction'](WT_CFG['STORE'], 'readwrite');
+      tx['objectStore'](WT_CFG['STORE'])['clear']();
+      tx['oncomplete'] = function(){ resolve(); };
+      tx['onerror'] = function(){ reject(tx['error']); };
+    });
+  });
+}
+
+/* ========== 字幕解析 ========== */
+function wtParseSub(text){
+  var lines = [];
+  var blocks = String(text)['replace'](/\r\n/g,'\n')['replace'](/\r/g,'\n')['split'](/\n\s*\n/);
+  for(var i=0;i<blocks['length'];i++){
+    var block = blocks[i]['trim']();
+    if(!block) continue;
+    if(/^WEBVTT/i['test'](block) || /^NOTE/i['test'](block) || /^STYLE/i['test'](block)) continue;
+    var bl = block['split']('\n');
+    var idx = 0;
+    if(/^\d+$/['test'](bl[0]['trim']())) idx = 1;
+    var timeLine = bl[idx] || '';
+    var m = timeLine['match'](/(\d{1,2}):(\d{2}):(\d{2})[.,](\d{3})\s*-->\s*(\d{1,2}):(\d{2}):(\d{2})[.,](\d{3})/);
+    if(!m) continue;
+    var start = (+m[1])*3600 + (+m[2])*60 + (+m[3]) + (+m[4])/1000;
+    var end = (+m[5])*3600 + (+m[6])*60 + (+m[7]) + (+m[8])/1000;
+    var textLines = bl['slice'](idx+1);
+    var txt = textLines['join'](' ')['trim']();
+    txt = wtCleanText(txt);
+    if(!txt) continue;
+    var speaker = '';
+    var spm = txt['match'](/^([^\s:：]{1,8})[：:]\s*/);
+    if(spm){ speaker = spm[1]; txt = txt['slice'](spm[0]['length']); }
+    lines['push']({ start:start, end:end, text:txt, speaker:speaker });
+  }
+  lines['sort'](function(a,b){ return a['start'] - b['start']; });
+  return lines;
+}
+function wtCleanText(t){
+  if(!t) return '';
+  t = t['replace'](/<[^>]+>/g,'');           // 去 HTML 标签
+  t = t['replace'](/\{[^}]*\}/g,'');          // 去 {样式} 标记
+  t = t['replace'](/[\(\[][^)\]]*[\)\]]/g,''); // 去音效（笑声）[音乐]
+  t = t['replace'](/\s+/g,' ')['trim']();
+  return t;
+}
+
+/* ========== 清洗 ========== */
+var WT_FILLERS = ['啊','哦','嗯','呃','唉','呀','哈','嘿','喂','唔','噢','哎','啦','嘛','呐','哼','咦','哇','哟','咯'];
+function wtIsFillerOnly(s){
+  var pure = s['replace'](/[\s\p{P}。！？，、…—~\-\.,!?]/gu,'');
+  if(!pure) return false;
+  for(var i=0;i<pure['length'];i++){
+    if(WT_FILLERS['indexOf'](pure[i])<0) return false;
+  }
+  return true;
+}
+function wtPureLen(s){
+  return s['replace'](/[\s\p{P}。！？，、…—~\-\.,!?]/gu,'')['length'];
+}
+function wtCleanLines(raw){
+  var out = [];
+  for(var i=0;i<raw['length'];i++){
+    var t = raw[i]['text'];
+    var pure = t['replace'](/[\s\p{P}。！？，、…—~\-\.,!?]/gu,'');
+    if(!pure) continue;                        // 纯标点/省略号
+    if(wtIsFillerOnly(t)) continue;            // 纯语气词
+    if(wtPureLen(t) <= 2 && out['length']>0 && out[out['length']-1]['text']===t) continue; // 1-2字重复句
+    out['push'](raw[i]);
+  }
+  return out;
+}
+
+/* ========== 分层（20 层，不切台词） ========== */
+function wtBuildLayers(lines, duration){
+  var N = WT_CFG['LAYER_COUNT'];
+  duration = duration || (lines['length']? lines[lines['length']-1]['end'] : 0);
+  var layers = [];
+  var ends = [];   // 台词结束点（候选边界）
+  for(var i=0;i<lines['length'];i++) ends['push'](lines[i]['end']);
+  var boundaries = [0];
+  for(var k=1;k<N;k++){
+    var theory = duration * k / N;
+    var chosen = theory;
+    var chosenHasLine = false;
+    // 找最近的台词结束点 >= theory
+    var best = -1;
+    for(var j=0;j<ends['length'];j++){
+      if(ends[j] >= theory){ best = ends[j]; break; }
+    }
+    if(best>=0 && (best - theory) <= WT_CFG['GAP_TOLERANCE']){
+      chosen = best; chosenHasLine = true;
+    } else {
+      // 30 秒内无台词结束，强行按理论切点
+      chosen = theory;
+    }
+    if(chosen <= boundaries[boundaries['length']-1]) chosen = boundaries[boundaries['length']-1] + 0.01;
+    boundaries['push'](chosen);
+  }
+  boundaries['push'](duration);
+  for(var li=0;li<N;li++){
+    var st = boundaries[li], en = boundaries[li+1];
+    var lns = [];
+    for(var li2=0;li2<lines['length'];li2++){
+      if(lines[li2]['start'] >= st - 0.001 && lines[li2]['end'] <= en + 0.001) lns['push'](lines[li2]);
+      else if(lines[li2]['start'] < en && lines[li2]['end'] > st && lns['length']===0){
+        // 落在边界附近的台词，归到本层
+      }
+    }
+    layers['push']({ index:li, start:st, end:en, lines:lns, summary:'' });
+  }
+  return layers;
+}
+
+/* ========== AI 调用 ========== */
+function wtCallAI(messages, opts){
+  opts = opts || {};
+  var base = WT_STATE['api']['base']['replace'](/\/+$/,'');
+  var url = base + '/chat/completions';
+  var body = {
+    model: WT_STATE['api']['model'],
+    messages: messages,
+    temperature: opts['temperature']!=null? opts['temperature'] : 0.7,
+    max_tokens: opts['max_tokens'] || 600,
+    stream: false
+  };
+  if(opts['response_format']) body['response_format'] = opts['response_format'];
+  return fetch(url, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + WT_STATE['api']['key'] },
+    body: JSON['stringify'](body)
+  }).then(function(r){
+    if(!r['ok']) return r['text']().then(function(t){ var e=new Error('HTTP '+r['status']); e['detail']=t; throw e; });
+    return r['json']();
+  }).then(function(d){
+    var c = d && d['choices'] && d['choices'][0] && d['choices'][0]['message'] && d['choices'][0]['message']['content'];
+    if(!c) throw new Error('空回复');
+    return c;
+  });
+}
+
+/* ========== 摘要生成（一次性） ========== */
+function wtBuildSummaryPrompt(layers){
+  var parts = [];
+  for(var i=0;i<layers['length'];i++){
+    var L = layers[i];
+    var t = fmtTime(L['start']) + '-' + fmtTime(L['end']);
+    var txt = '';
+    if(L['lines']['length']===0){ txt = '（无对白段）'; }
+    else {
+      var arr = [];
+      for(var j=0;j<L['lines']['length'];j++){
+        var ln = L['lines'][j];
+        arr['push']((ln['speaker']? ln['speaker']+'：' : '') + ln['text']);
+      }
+      txt = arr['join'](' ');
+      if(txt['length'] > 600) txt = txt['slice'](0,600) + '…';
+    }
+    parts['push']('第'+(i+1)+'层 ['+t+']\n'+txt);
+  }
+  var prompt = '下面是一部电影按时间分成的 '+WT_CFG['LAYER_COUNT']+' 层对白。请为每一层生成一段不超过'+WT_CFG['SUMMARY_MAX']+'字的摘要，只写"谁、在哪、发生了什么"，直白说事，不要文学修辞、不要剧透后续。无对白的层写"无对白段"。最后再生成一段不超过'+WT_CFG['OVERVIEW_MAX']+'字的整片前情总览。\n\n'+
+    parts['join']('\n\n') +
+    '\n\n只输出 JSON，格式：{"overview":"前情总览","layers":["层1摘要","层2摘要",...]}，数组长度必须为'+WT_CFG['LAYER_COUNT']+'。';
+  return prompt;
+}
+function wtParseSummary(raw, layers){
+  var json = null;
+  try{ json = JSON['parse'](raw); }catch(e){
+    var m = raw['match'](/\{[\s\S]*\}/);
+    if(m){ try{ json = JSON['parse'](m[0]); }catch(e2){} }
+  }
+  if(!json || !Array['isArray'](json['layers'])) throw new Error('摘要格式错误');
+  var sums = json['layers'];
+  for(var i=0;i<layers['length'];i++){
+    layers[i]['summary'] = (sums[i] || '无对白段');
+    if(layers[i]['lines']['length']===0) layers[i]['summary'] = '无对白段';
+  }
+  return { overview: json['overview'] || '', layerSummaries: layers['map'](function(L){ return L['summary']; }) };
+}
+
+/* ========== 当前层定位 ========== */
+function wtCurrentLayer(t){
+  var ls = WT_STATE['layers'];
+  for(var i=0;i<ls['length'];i++){
+    if(t >= ls[i]['start'] && t < ls[i]['end']) return ls[i];
+  }
+  if(ls['length']) return ls[ls['length']-1];
+  return null;
+}
+
+/* ========== 上下文组装 ========== */
+function wtTruncate(s, max){ return s['length']>max ? s['slice'](0,max)+'…' : s; }
+function wtBuildContext(userMsg){
+  var t = $wt('#wtVideo')['currentTime'] || 0;
+  var cur = wtCurrentLayer(t);
+  var idx = cur? cur['index'] : 0;
+  var ov = WT_STATE['summary']['overview'] || '';
+  // 最近5层摘要（含当前层，向前取）
+  var recentSums = [];
+  for(var i=idx; i>=0 && recentSums['length']<WT_CFG['RECENT_LAYERS']; i--){
+    if(WT_STATE['layers'][i]) recentSums['unshift']('第'+(i+1)+'层：'+(WT_STATE['layers'][i]['summary']||'无对白段'));
+  }
+  // 当前层对白
+  var curLines = '';
+  if(cur && cur['lines']['length']){
+    var arr=[];
+    for(var j=0;j<cur['lines']['length'];j++){
+      var ln=cur['lines'][j];
+      arr['push']((ln['speaker']? ln['speaker']+'：':'')+ln['text']);
+    }
+    curLines = arr['join'](' ');
+    curLines = wtTruncate(curLines, 400);
+  }
+  var ctx = '';
+  if(ov) ctx += '【前情总览】'+wtTruncate(ov,WT_CFG['OVERVIEW_MAX'])+'\n';
+  ctx += '【最近剧情】\n'+recentSums['join']('\n')+'\n';
+  if(curLines) ctx += '【当前这段对白】'+curLines+'\n';
+  ctx += '【当前进度】'+fmtTime(t)+'，第'+(idx+1)+'层。';
+
+  var messages = [];
+  messages['push']({ role:'system', content: WT_STATE['sysPrompt'] + '\n（你们正在一起看电影。回复口语化、简短、真诚，不超过'+WT_CFG['REPLY_MAX']+'字，不要剧透后面的内容。）' });
+  messages['push']({ role:'user', content: ctx });
+
+  // 最近聊天历史
+  var chat = WT_STATE['chat'];
+  var take = Math['min'](chat['length'], WT_CFG['RECENT_CHAT']*2);
+  for(var k=chat['length']-take; k<chat['length']; k++){
+    messages['push']({ role: chat[k]['role']==='user'?'user':'assistant', content: chat[k]['text'] });
+  }
+  messages['push']({ role:'user', content: userMsg });
+  return messages;
+}
+
+/* ========== 渲染 ========== */
+function wtRenderChat(){
+  var box = $wt('#wtMsgs');
+  var chat = WT_STATE['chat'];
+  if(chat['length']===0){ box['innerHTML'] = '<div class="wt-chatempty">看累了就和我说说话～<br>我会根据现在的剧情陪你聊。</div>'; return; }
+  var html = '';
+  for(var i=0;i<chat['length'];i++){
+    var m = chat[i];
+    html += '<div class="wt-msg '+(m['role']==='user'?'me':'ai')+'">';
+    html += '<div class="who">'+(m['role']==='user'?'加加':'我')+'</div>';
+    html += '<div class="b">'+wtEscape(m['text'])+'</div>';
+    html += '</div>';
+  }
+  box['innerHTML'] = html;
+  box['scrollTop'] = box['scrollHeight'];
+}
+function wtEscape(s){ return String(s)['replace'](/&/g,'&amp;')['replace'](/</g,'&lt;')['replace'](/>/g,'&gt;'); }
+
+function wtRenderLibrary(){
+  var box = $wt('#wtLibContent');
+  var ls = WT_STATE['layers'];
+  if(ls['length']===0){
+    box['innerHTML'] = '<div class="wt-empty">还没有影片数据。<br>先去「观影」页导一部电影吧。</div>';
+    return;
+  }
+  var total = 0;
+  for(var i=0;i<ls['length'];i++) total += ls[i]['lines']['length'];
+  var head = '<div class="wt-libhead card" style="padding:16px 18px;">';
+  head += '<h2>'+(WT_STATE['filmName']||'未命名影片')+'</h2>';
+  head += '<div class="meta">'+WT_CFG['LAYER_COUNT']+' 层 · '+total+' 句对白 · 总览：'+(WT_STATE['summary']['overview']||'未生成')+'</div>';
+  if(!WT_STATE['summary']['overview']) head += '<button class="btn sm ghost" id="wtReSum" style="margin-top:10px;">补生成摘要</button>';
+  head += '</div>';
+  var body = '';
+  for(var j=0;j<ls['length'];j++){
+    var L = ls[j];
+    var sum = L['summary'] || (L['lines']['length']===0?'无对白段':'未生成');
+    body += '<div class="wt-layer" data-l="'+j+'">';
+    body += '<div class="wt-layerhead"><span class="lnum">L'+(j+1)+'</span><span class="ltime">'+fmtTime(L['start'])+'-'+fmtTime(L['end'])+'</span><span class="lsum">'+wtEscape(sum)+'</span><span class="arrow">›</span></div>';
+    body += '<div class="wt-layerbody"><div class="fullsum">'+wtEscape(sum)+'</div>';
+    if(L['lines']['length']===0){ body += '<div class="line">无对白段</div>'; }
+    else { for(var n=0;n<L['lines']['length'];n++){ var ln=L['lines'][n]; body += '<div class="line"><span class="t">'+fmtTime(ln['start'])+'</span>'+wtEscape((ln['speaker']?ln['speaker']+'：':'')+ln['text'])+'</div>'; } }
+    body += '</div></div>';
+  }
+  box['innerHTML'] = head + body;
+  $$wt('.wt-layerhead', box)['forEach'](function(hd){
+    hd['addEventListener']('click', function(){ hd['parentNode']['classList']['toggle']('open'); });
+  });
+  var reBtn = $wt('#wtReSum');
+  if(reBtn) reBtn['addEventListener']('click', wtRegenSummary);
+}
+
+function wtRenderWatchPage(){
+  var imp = $wt('#wtImportArea');
+  var wa = $wt('#wtWatchArea');
+  if(WT_STATE['videoURL']){
+    imp['style']['display'] = 'none';
+    wa['style']['display'] = 'block';
+    $wt('#wtFilmTag')['textContent'] = WT_STATE['filmName'] || WT_STATE['videoName'] || '';
+  } else if(WT_STATE['layers']['length']>0){
+    // 数据已恢复但需重新选视频
+    imp['style']['display'] = 'none';
+    wa['style']['display'] = 'none';
+    if(!$wt('#wtRestoreCard')){
+      var card = document['createElement']('div');
+      card['id'] = 'wtRestoreCard';
+      card['className'] = 'card wt-import';
+      card['innerHTML'] = '<h2>已恢复《'+wtEscape(WT_STATE['filmName']||'影片')+'》</h2><p>字幕、分层和聊天记录都还在。<br>重新选一下视频文件就能继续看。</p><button class="btn ghost" id="wtRePickVideo">选视频文件</button>';
+      imp['parentNode']['insertBefore'](card, imp);
+      $wt('#wtRePickVideo')['addEventListener']('click', function(){ $wt('#wtVideoFile')['click'](); });
+    }
+  } else {
+    if($wt('#wtRestoreCard')) $wt('#wtRestoreCard')['remove']();
+    imp['style']['display'] = 'block';
+    wa['style']['display'] = 'none';
+  }
+}
+
+/* ========== 页面切换 ========== */
+function wtSwitchPage(name){
+  WT_STATE['currentPage'] = name;
+  $$wt('.wt-page')['forEach'](function(p){ p['classList']['toggle']('active', p['dataset']['page']===name); });
+  $$wt('.wt-nav button')['forEach'](function(b){ b['classList']['toggle']('active', b['dataset']['nav']===name); });
+  if(name==='library') wtRenderLibrary();
+}
+
+/* ========== 导入 ========== */
+function wtLoadURL(url){
+  url = (url||'')['trim']();
+  if(!url) return;
+  WT_STATE['videoName'] = url['split']('?')[0]['split']('/')['pop']() || '在线视频';
+  WT_STATE['videoURL'] = url;
+  $wt('#wtVideoName')['textContent'] = '视频：' + WT_STATE['videoName'];
+  var v = $wt('#wtVideo');
+  if(url['indexOf']('.m3u8') > -1){
+    if(window['Hls'] && Hls['isSupported']()){
+      if(WT_STATE['_hls']) WT_STATE['_hls']['destroy']();
+      var hls = new Hls();
+      WT_STATE['_hls'] = hls;
+      hls['loadSource'](url);
+      hls['attachMedia'](v);
+      hls['on'](Hls['Events']['MANIFEST_PARSED'], function(){
+        WT_STATE['duration'] = v['duration'];
+        wtCheckReady();
+      });
+    } else if(v['canPlayType']('application/vnd.apple.mpegurl')){
+      v['src'] = url;
+    } else {
+      wtToast('不支持播放 m3u8');
+      return;
+    }
+  } else {
+    v['src'] = url;
+  }
+  v['addEventListener']('loadedmetadata', function onMeta(){
+    v['removeEventListener']('loadedmetadata', onMeta);
+    WT_STATE['duration'] = v['duration'];
+    wtCheckReady();
+  });
+}
+function wtPickVideo(file){
+  if(WT_STATE['videoURL']) URL['revokeObjectURL'](WT_STATE['videoURL']);
+  WT_STATE['videoURL'] = URL['createObjectURL'](file);
+  WT_STATE['videoName'] = file['name'];
+  $wt('#wtVideoName')['textContent'] = '视频：' + file['name'];
+  var v = $wt('#wtVideo');
+  v['src'] = WT_STATE['videoURL'];
+  v['addEventListener']('loadedmetadata', function onMeta(){
+    v['removeEventListener']('loadedmetadata', onMeta);
+    WT_STATE['duration'] = v['duration'];
+    wtCheckReady();
+  });
+}
+function wtPickSub(file){
+  var reader = new FileReader();
+  reader['onload'] = function(){
+    WT_STATE['subText'] = reader['result'];
+    WT_STATE['subName'] = file['name'];
+    $wt('#wtSubName')['textContent'] = '字幕：' + file['name'];
+    wtCheckReady();
+  };
+  reader['readAsText'](file);
+}
+function wtCheckReady(){
+  var ok = !!WT_STATE['videoURL'] && WT_STATE['duration']>0 && !!WT_STATE['subText'];
+  // 有数据恢复后重选视频，直接进入播放
+  if(WT_STATE['layers']['length']>0 && WT_STATE['videoURL'] && WT_STATE['duration']>0){
+    $wt('#wtStartPre')['disabled'] = true;
+    $wt('#wtDirectWatch')['disabled'] = true;
+    $wt('#wtImportArea')['style']['display'] = 'none';
+    if($wt('#wtRestoreCard')) $wt('#wtRestoreCard')['remove']();
+    $wt('#wtWatchArea')['style']['display'] = 'block';
+    $wt('#wtFilmTag')['textContent'] = WT_STATE['filmName'] || WT_STATE['videoName'] || '';
+    return;
+  }
+  $wt('#wtStartPre')['disabled'] = !ok;
+  $wt('#wtDirectWatch')['disabled'] = !(!!WT_STATE['videoURL'] && WT_STATE['duration']>0);
+}
+
+/* ========== 直接看（跳过预处理） ========== */
+function wtDirectWatch(){
+  if(!WT_STATE['videoURL'] || WT_STATE['duration']<=0){ wtToast('视频还没准备好'); return; }
+  WT_STATE['filmName'] = $wt('#wtFilmName')['value']['trim']() || WT_STATE['videoName']['replace'](/\.[^.]+$/,'') || '未命名影片';
+  WT_STATE['lines'] = [];
+  WT_STATE['layers'] = [];
+  WT_STATE['summary'] = {overview:'', layerSummaries:[]};
+  $wt('#wtImportArea')['style']['display'] = 'none';
+  $wt('#wtWatchArea')['style']['display'] = 'block';
+  $wt('#wtFilmTag')['textContent'] = WT_STATE['filmName'];
+  wtRenderWatchPage();
+  wtRenderChat();
+  $wt('#wtVideo')['play']();
+  wtSaveDB();
+  wtToast('开看了 🎬', true);
+}
+
+/* ========== 预处理 ========== */
+function wtPreprocess(){
+  if(!WT_STATE['subText']){ wtToast('请先选字幕文件'); return; }
+  if(WT_STATE['duration']<=0){ wtToast('视频还没准备好'); return; }
+  $wt('#wtMask')['classList']['add']('show');
+  wtMask('清洗字幕中…', '过滤语气词、音效、纯标点', 15);
+  setTimeout(function(){
+    var raw = wtParseSub(WT_STATE['subText']);
+    WT_STATE['rawLines'] = raw;
+    WT_STATE['lines'] = wtCleanLines(raw);
+    wtMask('按时间分层…', WT_STATE['lines']['length']+' 句有效对白 → '+WT_CFG['LAYER_COUNT']+' 层', 35);
+    setTimeout(function(){
+      WT_STATE['layers'] = wtBuildLayers(WT_STATE['lines'], WT_STATE['duration']);
+      WT_STATE['filmName'] = $wt('#wtFilmName')['value']['trim'] || WT_STATE['videoName']['replace'](/\.[^.]+$/,'') || '未命名影片';
+      var noKey = !WT_STATE['api']['key'];
+      if(noKey){
+        wtMask('完成基础预处理', '未配置接口，已跳过摘要生成', 100);
+        WT_STATE['summary'] = { overview:'', layerSummaries: WT_STATE['layers']['map'](function(){ return ''; }) };
+        setTimeout(wtFinishPre, 700);
+        return;
+      }
+      wtMask('生成剧情摘要…', '把 '+WT_CFG['LAYER_COUNT']+' 层一次性交给 AI', 55);
+      var prompt = wtBuildSummaryPrompt(WT_STATE['layers']);
+      wtCallAI([{role:'user', content:prompt}], { max_tokens: 1800, temperature:0.4, response_format:{type:'json_object'} })
+        .then(function(raw2){
+          WT_STATE['summary'] = wtParseSummary(raw2, WT_STATE['layers']);
+          wtMask('摘要完成', '正在保存…', 95);
+          wtFinishPre();
+        })['catch'](function(err){
+          wtMask('摘要生成失败', (err['message']||err)+'。已保留分层，可稍后补生成。', 100);
+          WT_STATE['summary'] = { overview:'', layerSummaries: WT_STATE['layers']['map'](function(){ return ''; }) };
+          setTimeout(function(){ $wt('#wtMask')['classList']['remove']('show'); wtToast('摘要失败，已跳过，可稍后补生成'); wtEnterWatch(); }, 1600);
+        });
+    }, 200);
+  }, 200);
+}
+function wtFinishPre(){
+  wtSaveFilm();
+  $wt('#wtMask')['classList']['remove']('show');
+  wtToast('预处理完成，开始看吧～', true);
+  wtEnterWatch();
+}
+function wtEnterWatch(){
+  $wt('#wtImportArea')['style']['display'] = 'none';
+  if($wt('#wtRestoreCard')) $wt('#wtRestoreCard')['remove']();
+  $wt('#wtWatchArea')['style']['display'] = 'block';
+  $wt('#wtFilmTag')['textContent'] = WT_STATE['filmName'] || '';
+  wtRenderChat();
+}
+
+/* ========== 补生成摘要 ========== */
+function wtRegenSummary(){
+  if(!WT_STATE['api']['key']){ wtToast('请先在设置里填接口'); wtSwitchPage('settings'); return; }
+  if(WT_STATE['layers']['length']===0){ wtToast('还没有影片数据'); return; }
+  $wt('#wtMask')['classList']['add']('show');
+  wtMask('重新生成摘要…', '', 40);
+  var prompt = wtBuildSummaryPrompt(WT_STATE['layers']);
+  wtCallAI([{role:'user', content:prompt}], { max_tokens:1800, temperature:0.4, response_format:{type:'json_object'} })
+    .then(function(raw){
+      WT_STATE['summary'] = wtParseSummary(raw, WT_STATE['layers']);
+      return wtSaveFilm();
+    }).then(function(){
+      $wt('#wtMask')['classList']['remove']('show');
+      wtToast('摘要已更新', true);
+      wtRenderLibrary();
+    })['catch'](function(err){
+      $wt('#wtMask')['classList']['remove']('show');
+      wtToast('生成失败：'+(err['message']||err));
+    });
+}
+
+/* ========== 持久化 ========== */
+function wtSaveFilm(){
+  var d = {
+    filmName: WT_STATE['filmName'],
+    videoName: WT_STATE['videoName'],
+    subName: WT_STATE['subName'],
+    duration: WT_STATE['duration'],
+    lines: WT_STATE['lines'],
+    layers: WT_STATE['layers'],
+    summary: WT_STATE['summary'],
+    chat: WT_STATE['chat']
+  };
+  return wtIDBSave(d)['catch'](function(){ /* 静默 */ });
+}
+
+/* ========== 播放器控制 ========== */
+function wtBindPlayer(){
+  var v = $wt('#wtVideo');
+  var btn = $wt('#wtPlayBtn');
+  var seek = $wt('#wtSeek');
+  var timeEl = $wt('#wtTime');
+  btn['addEventListener']('click', function(){ if(v['paused']) v['play'](); else v['pause'](); });
+  v['addEventListener']('play', function(){ btn['textContent'] = '❚❚'; });
+  v['addEventListener']('pause', function(){ btn['textContent'] = '▶'; });
+  v['addEventListener']('loadedmetadata', function(){ seek['max'] = v['duration'] || 100; });
+  v['addEventListener']('timeupdate', function(){
+    if(v['duration']){ seek['value'] = v['currentTime']; timeEl['textContent'] = fmtTime(v['currentTime'])+' / '+fmtTime(v['duration']); }
+  });
+  // 拖进度条：纯本地，不调 API
+  var seeking = false;
+  seek['addEventListener']('input', function(){ seeking = true; timeEl['textContent'] = fmtTime(parseFloat(seek['value']))+' / '+fmtTime(v['duration']); });
+  seek['addEventListener']('change', function(){ v['currentTime'] = parseFloat(seek['value']); seeking = false; });
+}
+
+/* ========== 全屏 + 弹幕 ========== */
+function wtToggleFullscreen(){
+  var player = $wt('#wtPlayer');
+  var v = $wt('#wtVideo');
+  var isFs = document['fullscreenElement'] || $wt('#wtPlayer')['classList']['contains']('wt-fake-fs');
+  if(isFs){
+    if(document['exitFullscreen']) document['exitFullscreen']();
+    player['classList']['remove']('wt-fake-fs');
+    wtSetFullscreen(false);
+  } else {
+    if(player['requestFullscreen']){
+      var p = player['requestFullscreen']();
+      if(p && p['catch']) p['catch'](function(){ player['classList']['add']('wt-fake-fs'); wtSetFullscreen(true); });
+    } else if(player['webkitEnterFullscreen']){
+      v['webkitEnterFullscreen']();
+    } else {
+      player['classList']['add']('wt-fake-fs');
+      wtSetFullscreen(true);
+    }
+  }
+}
+function wtSetFullscreen(on){
+  WT_STATE['fullscreen'] = on;
+  var dm = $wt('#wtDanmaku');
+  if(on){
+    // 进入全屏：若有最新对话则显示弹幕
+    if(WT_STATE['chat']['length']>0) wtShowDanmaku();
+  } else {
+    dm['classList']['remove']('show');
+  }
+}
+function wtShowDanmaku(){
+  if(!WT_STATE['fullscreen']) return;
+  var chat = WT_STATE['chat'];
+  // 取最近一组 user + ai
+  var lastUser = null, lastAi = null;
+  for(var i=chat['length']-1;i>=0;i--){
+    if(!lastAi && chat[i]['role']==='ai') lastAi = chat[i]['text'];
+    if(!lastUser && chat[i]['role']==='user') lastUser = chat[i]['text'];
+    if(lastUser && lastAi) break;
+  }
+  if(lastUser){ $wt('#dmUser')['textContent'] = '加加：'+lastUser; }
+  if(lastAi){ $wt('#dmAi')['textContent'] = lastAi; }
+  $wt('#wtDanmaku')['classList']['add']('show');
+  clearTimeout(WT_STATE['danmakuTimer']);
+  WT_STATE['danmakuTimer'] = setTimeout(function(){ $wt('#wtDanmaku')['classList']['remove']('show'); }, WT_CFG['DANMAKU_FADE']);
+}
+
+/* ========== 发送消息 ========== */
+function wtSendChat(text){
+  text = (text||'')['trim']();
+  if(!text) return;
+  var input = $wt('#wtChatInput');
+  if(input['value']) input['value'] = '';
+  WT_STATE['chat']['push']({ role:'user', text:text });
+  wtRenderChat();
+  // 思考指示
+  var box = $wt('#wtMsgs');
+  var think = document['createElement']('div');
+  think['className'] = 'wt-thinking'; think['id'] = 'wtThink';
+  think['innerHTML'] = '在想<span>.</span><span>.</span><span>.</span>';
+  box['appendChild'](think);
+  box['scrollTop'] = box['scrollHeight'];
+  if(WT_STATE['fullscreen']) wtShowDanmaku();
+
+  if(!WT_STATE['api']['key']){
+    var t = $wt('#wtThink'); if(t) t['remove']();
+    WT_STATE['chat']['push']({ role:'ai', text:'（还没配接口，去设置页填一下 API Key 就能聊啦）' });
+    wtRenderChat(); wtSaveFilm(); wtShowDanmaku(); return;
+  }
+  var messages = wtBuildContext(text);
+  wtCallAI(messages, { max_tokens: 220, temperature:0.8 })
+    .then(function(reply){
+      var tt = $wt('#wtThink'); if(tt) tt['remove']();
+      reply = (reply||'')['replace'](/^\s+|\s+$/g,'');
+      WT_STATE['chat']['push']({ role:'ai', text:reply });
+      wtRenderChat(); wtSaveFilm(); wtShowDanmaku();
+    })['catch'](function(err){
+      var tt = $wt('#wtThink'); if(tt) tt['remove']();
+      var msg = err['message'] || String(err);
+      var hint = '';
+      if(/401|403|404|Network|Failed to fetch|CORS|跨域/i['test'](msg)) hint = '（可能是跨域或 Key 无效，看设置页提示）';
+      WT_STATE['chat']['push']({ role:'ai', text:'呃，没回上……'+msg+hint });
+      wtRenderChat(); wtShowDanmaku();
+      if(/Failed to fetch|Network|CORS|跨域/i['test'](msg)) wtShowCorsTip();
+    });
+}
+
+/* ========== 设置 ========== */
+function wtLoadSettings(){
+  try{
+    WT_STATE['api']['base'] = localStorage['getItem']('wt_api_base') || WT_STATE['api']['base'];
+    WT_STATE['api']['key'] = localStorage['getItem']('wt_api_key') || '';
+    WT_STATE['api']['model'] = localStorage['getItem']('wt_api_model') || WT_STATE['api']['model'];
+    WT_STATE['sysPrompt'] = localStorage['getItem']('wt_sys_prompt') || WT_DEFAULT_PROMPT;
+  }catch(e){}
+  $wt('#wtApiBase')['value'] = WT_STATE['api']['base'];
+  $wt('#wtApiKey')['value'] = WT_STATE['api']['key'];
+  $wt('#wtApiModel')['value'] = WT_STATE['api']['model'];
+  $wt('#wtSysPrompt')['value'] = WT_STATE['sysPrompt'];
+}
+function wtApplyBg(){
+  var root = document['querySelector']('.watch-together');
+  if(!root) return;
+  var img = null, mask = null;
+  try{
+    img = localStorage['getItem']('wt_bg_img');
+    mask = localStorage['getItem']('wt_bg_mask');
+  }catch(e){}
+  root['style']['setProperty']('--wt-bg', img ? 'url("'+img+'")' : "url('stars.jpg.PNG')");
+  if(mask===null || mask==='') mask='18';
+  root['style']['setProperty']('--wt-mask', (parseInt(mask)/100)['toString']());
+  var slider = $wt('#wtBgMask'); if(slider) slider['value']=mask;
+  var valEl = $wt('#wtBgMaskVal'); if(valEl) valEl['textContent']=mask+'%';
+}
+function wtSaveApi(){
+  WT_STATE['api']['base'] = ($wt('#wtApiBase')['value']||'')['trim']() || 'https://api.siliconflow.cn/v1';
+  WT_STATE['api']['key'] = ($wt('#wtApiKey')['value']||'')['trim']();
+  WT_STATE['api']['model'] = ($wt('#wtApiModel')['value']||'')['trim']() || 'deepseek-ai/DeepSeek-V3';
+  try{
+    localStorage['setItem']('wt_api_base', WT_STATE['api']['base']);
+    localStorage['setItem']('wt_api_key', WT_STATE['api']['key']);
+    localStorage['setItem']('wt_api_model', WT_STATE['api']['model']);
+  }catch(e){}
+  wtToast('接口配置已保存', true);
+}
+function wtSavePrompt(){
+  WT_STATE['sysPrompt'] = $wt('#wtSysPrompt')['value'] || WT_DEFAULT_PROMPT;
+  try{ localStorage['setItem']('wt_sys_prompt', WT_STATE['sysPrompt']); }catch(e){}
+  wtToast('提示词已保存', true);
+}
+function wtShowCorsTip(){
+  var tip = $wt('#wtToast');
+  // 用专门的提示：写在设置页顶部
+  var settingsTip = $wt('#wtCorsTip');
+  if(!settingsTip){
+    var card = $wt('.wt-page[data-page="settings"] .card');
+    if(card[0]){
+      var div = document['createElement']('div');
+      div['className'] = 'wt-tip show'; div['id'] = 'wtCorsTip';
+      div['textContent'] = '检测到请求失败，可能是跨域问题。建议在硅基流动后台开启 CORS，或换用 DeepSeek 官方接口（https://api.deepseek.com/v1，模型 deepseek-chat）。';
+      card[0]['parentNode']['insertBefore'](div, card[0]);
+    }
+  }
+  wtToast('请求失败，可能是跨域，已写进设置页');
+}
+
+/* ========== 初始化 ========== */
+function wtBindEvents(){
+  $wt('#wtPickVideo')['addEventListener']('click', function(){ $wt('#wtVideoFile')['click'](); });
+  $wt('#wtPickSub')['addEventListener']('click', function(){ $wt('#wtSubFile')['click'](); });
+  $wt('#wtVideoFile')['addEventListener']('change', function(e){ if(e['target']['files'][0]) wtPickVideo(e['target']['files'][0]); });
+  $wt('#wtSubFile')['addEventListener']('change', function(e){ if(e['target']['files'][0]) wtPickSub(e['target']['files'][0]); });
+  $wt('#wtVideoURL')['addEventListener']('input', function(e){ if(e['target']['value']['trim']()) wtLoadURL(e['target']['value']); });
+  $wt('#wtStartPre')['addEventListener']('click', wtPreprocess);
+  $wt('#wtDirectWatch')['addEventListener']('click', wtDirectWatch);
+
+  $$wt('.wt-nav button')['forEach'](function(b){ b['addEventListener']('click', function(){ wtSwitchPage(b['dataset']['nav']); }); });
+
+  wtBindPlayer();
+  $wt('#wtFullBtn')['addEventListener']('click', wtToggleFullscreen);
+  document['addEventListener']('fullscreenchange', function(){ wtSetFullscreen(!!document['fullscreenElement']); });
+
+  // 聊天发送
+  $wt('#wtSend')['addEventListener']('click', function(){ wtSendChat($wt('#wtChatInput')['value']); });
+  $wt('#wtChatInput')['addEventListener']('keydown', function(e){ if(e['key']==='Enter' && !e['shiftKey']){ e['preventDefault'](); wtSendChat($wt('#wtChatInput')['value']); } });
+  $wt('#wtFsInput')['addEventListener']('keydown', function(e){ if(e['key']==='Enter' && !e['shiftKey']){ e['preventDefault'](); wtSendChat($wt('#wtFsInput')['value']); $wt('#wtFsInput')['value']=''; } });
+
+  // 背景
+  $wt('#wtPickBg')['addEventListener']('click', function(){ $wt('#wtBgFile')['click'](); });
+  $wt('#wtBgFile')['addEventListener']('change', function(e){
+    var f = e['target']['files'][0]; if(!f) return;
+    var r = new FileReader();
+    r['onload'] = function(){
+      try{ localStorage['setItem']('wt_bg_img', r['result']); }catch(err){ wtToast('图片太大存不下'); return; }
+      wtApplyBg(); wtToast('背景已换', true);
+    };
+    r['readAsDataURL'](f);
+  });
+  $wt('#wtResetBg')['addEventListener']('click', function(){
+    try{ localStorage['removeItem']('wt_bg_img'); }catch(err){}
+    wtApplyBg(); wtToast('已恢复默认星空', true);
+  });
+  $wt('#wtBgMask')['addEventListener']('input', function(){
+    var v = $wt('#wtBgMask')['value'];
+    var root = document['querySelector']('.watch-together');
+    if(root) root['style']['setProperty']('--wt-mask', (parseInt(v)/100)['toString']());
+    $wt('#wtBgMaskVal')['textContent'] = v+'%';
+  });
+  $wt('#wtBgMask')['addEventListener']('change', function(){
+    try{ localStorage['setItem']('wt_bg_mask', $wt('#wtBgMask')['value']); }catch(e){}
+  });
+
+  // 设置
+  $wt('#wtSaveApi')['addEventListener']('click', wtSaveApi);
+  $wt('#wtSavePrompt')['addEventListener']('click', wtSavePrompt);
+  $wt('#wtClearData')['addEventListener']('click', function(){
+    wtIDBClear().then(function(){
+      WT_STATE['layers']=[]; WT_STATE['lines']=[]; WT_STATE['summary']={overview:'',layerSummaries:[]}; WT_STATE['chat']=[];
+      if(WT_STATE['videoURL']){ URL['revokeObjectURL'](WT_STATE['videoURL']); WT_STATE['videoURL']=null; }
+      $wt('#wtVideo')['removeAttribute']('src');
+      wtRenderWatchPage(); wtRenderChat(); wtRenderLibrary();
+      wtToast('本地数据已清空', true);
+    })['catch'](function(){ wtToast('清空失败'); });
+  });
+
+  // 页面失焦时清理弹幕定时器
+  document['addEventListener']('visibilitychange', function(){
+    if(document['hidden']){ clearTimeout(WT_STATE['danmakuTimer']); }
+  });
+}
+
+function wtRestoreFromDB(){
+  return wtIDBLoad().then(function(d){
+    if(!d) return;
+    WT_STATE['filmName'] = d['filmName'] || '';
+    WT_STATE['videoName'] = d['videoName'] || '';
+    WT_STATE['subName'] = d['subName'] || '';
+    WT_STATE['duration'] = d['duration'] || 0;
+    WT_STATE['lines'] = d['lines'] || [];
+    WT_STATE['layers'] = d['layers'] || [];
+    WT_STATE['summary'] = d['summary'] || {overview:'', layerSummaries:[]};
+    WT_STATE['chat'] = d['chat'] || [];
+  });
+}
+
+function wtInit(retry){
+  retry = retry || 0;
+  wtLoadSettings();
+  wtApplyBg();
+  wtBindEvents();
+  wtIDBOpen().then(function(){
+    return wtRestoreFromDB();
+  }).then(function(){
+    wtRenderWatchPage();
+    wtRenderChat();
+    if(WT_STATE['layers']['length']>0) $wt('#wtFilmTag')['textContent'] = WT_STATE['filmName'] || '';
+  })['catch'](function(err){
+    var fatal = err && (err['name'] === 'NotSupportedError' || err['name'] === 'SecurityError');
+    if(retry < 3 && !fatal){ setTimeout(function(){ wtInit(retry+1); }, 600); }
+    else { wtRenderWatchPage(); wtRenderChat(); wtToast('本地存储不可用，数据不保存'); }
+  });
+}
+
+if(document['readyState']==='loading') document['addEventListener']('DOMContentLoaded', function(){ wtInit(); });
+else wtInit();
+</script>
+</body>
+</html>
