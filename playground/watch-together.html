@@ -201,7 +201,30 @@ body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:
 </style>
 <style>html.jj-embed .watch-together .wt-top{display:none}</style>
 <script>try{if(window.self!==window.top){document.documentElement.classList.add('jj-embed');}}catch(e){}</script>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+<script>
+/* hls.js 多源加载：jsdelivr 国内不稳，依次尝试 unpkg / npmmirror / githack，全部失败不阻塞页面 */
+(function(){
+  var srcs = [
+    'https://cdn.bootcdn.net/ajax/libs/hls.js/1.5.17/hls.min.js',
+    'https://cdn.staticfile.net/hls.js/1.5.17/hls.min.js',
+    'https://unpkg.com/hls.js@1.5.17/dist/hls.min.js',
+    'https://registry.npmmirror.com/hls.js/1.5.17/files/dist/hls.min.js'
+  ];
+  var i = 0;
+  function tryNext(){
+    if (i >= srcs.length) { window.__hlsFailed = true; return; }
+    var s = document.createElement('script');
+    s.src = srcs[i++];
+    s.async = false;
+    var done = false;
+    s.onload = function(){ if(!done){ done = true; } };
+    s.onerror = function(){ if(!done){ done = true; s.remove(); tryNext(); } };
+    setTimeout(function(){ if(!done){ done = true; s.remove(); tryNext(); } }, 8000);
+    document.head.appendChild(s);
+  }
+  tryNext();
+})();
+</script>
 </head>
 <body>
 <div class="watch-together">
