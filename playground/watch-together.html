@@ -1049,7 +1049,13 @@ function wtToggleFullscreen(){
   var v = $wt('#wtVideo');
   var isFs = document['fullscreenElement'] || $wt('#wtPlayer')['classList']['contains']('wt-fake-fs');
   if(isFs){
-    if(document['exitFullscreen']) document['exitFullscreen']();
+    // 只有真正处于全屏时才 exitFullscreen，fake 全屏下调用会报错
+    try{
+      if(document['fullscreenElement'] && document['exitFullscreen']){
+        var q = document['exitFullscreen']();
+        if(q && q['catch']) q['catch'](function(){});
+      }
+    }catch(e){}
     player['classList']['remove']('wt-fake-fs');
     wtSetFullscreen(false);
   } else {
