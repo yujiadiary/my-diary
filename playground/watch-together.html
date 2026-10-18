@@ -227,6 +227,20 @@ body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:
 </script>
 </head>
 <body>
+<script>
+(function(){
+  var errs=[];
+  function show(){
+    var d=document.getElementById('wtErrProbe');
+    if(!d){ d=document.createElement('div'); d.id='wtErrProbe';
+      d.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#000c;color:#0f0;font:11px monospace;padding:6px;max-height:40%;overflow:auto;white-space:pre-wrap;pointer-events:none;';
+      (document.body||document.documentElement).appendChild(d); }
+    d.textContent='[错误捕获]\n'+errs.join('\n---\n');
+  }
+  window.addEventListener('error',function(e){ errs.push('ERR: '+e.message+' @ '+(e.filename||'')+':'+e.lineno); show(); });
+  window.addEventListener('unhandledrejection',function(e){ errs.push('REJ: '+(e.reason&&(e.reason.stack||e.reason.message||e.reason))); show(); });
+})();
+</script>
 <div class="watch-together">
   <div class="wt-wrap">
     <div class="wt-top">
@@ -1133,7 +1147,16 @@ function wtBindEvents(){
   $wt('#wtPickSub')['addEventListener']('click', function(){ $wt('#wtSubFile')['click'](); });
   $wt('#wtVideoFile')['addEventListener']('change', function(e){ if(e['target']['files'][0]) wtPickVideo(e['target']['files'][0]); });
   $wt('#wtSubFile')['addEventListener']('change', function(e){ if(e['target']['files'][0]) wtPickSub(e['target']['files'][0]); });
-  $wt('#wtVideoURL')['addEventListener']('input', function(e){ if(e['target']['value']['trim']()) wtLoadURL(e['target']['value']); });
+  var urlTimer = null;
+  $wt('#wtVideoURL')['addEventListener']('input', function(e){
+    var val = e['target']['value']['trim']();
+    clearTimeout(urlTimer);
+    if(!val) return;
+    urlTimer = setTimeout(function(){ wtLoadURL(val); }, 1200);
+  });
+  $wt('#wtVideoURL')['addEventListener']('keydown', function(e){
+    if(e['key']==='Enter'){ e['preventDefault'](); clearTimeout(urlTimer); var val = e['target']['value']['trim'](); if(val) wtLoadURL(val); }
+  });
   $wt('#wtStartPre')['addEventListener']('click', wtPreprocess);
   $wt('#wtDirectWatch')['addEventListener']('click', wtDirectWatch);
 
