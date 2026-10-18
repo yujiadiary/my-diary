@@ -111,7 +111,9 @@ body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:
 .watch-together .wt-ctrls{
   position:absolute;left:0;right:0;bottom:0;z-index:7;padding:8px 10px calc(8px + env(safe-area-inset-bottom));
   background:linear-gradient(transparent,rgba(0,0,0,.55));display:flex;align-items:center;gap:8px;
+  transition:opacity .25s ease;
 }
+.watch-together .wt-ctrls.wt-hidden{opacity:0;pointer-events:none;}
 .watch-together .wt-playbtn{
   touch-action:manipulation;width:34px;height:34px;border-radius:50%;border:none;
   background:rgba(255,255,255,.16);color:#fff;font-size:14px;cursor:pointer;flex-shrink:0;
@@ -401,6 +403,7 @@ var WT_CFG = {
   RECENT_LAYERS: 5,       // 上下文带最近几层摘要（含当前层）
   RECENT_CHAT: 6,         // 上下文带最近几轮聊天
   DANMAKU_FADE: 60000,    // 全屏弹幕无新消息后淡出时间
+  CTRL_HIDE: 3000,        // 播放控件无操作后自动隐藏时间
   DB_NAME: 'watch-together',
   STORE: 'film'
 };
@@ -448,6 +451,7 @@ var WT_STATE = {
   chat: [],      // {role:'user'|'ai', text}
   currentPage: 'watch',
   danmakuTimer: null,
+  ctrlsTimer: null,
   toastTimer: null,
   api: { base:'https://api.siliconflow.cn/v1', key:'', model:'deepseek-ai/DeepSeek-V3' },
   sysPrompt: WT_DEFAULT_PROMPT,
@@ -806,6 +810,7 @@ function wtSwitchPage(name){
   $$wt('.wt-page')['forEach'](function(p){ p['classList']['toggle']('active', p['dataset']['page']===name); });
   $$wt('.wt-nav button')['forEach'](function(b){ b['classList']['toggle']('active', b['dataset']['nav']===name); });
   if(name==='library') wtRenderLibrary();
+  if(name==='watch') wtShowCtrls();
 }
 
 /* ========== 导入 ========== */
@@ -887,6 +892,7 @@ function wtCheckReady(){
     if($wt('#wtRestoreCard')) $wt('#wtRestoreCard')['remove']();
     $wt('#wtWatchArea')['style']['display'] = 'block';
     $wt('#wtFilmTag')['textContent'] = WT_STATE['filmName'] || WT_STATE['videoName'] || '';
+    wtShowCtrls();
     return;
   }
   $wt('#wtStartPre')['disabled'] = !ok;
@@ -908,6 +914,7 @@ function wtDirectWatch(){
   wtRenderWatchPage();
   wtRenderChat();
   $wt('#wtVideo')['play']();
+  wtShowCtrls();
   wtSaveFilm();
   wtToast('开看了 🎬', true);
 }
@@ -1013,8 +1020,27 @@ function wtBindPlayer(){
   });
   // 拖进度条：纯本地，不调 API
   var seeking = false;
-  seek['addEventListener']('input', function(){ seeking = true; timeEl['textContent'] = fmtTime(parseFloat(seek['value']))+' / '+fmtTime(v['duration']); });
+  seek['addEventListener']('input', function(){ seeking = true; timeEl['textContent'] = fmtTime(parseFloat(seek['value']))+' / '+fmtTime(v['duration']); wtShowCtrls(); });
   seek['addEventListener']('change', function(){ v['currentTime'] = parseFloat(seek['value']); seeking = false; });
+  // 点视频切换控件显示；点控件本身则重置自动隐藏计时
+  v['addEventListener']('click', wtToggleCtrls);
+  $wt('#wtCtrls')['addEventListener']('click', function(){ wtShowCtrls(); });
+}
+/* ========== 播放控件自动显示 / 隐藏 ========== */
+function wtShowCtrls(){
+  var c = $wt('#wtCtrls'); if(!c) return;
+  c['classList']['remove']('wt-hidden');
+  clearTimeout(WT_STATE['ctrlsTimer']);
+  WT_STATE['ctrlsTimer'] = setTimeout(wtHideCtrls, WT_CFG['CTRL_HIDE']);
+}
+function wtHideCtrls(){
+  var c = $wt('#wtCtrls'); if(!c) return;
+  c['classList']['add']('wt-hidden');
+}
+function wtToggleCtrls(){
+  var c = $wt('#wtCtrls'); if(!c) return;
+  if(c['classList']['contains']('wt-hidden')) wtShowCtrls();
+  else { clearTimeout(WT_STATE['ctrlsTimer']); wtHideCtrls(); }
 }
 
 /* ========== 全屏 + 弹幕 ========== */
@@ -1041,6 +1067,9 @@ function wtToggleFullscreen(){
 function wtSetFullscreen(on){
   WT_STATE['fullscreen'] = on;
   var dm = $wt('#wtDanmaku');
+  var fb = $wt('#wtFullBtn');
+  if(fb){ fb['textContent'] = on ? '✕' : '⤢'; fb['title'] = on ? '退出全屏' : '全屏'; }
+  wtShowCtrls();
   if(on){
     // 进入全屏：若有最新对话则显示弹幕
     if(WT_STATE['chat']['length']>0) wtShowDanmaku();
