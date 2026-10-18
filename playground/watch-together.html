@@ -178,6 +178,10 @@ body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:
 .watch-together .wt-tip{font-size:12px;color:#c9a0a0;background:rgba(201,160,160,.1);border:1px solid rgba(201,160,160,.2);border-radius:12px;padding:10px 12px;margin-bottom:14px;line-height:1.6;display:none;}
 .watch-together .wt-tip.show{display:block;}
 .watch-together .wt-tip.ok{color:#a0c9a0;background:rgba(160,201,160,.1);border-color:rgba(160,201,160,.2);}
+/* 保存提示在容器外，单独给固定样式 */
+.wt-tip{font-size:13px;position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:99999;color:#c9a0a0;background:rgba(30,22,50,.95);border:1px solid rgba(201,160,160,.25);border-radius:12px;padding:10px 16px;line-height:1.6;display:none;max-width:80vw;}
+.wt-tip.show{display:block;}
+.wt-tip.ok{color:#a0c9a0;border-color:rgba(160,201,160,.25);}
 
 /* 预处理遮罩 */
 .watch-together .wt-mask{position:absolute;inset:0;z-index:20;background:rgba(8,5,18,.86);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;text-align:center;padding:24px;}
@@ -869,12 +873,14 @@ function wtCheckReady(){
     return;
   }
   $wt('#wtStartPre')['disabled'] = !ok;
-  $wt('#wtDirectWatch')['disabled'] = !(!!WT_STATE['videoURL'] && WT_STATE['duration']>0);
+  $wt('#wtDirectWatch')['disabled'] = !WT_STATE['videoURL'];
 }
 
 /* ========== 直接看（跳过预处理） ========== */
 function wtDirectWatch(){
-  if(!WT_STATE['videoURL'] || WT_STATE['duration']<=0){ wtToast('视频还没准备好'); return; }
+  if(!WT_STATE['videoURL']){ wtToast('先选视频或贴个链接'); return; }
+  // 时长拿不到（源慢/跨域/手机限制）不拦人，播放器自己会接管
+  if(WT_STATE['duration']<=0){ try{ WT_STATE['duration'] = $wt('#wtVideo')['duration'] || 0; }catch(e){} }
   WT_STATE['filmName'] = $wt('#wtFilmName')['value']['trim']() || WT_STATE['videoName']['replace'](/\.[^.]+$/,'') || '未命名影片';
   WT_STATE['lines'] = [];
   WT_STATE['layers'] = [];
