@@ -805,10 +805,12 @@ function wtSwitchPage(name){
 
 /* ========== 导入 ========== */
 function wtLoadURL(url){
-  url = (url||'')['trim']();
+  // 去掉粘贴时常带的零宽/双向控制字符
+  url = (url||'')['trim']()['replace'](/[\u200b-\u200f\u202a-\u202e\ufeff]/g,'');
   if(!url) return;
   WT_STATE['videoName'] = url['split']('?')[0]['split']('/')['pop']() || '在线视频';
   WT_STATE['videoURL'] = url;
+  WT_STATE['duration'] = 0;
   $wt('#wtVideoName')['textContent'] = '视频：' + WT_STATE['videoName'];
   var v = $wt('#wtVideo');
   if(url['indexOf']('.m3u8') > -1){
@@ -821,6 +823,14 @@ function wtLoadURL(url){
       hls['on'](Hls['Events']['MANIFEST_PARSED'], function(){
         WT_STATE['duration'] = v['duration'];
         wtCheckReady();
+      });
+      // hls.js 播不了时回退到浏览器原生 HLS
+      hls['on'](Hls['Events']['ERROR'], function(evt, data){
+        if(data && data['fatal']){
+          try{ hls['destroy'](); }catch(e){}
+          WT_STATE['_hls'] = null;
+          v['src'] = WT_STATE['videoURL'];
+        }
       });
     } else if(v['canPlayType']('application/vnd.apple.mpegurl')){
       v['src'] = url;
@@ -836,6 +846,8 @@ function wtLoadURL(url){
     WT_STATE['duration'] = v['duration'];
     wtCheckReady();
   });
+  // 只要填了链接就放行「直接看」，不再卡在元数据/时长上
+  wtCheckReady();
 }
 function wtPickVideo(file){
   if(WT_STATE['videoURL']) URL['revokeObjectURL'](WT_STATE['videoURL']);
